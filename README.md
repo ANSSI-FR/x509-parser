@@ -12,7 +12,7 @@ See [LICENSE](LICENSE) file at the root folder of the project.
 
 ## Contributors
 
-  * Ryad BEANDJILA (<mailto:ryad.benadjila@ssi.gouv.fr>)
+  * Ryad BENADJILA (<mailto:ryad.benadjila@ssi.gouv.fr>)
   * Patricia MOUY (<mailto:patricia.mouy@ssi.gouv.fr>)
 
 ## Description
