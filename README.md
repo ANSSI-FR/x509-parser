@@ -1,5 +1,7 @@
 # x509-parser project
 
+[![Verification Status](https://travis-ci.org/evdenis/x509-parser.svg?branch=travis)](https://travis-ci.org/evdenis/x509-parser)
+
 ## Copyright and license
 Copyright (C) 2019
 

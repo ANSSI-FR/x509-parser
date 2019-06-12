@@ -1,0 +1,35 @@
+language: c
+os:
+  - linux
+compiler: clang
+dist: xenial
+addons:
+  apt:
+    packages:
+      - aspcud
+      - libgnomecanvas2-dev
+      - libgtk2.0-dev
+      - libgtksourceview2.0-dev
+
+cache:
+  directories:
+    - $HOME/.opam
+    - /usr/local/bin
+
+before_install:
+  - sudo apt-get update -qq
+  - sudo wget --no-clobber https://github.com/ocaml/opam/releases/download/2.0.4/opam-2.0.4-x86_64-linux -O /usr/local/bin/opam || true
+  - sudo chmod +x /usr/local/bin/opam
+  - opam init --auto-setup --disable-sandboxing --compiler=4.06.1
+  - opam install --yes depext
+
+install:
+  - opam update
+  - opam upgrade --yes
+  - opam depext --yes --noninteractive --install frama-c alt-ergo
+
+script:
+  - CC=gcc make
+  - make clean
+  - CC=clang make
+  - eval $(opam config env); travis_wait 30 make test
