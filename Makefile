@@ -15,6 +15,7 @@ $(BUILD_DIR)/x509-parser: src/main.c build/x509-parser.o
 	$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) $^ -o $@
 
 build/x509-parser.o: src/x509-parser.c src/x509-parser.h
+	@mkdir -p  $(BUILD_DIR)
 	$(CC) $(LIB_CFLAGS) -c $< -o $@
 
 clean:
