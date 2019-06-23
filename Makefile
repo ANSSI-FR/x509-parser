@@ -5,21 +5,47 @@
 #####################################################################
 
 BUILD_DIR=./build
+CORPUS_DIR=./corpus
 EXEC = $(BUILD_DIR)/x509-parser
+
+JOBS:=$(shell nproc)
 
 include common.mk
 
 all: $(LIBS) $(EXEC)
 
-$(BUILD_DIR)/x509-parser: src/main.c build/x509-parser.o
+$(CORPUS_DIR):
+	@mkdir -p $@
+
+$(BUILD_DIR):
+	@mkdir -p $@
+
+fuzz-asan: $(CORPUS_DIR) $(BUILD_DIR)/x509-fuzz-asan
+	./$(BUILD_DIR)/x509-fuzz-asan -max_len=65535 -jobs=$(JOBS) $(CORPUS_DIR)
+
+fuzz-ubsan: $(CORPUS_DIR) $(BUILD_DIR)/x509-fuzz-ubsan
+	./$(BUILD_DIR)/x509-fuzz-ubsan -max_len=65535 -jobs=$(JOBS) $(CORPUS_DIR)
+
+fuzz-msan: $(CORPUS_DIR) $(BUILD_DIR)/x509-fuzz-msan
+	./$(BUILD_DIR)/x509-fuzz-msan -max_len=65535 -jobs=$(JOBS) $(CORPUS_DIR)
+
+$(BUILD_DIR)/x509-parser: src/main.c $(BUILD_DIR)/x509-parser.o
 	$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) $^ -o $@
 
-build/x509-parser.o: src/x509-parser.c src/x509-parser.h
-	@mkdir -p  $(BUILD_DIR)
-	$(CC) $(LIB_CFLAGS) -c $< -o $@
+$(BUILD_DIR)/x509-fuzz-asan: $(BUILD_DIR) src/fuzz.c src/x509-parser.c
+	clang -g -O1 -fsanitize=fuzzer,address src/fuzz.c src/x509-parser.c -o $@
+
+$(BUILD_DIR)/x509-fuzz-ubsan: $(BUILD_DIR) src/fuzz.c src/x509-parser.c
+	clang -g -O1 -fsanitize=fuzzer,signed-integer-overflow src/fuzz.c src/x509-parser.c -o $@
+
+$(BUILD_DIR)/x509-fuzz-msan: $(BUILD_DIR) src/fuzz.c src/x509-parser.c
+	clang -g -O1 -fsanitize=fuzzer,memory src/fuzz.c src/x509-parser.c -o $@
+
+$(BUILD_DIR)/x509-parser.o: $(BUILD_DIR) src/x509-parser.c src/x509-parser.h
+	$(CC) $(LIB_CFLAGS) -c src/x509-parser.c -o $@
 
 clean:
-	@rm -f $(LIBS) $(EXEC)
+	@rm -fr $(LIBS) $(EXEC) build *.log
 	@find -name '*.o' -exec rm -f '{}' \;
 	@find -name '*~'  -exec rm -f '{}' \;
 
@@ -28,7 +54,6 @@ clean:
 #####################################################################
 
 SESSION:=frama-c-rte-val-wp.session
-JOBS:=$(shell nproc)
 TIMEOUT:=15
 
 # "-val-warn-undefined-pointer-comparison none" is to deal with the
@@ -76,4 +101,4 @@ frama-c:
 frama-c-gui:
 	frama-c-gui -load $(SESSION)
 
-.PHONY: all clean frama-c-gui frama-c
+.PHONY: all clean fuzz-asan fuzz-ubsan fuzz-msan frama-c-gui frama-c
