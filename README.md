@@ -37,8 +37,12 @@ This will compile different elements in the [build](build/) directory:
 
 ## Validating
 
-The main [Makefile](Makefile) has a Frama-C target which can be used to
-start Frama-C to verify the project.
+The main [Makefile](Makefile) has targets to run several static analyzers.
+
+### Frama-C
+
+To verify the project with [Frama-C](https://frama-c.com/), use the `frama-c`
+target:
 
 <pre>
 	$ make frama-c
@@ -49,3 +53,14 @@ Frama-C can be done using OPAM. More details can be found on
 [Frama-C](https://frama-c.com/) project website. Frama-C may also be
 available as a common package on your distribution.
 
+### IKOS
+
+To verify the project with [IKOS](https://github.com/NASA-SW-VnV/ikos), use the
+`ikos` target:
+
+<pre>
+	$ make ikos
+</pre>
+
+IKOS must have been installed prior to calling that target.
+See the [installation instructions](https://github.com/NASA-SW-VnV/ikos/tree/master/doc/install).
