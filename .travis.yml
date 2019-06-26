@@ -14,12 +14,15 @@ addons:
 cache:
   directories:
     - $HOME/.opam
-    - /usr/local/bin
+    - $HOME/bin
 
 before_install:
   - sudo apt-get update -qq
-  - sudo wget --no-clobber https://github.com/ocaml/opam/releases/download/2.0.4/opam-2.0.4-x86_64-linux -O /usr/local/bin/opam || true
-  - sudo chmod +x /usr/local/bin/opam
+  - which opam || (
+      wget https://github.com/ocaml/opam/releases/download/2.0.4/opam-2.0.4-x86_64-linux
+           -O $HOME/bin/opam &&
+      chmod +x $HOME/bin/opam
+    )
   - opam init --auto-setup --disable-sandboxing --compiler=4.06.1
   - opam install --yes depext
 
