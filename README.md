@@ -18,7 +18,7 @@ See [LICENSE](LICENSE) file at the root folder of the project.
 ## Description
 
 This software implements a X.509 certificate parser, annotated using
-ACSL annotations for verification with Frama-C.
+ACSL annotations for verification with Frama-C (version 18/Argon).
 
 ## Building
 
