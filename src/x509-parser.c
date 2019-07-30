@@ -9222,7 +9222,7 @@ out:
 	return ret;
 }
 
-#ifdef __FRAMAC__
+#if defined(__FRAMAC__)
 
 /* This dummy main allows testing */
 
@@ -9239,6 +9239,26 @@ int main(int argc, char *argv[]) {
 
 	len = Frama_C_interval(0, RAND_BUF_SIZE);
 	/*@ assert 0 <= len <= RAND_BUF_SIZE; */
+
+	ret = parse_x509_cert(buf, len);
+
+	return ret;
+}
+
+#elif defined(__IKOS__)
+
+#include <ikos/analyzer/intrinsic.h>
+#define RAND_BUF_SIZE 65535
+
+int main(int argc, char *argv[]) {
+	u8 buf[RAND_BUF_SIZE];
+	u16 len;
+	int ret;
+
+	__ikos_abstract_mem(buf, RAND_BUF_SIZE);
+
+	len = __ikos_nondet_uint();
+	__ikos_assume(len <= RAND_BUF_SIZE);
 
 	ret = parse_x509_cert(buf, len);
 

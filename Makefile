@@ -76,4 +76,16 @@ frama-c:
 frama-c-gui:
 	frama-c-gui -load $(SESSION)
 
-.PHONY: all clean frama-c-gui frama-c
+#####################################################################
+# IKOS
+#####################################################################
+
+IKOS_DATABASE:=ikos.db
+
+ikos:
+	ikos src/x509-parser.c -D__IKOS__ -o $(IKOS_DATABASE)
+
+ikos-gui:
+	ikos-view $(IKOS_DATABASE)
+
+.PHONY: all clean frama-c-gui frama-c ikos ikos-gui
