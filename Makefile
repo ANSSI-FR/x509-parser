@@ -20,8 +20,8 @@ build/x509-parser.o: src/x509-parser.c src/x509-parser.h
 
 clean:
 	@rm -f $(LIBS) $(EXEC)
-	@find -name '*.o' -exec rm -f '{}' \;
-	@find -name '*~'  -exec rm -f '{}' \;
+	@find . -name '*.o' -exec rm -f '{}' \;
+	@find . -name '*~'  -exec rm -f '{}' \;
 
 #####################################################################
 # Frama-C
