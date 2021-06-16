@@ -50,7 +50,7 @@ frama-c:
 		    -eva \
 		    -wp-dynamic \
 		    -eva-slevel 1 \
-		    -slevel-function="_extract_complex_tag:100, \
+		    -eva-slevel-function="_extract_complex_tag:100, \
 				      _parse_arc:100, \
 				      parse_UTCTime:100, \
 				      find_dn_by_oid:100, \
@@ -68,10 +68,12 @@ frama-c:
 		    -then \
 		    -wp \
 		    -wp-dynamic \
+		    -wp-no-init-const \
 		    -wp-par $(JOBS) \
-		    -wp-steps 100000 -wp-depth 100000 -pp-annot \
+		    -wp-steps 100000 -pp-annot \
 		    -wp-split -wp-literals \
-		    -wp-timeout $(TIMEOUT) -save $(SESSION)
+		    -wp-timeout $(TIMEOUT) -save $(SESSION) \
+		    -kernel-msg-key pp
 
 frama-c-gui:
 	frama-c-gui -load $(SESSION)

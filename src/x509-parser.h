@@ -14,7 +14,11 @@
 #include <unistd.h>
 #include <string.h>
 
+#if defined(__FRAMAC__)
+#define ATTRIBUTE_UNUSED
+#else
 #define ATTRIBUTE_UNUSED __attribute__((unused))
+#endif
 
 typedef uint8_t	  u8;
 typedef uint16_t u16;

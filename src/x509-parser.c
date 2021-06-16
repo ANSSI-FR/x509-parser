@@ -2418,7 +2418,7 @@ static int parse_x509_AlgorithmIdentifier(const u8 *buf, u16 len,
 	buf += oid_len;
 	param_len = data_len - oid_len;
 
-
+	/*@ assert talg->parse_algoid_params \in { parse_algoid_params_generic, parse_algoid_params_ecdsa_with, parse_algoid_params_ecPublicKey, parse_algoid_params_rsa }; @*/
 	/*@ calls parse_algoid_params_generic, parse_algoid_params_ecdsa_with, parse_algoid_params_ecPublicKey, parse_algoid_params_rsa; @*/
 	ret = talg->parse_algoid_params(buf, param_len, param);
 	if (ret) {
@@ -3591,6 +3591,7 @@ static int parse_AttributeTypeAndValue(const u8 *buf, u16 len, u16 *eaten)
 	 * Let's now check the value associated w/ and
 	 * following the OID has a valid format.
 	 */
+	/*@ assert cur->parse_rdn_val \in { parse_rdn_val_cn, parse_rdn_val_org, parse_rdn_val_org_unit, parse_rdn_val_title, parse_rdn_val_dn_qual, parse_rdn_val_pseudo, parse_rdn_val_dc, parse_rdn_val_x520name, parse_rdn_val_serial, parse_rdn_val_country, parse_rdn_val_locality, parse_rdn_val_state }; @*/
 	/*@ calls parse_rdn_val_cn, parse_rdn_val_x520name,
 		  parse_rdn_val_serial, parse_rdn_val_country,
 		  parse_rdn_val_locality, parse_rdn_val_state,
@@ -4439,6 +4440,7 @@ static int parse_x509_subjectPublicKeyInfo(const u8 *buf, u16 len, u16 *eaten)
 		goto out;
 	}
 
+	/*@ assert alg->parse_subjectpubkey \in { parse_subjectpubkey_ec, parse_subjectpubkey_rsa } ; @*/
 	/*@ calls parse_subjectpubkey_ec, parse_subjectpubkey_rsa ; @*/
 	ret = alg->parse_subjectpubkey(buf, remain, &param);
 	if (ret) {
@@ -8310,6 +8312,7 @@ static int parse_x509_Extension(const u8 *buf, u16 len,
 	}
 
 	/* Parse the parameters for that extension */
+	/*@ assert ext->parse_ext_params \in { parse_ext_AIA, parse_ext_AKI, parse_ext_SKI, parse_ext_keyUsage, parse_ext_certPolicies, parse_ext_policyMapping, parse_ext_SAN, parse_ext_IAN, parse_ext_subjectDirAttr, parse_ext_basicConstraints, parse_ext_nameConstraints, parse_ext_policyConstraints, parse_ext_EKU, parse_ext_CRLDP, parse_ext_inhibitAnyPolicy, parse_ext_bad_oid }; @*/
 	/*@ calls parse_ext_AIA, parse_ext_AKI, parse_ext_SKI, parse_ext_keyUsage, parse_ext_certPolicies, parse_ext_policyMapping, parse_ext_SAN, parse_ext_IAN, parse_ext_subjectDirAttr, parse_ext_basicConstraints, parse_ext_nameConstraints, parse_ext_policyConstraints, parse_ext_EKU, parse_ext_CRLDP, parse_ext_inhibitAnyPolicy, parse_ext_bad_oid ; @*/
 	ret = ext->parse_ext_params(buf, ext_data_len, critical, ctx);
 	if (ret) {
@@ -9079,6 +9082,7 @@ static int parse_x509_signatureValue(const u8 *buf, u16 len,
 		goto out;
 	}
 
+	/*@ assert sig_alg->parse_sig \in { parse_sig_ecdsa, parse_sig_generic }; @*/
 	/*@ calls parse_sig_ecdsa, parse_sig_generic; @*/
 	ret = sig_alg->parse_sig(buf, len, eaten);
 	if (ret) {
