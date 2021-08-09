@@ -10,7 +10,6 @@
 
 #include "x509-parser.h"
 
-
 /*
  * Some implementation notes:
  *
@@ -24,7 +23,7 @@
 #ifdef ERROR_TRACE_ENABLE
 #define ERROR_TRACE_APPEND(x) do {			    \
 	       extern int printf(const char *format, ...);  \
-	       printf("%05d", (x));			    \
+	       printf("%05d ", (x));			    \
 	} while (0);
 #else
 #define ERROR_TRACE_APPEND(x)
