@@ -1152,7 +1152,7 @@ static int parse_subjectpubkey_rsa(const u8 *buf, u16 len, alg_param *param);
 
 #ifdef TEMPORARY_BADALGS
 static int parse_sig_generic(const u8 *buf, u16 len, u16 *eaten);
-static int parse_algoid_params_generic(const u8 *buf, u16 len, alg_param *param);
+static int parse_algoid_params_generic(const u8 *buf, u16 ATTRIBUTE_UNUSED len, alg_param *param);
 static int parse_algoid_params_rsa(const u8 *buf, u16 len, alg_param *param);
 #endif
 
@@ -2118,18 +2118,17 @@ out:
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires (param != \null) ==> \valid_read(param);
-  @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
   @ ensures (param == \null) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
   @ ensures \result == 0 ==> param->unparsed_param == 1;
   @ assigns param->unparsed_param;
   @*/
-static int parse_algoid_params_generic(const u8 *buf, u16 len, alg_param *param)
+static int parse_algoid_params_generic(const u8 *buf, u16 ATTRIBUTE_UNUSED len, alg_param *param)
 {
 	int ret;
 
-	if ((len == 0) || (buf == NULL) || (param == NULL)) {
+	if ((buf == NULL) || (param == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
