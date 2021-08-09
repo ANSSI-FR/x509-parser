@@ -10,6 +10,7 @@
 
 #include "x509-parser.h"
 
+
 /*
  * Some implementation notes:
  *
@@ -1932,6 +1933,13 @@ static int parse_algoid_params_ecPublicKey(const u8 *buf, u16 len, alg_param *pa
 	 * expect to find an OID for a curve we support.
 	 */
 
+	if (buf[0] == 0x30) {
+		/* Sequence means we are dealing with ecParameters */
+		ret = -1;
+		goto out;
+	}
+
+	/* We should be dealing with a named curve (OID) */
 	/* The first thing we should find in the sequence is an OID */
 	ret = parse_OID(buf, len, &oid_len);
 	if (ret) {
