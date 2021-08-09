@@ -1196,6 +1196,7 @@ typedef struct {
 static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten);
 static int parse_algoid_params_ecdsa_with(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_ecPublicKey(const u8 *buf, u16 len, alg_param *param);
+static int parse_algoid_params_sm2(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_ec(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_rsa(const u8 *buf, u16 len, alg_param *param);
 
@@ -1333,6 +1334,24 @@ static const _alg_id _ecpublickey_alg = {
 	.parse_sig = NULL,
 	.parse_subjectpubkey = parse_subjectpubkey_ec,
 	.parse_algoid_params = parse_algoid_params_ecPublicKey,
+};
+
+
+static const u8 _sm2_sm3_name[] = "SM2 w/ SM3";
+static const u8 _sm2_sm3_printable_oid[] = "1.2.156.10197.1.501";
+static const u8 _sm2_sm3_der_oid[] = { 0x06, 0x08, 0x2a, 0x81,
+				     0x1c, 0xcf, 0x55, 0x01,
+				     0x83, 0x75 };
+
+static const _alg_id _sm2_sm3_alg = {
+	.alg_name = _sm2_sm3_name,
+	.alg_printable_oid = _sm2_sm3_printable_oid,
+	.alg_der_oid = _sm2_sm3_der_oid,
+	.alg_der_oid_len = sizeof(_sm2_sm3_der_oid),
+	.alg_type = ALG_SIG,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = NULL,
+	.parse_algoid_params = parse_algoid_params_sm2,
 };
 
 
@@ -1700,6 +1719,7 @@ static const _alg_id *known_algs[] = {
 	&_ecdsa_sha384_alg,
 	&_ecdsa_sha512_alg,
 	&_ecpublickey_alg,
+	&_sm2_sm3_alg,
 #ifdef TEMPORARY_BADALGS
 	&_rsa_md2_alg,
 	&_rsa_md4_alg,
@@ -2162,6 +2182,50 @@ out:
 	return ret;
 }
 
+/*
+ * When parsing SM2 signature algorithm identifier, we may either find no
+ * params or ASN.1 NULL object (SM2 is always used with SM3 hash algorithm).
+ * We support those 2 cases we found in real world certs.
+ */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires (param != \null) ==> \valid_read(param);
+  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (param == \null) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @ assigns *param;
+  @*/
+static int parse_algoid_params_sm2(const u8 *buf, u16 len, alg_param *param)
+{
+	u16 parsed = 0;
+	int ret;
+
+	if ((buf == NULL) || (param == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	switch (len) {
+	case 0:
+		ret = 0;
+		break;
+	case 2:
+		ret = parse_null(buf, len, &parsed);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+		}
+		break;
+	default:
+		ret = -__LINE__;
+		break;
+	}
+
+out:
+	return ret;
+}
+
 #ifdef TEMPORARY_BADALGS
 /*
  * The function below just skips the parameters it should parse.
@@ -2480,8 +2544,8 @@ static int parse_x509_AlgorithmIdentifier(const u8 *buf, u16 len,
 	buf += oid_len;
 	param_len = data_len - oid_len;
 
-	/*@ assert talg->parse_algoid_params \in { parse_algoid_params_generic, parse_algoid_params_ecdsa_with, parse_algoid_params_ecPublicKey, parse_algoid_params_rsa }; @*/
-	/*@ calls parse_algoid_params_generic, parse_algoid_params_ecdsa_with, parse_algoid_params_ecPublicKey, parse_algoid_params_rsa; @*/
+	/*@ assert talg->parse_algoid_params \in { parse_algoid_params_generic, parse_algoid_params_ecdsa_with, parse_algoid_params_ecPublicKey, parse_algoid_params_rsa, parse_algoid_params_sm2 }; @*/
+	/*@ calls parse_algoid_params_generic, parse_algoid_params_ecdsa_with, parse_algoid_params_ecPublicKey, parse_algoid_params_rsa, parse_algoid_params_sm2; @*/
 	ret = talg->parse_algoid_params(buf, param_len, param);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
