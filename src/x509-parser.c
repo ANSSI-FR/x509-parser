@@ -1194,12 +1194,14 @@ typedef struct {
 } alg_param;
 
 static int parse_sig_ed448(const u8 *buf, u16 len, u16 *eaten);
+static int parse_sig_ed25519(const u8 *buf, u16 len, u16 *eaten);
 static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten);
 static int parse_algoid_params_ecdsa_with(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_ecPublicKey(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_sm2(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_eddsa(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_ed448(const u8 *buf, u16 len, alg_param *param);
+static int parse_subjectpubkey_ed25519(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_ec(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_rsa(const u8 *buf, u16 len, alg_param *param);
 
@@ -1337,6 +1339,22 @@ static const _alg_id _ecpublickey_alg = {
 	.parse_sig = NULL,
 	.parse_subjectpubkey = parse_subjectpubkey_ec,
 	.parse_algoid_params = parse_algoid_params_ecPublicKey,
+};
+
+
+static const u8 _ed25519_name[] = "Ed25519";
+static const u8 _ed25519_printable_oid[] = "1.3.101.112";
+static const u8 _ed25519_der_oid[] = { 0x06, 0x03, 0x2b, 0x65, 0x70 };
+
+static const _alg_id _ed25519_alg = {
+	.alg_name = _ed25519_name,
+	.alg_printable_oid = _ed25519_printable_oid,
+	.alg_der_oid = _ed25519_der_oid,
+	.alg_der_oid_len = sizeof(_ed25519_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_ed25519,
+	.parse_subjectpubkey = parse_subjectpubkey_ed25519,
+	.parse_algoid_params = parse_algoid_params_eddsa, /* for SIG and PUB */
 };
 
 
@@ -1738,6 +1756,7 @@ static const _alg_id *known_algs[] = {
 	&_ecdsa_sha384_alg,
 	&_ecdsa_sha512_alg,
 	&_ecpublickey_alg,
+	&_ed25519_alg,
 	&_ed448_alg,
 	&_sm2_sm3_alg,
 #ifdef TEMPORARY_BADALGS
@@ -2078,7 +2097,6 @@ out:
  *
  * OID are 1.3.101.112 for Ed25519 and 1.3.101.113 for Ed448.
  */
-#define ED448_PUB_LEN  57
 /*@
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
@@ -2088,7 +2106,7 @@ out:
   @ ensures (buf == \null) ==> \result < 0;
   @ assigns \nothing;
   @*/
-static int parse_subjectpubkey_ed448(const u8 *buf, u16 len, alg_param ATTRIBUTE_UNUSED *param)
+static int parse_subjectpubkey_eddsa(const u8 *buf, u16 len, u16 exp_pub_len, alg_param ATTRIBUTE_UNUSED *param)
 {
 	u16 remain, hdr_len = 0, data_len = 0;
 	int ret;
@@ -2133,7 +2151,7 @@ static int parse_subjectpubkey_ed448(const u8 *buf, u16 len, alg_param ATTRIBUTE
 	buf += 1;
 	remain = data_len - 1;
 
-	if (remain != ED448_PUB_LEN) {
+	if (remain != exp_pub_len) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -2143,6 +2161,36 @@ static int parse_subjectpubkey_ed448(const u8 *buf, u16 len, alg_param ATTRIBUTE
 
 out:
 	return ret;
+}
+
+#define ED25519_PUB_LEN 32
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \initialized(&param->curve_param);
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_subjectpubkey_ed25519(const u8 *buf, u16 len, alg_param *param)
+{
+	return parse_subjectpubkey_eddsa(buf, len, ED25519_PUB_LEN, param);
+}
+
+#define ED448_PUB_LEN  57
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \initialized(&param->curve_param);
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_subjectpubkey_ed448(const u8 *buf, u16 len, alg_param *param)
+{
+	return parse_subjectpubkey_eddsa(buf, len, ED448_PUB_LEN, param);
 }
 
 /*
@@ -4711,8 +4759,8 @@ static int parse_x509_subjectPublicKeyInfo(const u8 *buf, u16 len, u16 *eaten)
 		goto out;
 	}
 
-	/*@ assert alg->parse_subjectpubkey \in { parse_subjectpubkey_ec, parse_subjectpubkey_rsa, parse_subjectpubkey_ed448 } ; @*/
-	/*@ calls parse_subjectpubkey_ec, parse_subjectpubkey_rsa, parse_subjectpubkey_ed448 ; @*/
+	/*@ assert alg->parse_subjectpubkey \in { parse_subjectpubkey_ec, parse_subjectpubkey_rsa, parse_subjectpubkey_ed448, parse_subjectpubkey_ed25519 } ; @*/
+	/*@ calls parse_subjectpubkey_ec, parse_subjectpubkey_rsa, parse_subjectpubkey_ed448, parse_subjectpubkey_ed25519 ; @*/
 	ret = alg->parse_subjectpubkey(buf, remain, &param);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
@@ -9206,7 +9254,6 @@ out:
  * for public keys.  When used to identify signature algorithms, the
  * parameters MUST be absent.
  */
-#define ED448_SIG_LEN 114
 /*@
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
@@ -9218,7 +9265,7 @@ out:
   @ ensures (buf == \null) ==> \result < 0;
   @ assigns *eaten;
   @*/
-static int parse_sig_ed448(const u8 *buf, u16 len, u16 *eaten)
+static int parse_sig_eddsa(const u8 *buf, u16 len, u16 exp_sig_len, u16 *eaten)
 {
 	u16 remain, hdr_len = 0, data_len = 0;
 	int ret;
@@ -9262,7 +9309,7 @@ static int parse_sig_ed448(const u8 *buf, u16 len, u16 *eaten)
 	buf += 1;
 	remain = data_len - 1;
 
-	if (remain != ED448_SIG_LEN) {
+	if (remain != exp_sig_len) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -9276,6 +9323,39 @@ out:
 	return ret;
 }
 
+#define ED448_SIG_LEN 114
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, buf+(..));
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns *eaten;
+  @*/
+static int parse_sig_ed448(const u8 *buf, u16 len, u16 *eaten)
+{
+	return parse_sig_eddsa(buf, len, ED448_SIG_LEN, eaten);
+}
+
+#define ED25519_SIG_LEN 64
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, buf+(..));
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns *eaten;
+  @*/
+static int parse_sig_ed25519(const u8 *buf, u16 len, u16 *eaten)
+{
+	return parse_sig_eddsa(buf, len, ED25519_SIG_LEN, eaten);
+}
 
 /*@
   @ requires len >= 0;
@@ -9444,8 +9524,8 @@ static int parse_x509_signatureValue(const u8 *buf, u16 len,
 		goto out;
 	}
 
-	/*@ assert sig_alg->parse_sig \in { parse_sig_ecdsa, parse_sig_generic, parse_sig_ed448 }; @*/
-	/*@ calls parse_sig_ecdsa, parse_sig_generic, parse_sig_ed448; @*/
+	/*@ assert sig_alg->parse_sig \in { parse_sig_ecdsa, parse_sig_generic, parse_sig_ed448, parse_sig_ed25519 }; @*/
+	/*@ calls parse_sig_ecdsa, parse_sig_generic, parse_sig_ed448, parse_sig_ed25519; @*/
 	ret = sig_alg->parse_sig(buf, len, eaten);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
