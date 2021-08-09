@@ -2830,6 +2830,15 @@ static const u8 _dn_oid_pseudo[] =    { 0x06, 0x03, 0x55, 0x04, 0x41 };
 static const u8 _dn_oid_dc[] =        { 0x06, 0x0a, 0x09, 0x92, 0x26,
 					0x89, 0x93, 0xf2, 0x2c, 0x64,
 					0x01, 0x19 };
+static const u8 _dn_oid_ogrn[] =      { 0x06, 0x05, 0x2a, 0x85, 0x03,
+					0x64, 0x01 };
+static const u8 _dn_oid_snils[] =     { 0x06, 0x05, 0x2a, 0x85, 0x03,
+					0x64, 0x03 };
+static const u8 _dn_oid_ogrnip[] =    { 0x06, 0x05, 0x2a, 0x85, 0x03,
+					0x64, 0x05 };
+static const u8 _dn_oid_inn[] =       { 0x06, 0x08, 0x2a, 0x85, 0x03,
+					0x03, 0x81, 0x03, 0x01, 0x01 };
+static const u8 _dn_oid_street_address[] = { 0x06, 0x03, 0x55, 0x04, 0x09 };
 
 /*
  * This function verify given buffer contains a valid UTF-8 string
@@ -3065,6 +3074,51 @@ out:
 }
 
 /*
+ * Verify given buffer contains only numeric characters. -1 is
+ * returned on error, 0 on success.
+ */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int check_numeric_string(const u8 *buf, u16 len)
+{
+	int ret;
+	u16 rbytes;
+	u8 c;
+
+	if ((buf == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@
+	  @ loop invariant 0 <= rbytes <= len;
+	  @ loop assigns rbytes, c, ret;
+	  @ loop variant (len - rbytes);
+	  @ */
+	for (rbytes = 0; rbytes < len; rbytes++) {
+		c = buf[rbytes];
+
+		if ((c < '0' && c > '9')) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+	}
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*
  * VisibleString == ISO646String == ASCII
  */
 /*@
@@ -3259,6 +3313,7 @@ out:
  * upper bounds for the effective string.
  */
 #define STR_TYPE_UTF8_STRING      12
+#define STR_TYPE_NUMERIC_STRING   18
 #define STR_TYPE_PRINTABLE_STRING 19
 #define STR_TYPE_TELETEX_STRING   20
 #define STR_TYPE_IA5_STRING       22
@@ -3350,6 +3405,12 @@ static int parse_directory_string(const u8 *buf, u16 len, u16 lb, u16 ub)
 			ERROR_TRACE_APPEND(__LINE__);
 		}
 		break;
+	case STR_TYPE_NUMERIC_STRING:
+		ret = check_numeric_string(buf, len);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+		}
+		break;
 #endif
 	default:
 		ret = -__LINE__;
@@ -3420,6 +3481,69 @@ static int parse_printable_string(const u8 *buf, u16 len, u16 lb, u16 ub)
 	}
 
 	ret = check_printable_string(buf, len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*
+ * Some RDN values are specifically encoded as NumericString. The function
+ * verifies that. It returns -1 on error, 0 on success.
+ */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures \result == 0 ==> ((len >= 2) && (lb <= len - 2 <= ub));
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_numeric_string(const u8 *buf, u16 len, u16 lb, u16 ub)
+{
+	int ret = -__LINE__;
+	u8 str_type;
+
+	if ((buf == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	if (len < 2) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	str_type = buf[0];
+	if (str_type != STR_TYPE_NUMERIC_STRING) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	len -= 2;
+	if (buf[1] != len) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	buf += 2;
+
+	if ((len < lb) || (len > ub)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = check_numeric_string(buf, len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -3783,6 +3907,87 @@ static int parse_rdn_val_pseudo(const u8 *buf, u16 len)
 	return parse_directory_string(buf, len, 1, UB_PSEUDONYM);
 }
 
+
+/* From section 5.1 of draft-deremin-rfc4491-bis-01 */
+
+/* OGRN is the main state registration number of juridical entities */
+#define UB_OGRN 13
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_rdn_val_ogrn(const u8 *buf, u16 len)
+{
+	return parse_numeric_string(buf, len, 1, UB_OGRN);
+}
+
+/* SNILS is the individual insurance account number */
+#define UB_SNILS 11
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_rdn_val_snils(const u8 *buf, u16 len)
+{
+	return parse_numeric_string(buf, len, 1, UB_SNILS);
+}
+
+/*
+ * OGRNIP is the main state registration number of individual
+ * enterpreneurs
+ */
+#define UB_OGRNIP 15
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_rdn_val_ogrnip(const u8 *buf, u16 len)
+{
+	return parse_numeric_string(buf, len, 1, UB_OGRNIP);
+}
+
+/* INN is the individual taxpayer number (ITN). */
+#define UB_INN 12
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_rdn_val_inn(const u8 *buf, u16 len)
+{
+	return parse_numeric_string(buf, len, 1, UB_INN);
+}
+
+/* street address. */
+#define UB_STREET_ADDRESS 64 /* XXX FIXME Don't know what the limit is */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_rdn_val_street_address(const u8 *buf, u16 len)
+{
+	return parse_directory_string(buf, len, 1, UB_STREET_ADDRESS);
+}
+
 typedef struct {
 	const u8 *oid;
 	u8 oid_len;
@@ -3853,6 +4058,26 @@ static const _name_oid known_dn_oids[] = {
 	{ .oid = _dn_oid_dc,
 	  .oid_len = sizeof(_dn_oid_dc),
 	  .parse_rdn_val = parse_rdn_val_dc
+	},
+	{ .oid = _dn_oid_ogrn,
+	  .oid_len = sizeof(_dn_oid_ogrn),
+	  .parse_rdn_val = parse_rdn_val_ogrn
+	},
+	{ .oid = _dn_oid_snils,
+	  .oid_len = sizeof(_dn_oid_snils),
+	  .parse_rdn_val = parse_rdn_val_snils
+	},
+	{ .oid = _dn_oid_ogrnip,
+	  .oid_len = sizeof(_dn_oid_ogrnip),
+	  .parse_rdn_val = parse_rdn_val_ogrnip
+	},
+	{ .oid = _dn_oid_inn,
+	  .oid_len = sizeof(_dn_oid_inn),
+	  .parse_rdn_val = parse_rdn_val_inn
+	},
+	{ .oid = _dn_oid_street_address,
+	  .oid_len = sizeof(_dn_oid_street_address),
+	  .parse_rdn_val = parse_rdn_val_street_address
 	},
 };
 
@@ -3974,13 +4199,25 @@ static int parse_AttributeTypeAndValue(const u8 *buf, u16 len, u16 *eaten)
 	 * Let's now check the value associated w/ and
 	 * following the OID has a valid format.
 	 */
-	/*@ assert cur->parse_rdn_val \in { parse_rdn_val_cn, parse_rdn_val_org, parse_rdn_val_org_unit, parse_rdn_val_title, parse_rdn_val_dn_qual, parse_rdn_val_pseudo, parse_rdn_val_dc, parse_rdn_val_x520name, parse_rdn_val_serial, parse_rdn_val_country, parse_rdn_val_locality, parse_rdn_val_state }; @*/
+	/*@ assert cur->parse_rdn_val \in {
+		  parse_rdn_val_cn, parse_rdn_val_org,
+		  parse_rdn_val_org_unit, parse_rdn_val_title,
+		  parse_rdn_val_dn_qual, parse_rdn_val_pseudo,
+		  parse_rdn_val_dc, parse_rdn_val_x520name,
+		  parse_rdn_val_serial, parse_rdn_val_country,
+		  parse_rdn_val_locality, parse_rdn_val_state,
+		  parse_rdn_val_ogrn, parse_rdn_val_snils,
+		  parse_rdn_val_ogrnip, parse_rdn_val_inn,
+		  parse_rdn_val_street_address }; @*/
 	/*@ calls parse_rdn_val_cn, parse_rdn_val_x520name,
 		  parse_rdn_val_serial, parse_rdn_val_country,
 		  parse_rdn_val_locality, parse_rdn_val_state,
 		  parse_rdn_val_org, parse_rdn_val_org_unit,
 		  parse_rdn_val_title, parse_rdn_val_dn_qual,
-		  parse_rdn_val_pseudo, parse_rdn_val_dc;
+		  parse_rdn_val_pseudo, parse_rdn_val_dc,
+		  parse_rdn_val_ogrn, parse_rdn_val_snils,
+		  parse_rdn_val_ogrnip, parse_rdn_val_inn,
+		  parse_rdn_val_street_address;
 	  @*/
 	ret = cur->parse_rdn_val(buf, data_len);
 	if (ret) {
