@@ -6181,7 +6181,7 @@ typedef struct {
 	int has_crldp;
 	int one_crldp_has_all_reasons;
 	int aki_has_keyIdentifier;
-	int self_signed;
+	int subject_issuer_identical;
 } cert_parsing_ctx;
 
 /*
@@ -9793,7 +9793,7 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	ctx.has_crldp = 0;
 	ctx.one_crldp_has_all_reasons = 0;
 	ctx.aki_has_keyIdentifier = 0;
-	ctx.self_signed = 0;
+	ctx.subject_issuer_identical = 0;
 
 	/*
 	 * Let's first check we are dealing with a valid sequence containing
@@ -9899,13 +9899,12 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	buf += parsed;
 	remain -= parsed;
 
-	/*
-	 * We can now check if certificate is self-signed, i.e. if subject and
-	 * issuer fields are identical
-	 */
-	ctx.self_signed = 0;
+	/* We can now check if subject and issuer fields are identical */
+	ctx.subject_issuer_identical = 0;
 	if (subject_len == issuer_len) {
-		ctx.self_signed = !bufs_differ(subject_ptr, issuer_ptr, issuer_len);
+		ctx.subject_issuer_identical = !bufs_differ(subject_ptr,
+							    issuer_ptr,
+							    issuer_len);
 	}
 
 	/* subjectPublicKeyInfo */
@@ -10054,8 +10053,15 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	 * path construction.  There is one exception; where a CA distributes
 	 * its public key in the form of a "self-signed" certificate, the
 	 * authority key identifier MAY be omitted.
+	 * XXX In theory, the only valid definition for a self-signed
+	 * certificate is one for which the embedded key is the public
+	 * part of the private key that signed the certificate
+	 * (the tbsCertificate). Here, as we cannot verify the signature,
+	 * we base our check on the fact that *in most cases* subject should
+	 * match issuer in a self-signed certificate. This should be
+	 * investigated in a more thorough fashion.
 	 */
-	if (!ctx.self_signed && !ctx.aki_has_keyIdentifier) {
+	if (!ctx.subject_issuer_identical && !ctx.aki_has_keyIdentifier) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
