@@ -1196,17 +1196,25 @@ typedef struct {
 static int parse_sig_ed448(const u8 *buf, u16 len, u16 *eaten);
 static int parse_sig_ed25519(const u8 *buf, u16 len, u16 *eaten);
 static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten);
+static int parse_sig_gost94(const u8 *buf, u16 len, u16 *eaten);
+static int parse_sig_gost2001(const u8 *buf, u16 len, u16 *eaten);
+static int parse_sig_gost2012(const u8 *buf, u16 len, u16 *eaten);
 static int parse_algoid_params_ecdsa_with(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_ecPublicKey(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_sm2(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_eddsa(const u8 *buf, u16 len, alg_param *param);
+static int parse_algoid_params_pub_gost_r3410_2001(const u8 *buf, u16 len, alg_param *param);
+static int parse_algoid_params_pub_gost_r3410_2012_256(const u8 *buf, u16 len, alg_param *param);
+static int parse_algoid_params_pub_gost_r3410_2012_512(const u8 *buf, u16 len, alg_param *param);
+static int parse_algoid_params_sig_gost_none(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_ed448(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_x448(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_ed25519(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_x25519(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_ec(const u8 *buf, u16 len, alg_param *param);
+static int parse_subjectpubkey_gost256(const u8 *buf, u16 len, alg_param *param);
+static int parse_subjectpubkey_gost512(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_rsa(const u8 *buf, u16 len, alg_param *param);
-
 #ifdef TEMPORARY_BADALGS
 static int parse_sig_generic(const u8 *buf, u16 len, u16 *eaten);
 static int parse_algoid_params_generic(const u8 *buf, u16 ATTRIBUTE_UNUSED len, alg_param *param);
@@ -1691,7 +1699,7 @@ static const _alg_id _gost1_alg = {
 	.alg_der_oid = _gost1_der_oid,
 	.alg_der_oid_len = sizeof(_gost1_der_oid),
 	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
+	.parse_sig = parse_sig_gost2001,
 	.parse_subjectpubkey = NULL,
 	.parse_algoid_params = parse_algoid_params_generic,
 };
@@ -1707,9 +1715,97 @@ static const _alg_id _gost2_alg = {
 	.alg_der_oid = _gost2_der_oid,
 	.alg_der_oid_len = sizeof(_gost2_der_oid),
 	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
+	.parse_sig = parse_sig_gost94,
 	.parse_subjectpubkey = NULL,
 	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+/* XXX Unsure what to do with that one. Check what we have in certs */
+static const u8 _gost3_name[] = "gostR3410-2001";
+static const u8 _gost3_printable_oid[] = "1.2.643.2.2.19";
+static const u8 _gost3_der_oid[] = { 0x06, 0x06, 0x2a, 0x85,
+				     0x03, 0x02, 0x02, 0x13 };
+
+static const _alg_id _gost3_alg = {
+	.alg_name = _gost3_name,
+	.alg_printable_oid = _gost3_printable_oid,
+	.alg_der_oid = _gost3_der_oid,
+	.alg_der_oid_len = sizeof(_gost3_der_oid),
+	.alg_type = ALG_PUBKEY,
+	.parse_sig = NULL,
+	.parse_subjectpubkey = parse_subjectpubkey_gost256,
+	.parse_algoid_params = parse_algoid_params_pub_gost_r3410_2001,
+};
+
+
+static const u8 _gost4_name[] = "sig_gost3410-2012-256";
+static const u8 _gost4_printable_oid[] = "1.2.643.7.1.1.3.2";
+static const u8 _gost4_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
+				     0x03, 0x07, 0x01, 0x01,
+				     0x03, 0x02 };
+
+static const _alg_id _gost4_alg = {
+	.alg_name = _gost4_name,
+	.alg_printable_oid = _gost4_printable_oid,
+	.alg_der_oid = _gost4_der_oid,
+	.alg_der_oid_len = sizeof(_gost4_der_oid),
+	.alg_type = ALG_SIG,
+	.parse_sig = parse_sig_gost2012,
+	.parse_subjectpubkey = NULL,
+	.parse_algoid_params = parse_algoid_params_sig_gost_none,
+};
+
+
+static const u8 _gost5_name[] = "sig_gost3410-2012-512";
+static const u8 _gost5_printable_oid[] = "1.2.643.7.1.1.3.3";
+static const u8 _gost5_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
+				     0x03, 0x07, 0x01, 0x01,
+				     0x03, 0x03 };
+
+static const _alg_id _gost5_alg = {
+	.alg_name = _gost5_name,
+	.alg_printable_oid = _gost5_printable_oid,
+	.alg_der_oid = _gost5_der_oid,
+	.alg_der_oid_len = sizeof(_gost5_der_oid),
+	.alg_type = ALG_SIG,
+	.parse_sig = parse_sig_gost2012,
+	.parse_subjectpubkey = NULL,
+	.parse_algoid_params = parse_algoid_params_sig_gost_none,
+};
+
+static const u8 _gost6_name[] = "pub_gost3410-2012-256";
+static const u8 _gost6_printable_oid[] = "1.2.643.7.1.1.1.1";
+static const u8 _gost6_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
+				     0x03, 0x07, 0x01, 0x01,
+				     0x01, 0x01 };
+
+static const _alg_id _gost6_alg = {
+	.alg_name = _gost6_name,
+	.alg_printable_oid = _gost6_printable_oid,
+	.alg_der_oid = _gost6_der_oid,
+	.alg_der_oid_len = sizeof(_gost6_der_oid),
+	.alg_type = ALG_PUBKEY,
+	.parse_sig = NULL,
+	.parse_subjectpubkey = parse_subjectpubkey_gost256,
+	.parse_algoid_params = parse_algoid_params_pub_gost_r3410_2012_256,
+};
+
+
+static const u8 _gost7_name[] = "pub_gost3410-2012-512";
+static const u8 _gost7_printable_oid[] = "1.2.643.7.1.1.1.2";
+static const u8 _gost7_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
+				     0x03, 0x07, 0x01, 0x01,
+				     0x01, 0x02 };
+
+static const _alg_id _gost7_alg = {
+	.alg_name = _gost7_name,
+	.alg_printable_oid = _gost7_printable_oid,
+	.alg_der_oid = _gost7_der_oid,
+	.alg_der_oid_len = sizeof(_gost7_der_oid),
+	.alg_type = ALG_PUBKEY,
+	.parse_sig = NULL,
+	.parse_subjectpubkey = parse_subjectpubkey_gost512,
+	.parse_algoid_params = parse_algoid_params_pub_gost_r3410_2012_512,
 };
 
 
@@ -1811,6 +1907,11 @@ static const _alg_id *known_algs[] = {
 	&_odd4_alg,
 	&_gost1_alg,
 	&_gost2_alg,
+	&_gost3_alg,
+	&_gost4_alg,
+	&_gost5_alg,
+	&_gost6_alg,
+	&_gost7_alg,
 	&_rsa_ripemd160_alg,
 	&_weird1_alg,
 	&_weird2_alg,
@@ -2404,6 +2505,144 @@ out:
 }
 
 /*
+ * draft-deremin-rfc4491-bis-06 has the following on GOST public keys:
+ *
+ * The GOST R 34.10-2012 public key MUST be ASN.1 DER encoded as an
+ * OCTET STRING.  This encoding SHALL be used as the content (i.e., the
+ * value) of the subjectPublicKey field (a BIT STRING) of
+ * SubjectPublicKeyInfo structure.
+ *
+ * GostR3410-2012-256-PublicKey ::= OCTET STRING (64),
+ * GostR3410-2012-512-PublicKey ::= OCTET STRING (128).
+ *
+ * "GostR3410-2012-256-PublicKey" MUST contain 64 octets, where the
+ * first 32 octets contain the little-endian representation of "x" and
+ * the second 32 octets contains the little-endian representation of "y"
+ * coordinates of the public key.
+ *
+ * "GostR3410-2012-512-PublicKey" MUST contain 128 octets, where the
+ * first 64 octets contain the little-endian representation of "x" and
+ * the second 64 octets contains the little-endian representation of "y"
+ * coordinates of the public key.
+ */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \initialized(&param->curve_param);
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_subjectpubkey_gost(const u8 *buf, u16 len, u16 exp_pub_len,
+				    alg_param ATTRIBUTE_UNUSED *param)
+{
+	u16 remain;
+	u16 hdr_len = 0;
+	u16 data_len = 0;
+	int ret;
+
+	if ((buf == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * We expect the bitstring data to contain at least the initial
+	 * octet encoding the number of unused bits in the final
+	 * subsequent octet of the bistring.
+	 * */
+	if (data_len == 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+
+	/*
+	 * We expect the initial octet to encode a value of 0
+	 * indicating that there are no unused bits in the final
+	 * subsequent octet of the bitstring.
+	 */
+	if (buf[0] != 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	buf += 1;
+	remain = data_len - 1;
+
+	/*
+	 * We can now consider the content of the bitstring as an ASN.1 octet
+	 * string.
+	 */
+	ret = parse_id_len(buf, remain, CLASS_UNIVERSAL, ASN1_TYPE_OCTET_STRING,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	if (data_len != exp_pub_len) {
+		ret = -1;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+
+	}
+
+	buf += hdr_len;
+	remain -= hdr_len;
+
+	if (remain != data_len) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \initialized(&param->curve_param);
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_subjectpubkey_gost256(const u8 *buf, u16 len, alg_param *param)
+{
+	return parse_subjectpubkey_gost(buf, len, 64, param);
+}
+
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \initialized(&param->curve_param);
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_subjectpubkey_gost512(const u8 *buf, u16 len, alg_param *param)
+{
+	return parse_subjectpubkey_gost(buf, len, 128, param);
+}
+
+/*
  * When parsing SM2 signature algorithm identifier, we may either find no
  * params or ASN.1 NULL object (SM2 is always used with SM3 hash algorithm).
  * We support those 2 cases we found in real world certs.
@@ -2476,6 +2715,360 @@ static int parse_algoid_params_eddsa(const u8 *buf, u16 len, alg_param *param)
 out:
 	return ret;
 }
+
+/*
+ * From RFC 5280:
+ *
+ * subject public key encoding:
+ *
+ * SubjectPublicKeyInfo  ::=  SEQUENCE  {
+ *      algorithm         AlgorithmIdentifier,
+ *      subjectPublicKey  BIT STRING
+ * }
+ *
+ *    AlgorithmIdentifier  ::=  SEQUENCE  {
+ *       algorithm               OBJECT IDENTIFIER,
+ *       parameters              ANY DEFINED BY algorithm OPTIONAL  }
+ *
+ * From draft-deremin-rfc4491-bis-06:
+ *
+ * GOST R 34.10-2012 public keys with 256 bits private key length are
+ * identified by the following OID: 1.2.643.7.1.1.1.1
+ * GOST R 34.10-2012 public keys with 512 bits private key length are
+ * identified by the following OID: 1.2.643.7.1.1.1.2
+ *
+ * When either of these identifiers appears as algorithm field in
+ * SubjectPublicKeyInfo.algorithm.algorithm field, parameters field MUST
+ * have the following structure:
+ *
+ * GostR3410-2012-PublicKeyParameters ::= SEQUENCE {
+ *       publicKeyParamSet OBJECT IDENTIFIER,
+ *       digestParamSet OBJECT IDENTIFIER OPTIONAL
+ * }
+ *
+ * The function below parses the GostR3410-2012-PublicKeyParameters sequence.
+ */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_algoid_params_gost2012PublicKey(const u8 *buf, u16 len,
+					     alg_param ATTRIBUTE_UNUSED *param)
+{
+	u16 remain, hdr_len = 0, data_len = 0;
+	u16 oid_len = 0;
+	int ret;
+
+	if ((buf == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/* Check we are dealing with a valid sequence */
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * draft-deremin-rfc4491-bis-06 expects the OID to be in a limited set
+	 * defined as:
+	 * "public key parameters identifier for GOST R 34.10-2012 (see Sections
+	 * 5.1 and 5.2 of [RFC7836] or Appendix B) or GOST R 34.10-2001 (see
+	 * Section 8.4 of [RFC4357]) parameters.
+	 *
+	 * XXX verify that later. At the moment, we accept any valid OID
+	 */
+
+	buf += hdr_len;
+	remain = data_len;
+
+	/*
+	 * The first thing we should find in the sequence is an OID for
+	 * publicKeyParamSet
+	 */
+	ret = parse_OID(buf, remain, &oid_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += oid_len;
+	remain -= oid_len;
+
+	/*
+	 * draft-deremin-rfc4491-bis-06 has:
+	 *
+	 * The field digestParamSet:
+	 *
+	 * o  SHOULD be omitted if GOST R 34.10-2012 signature algorithm is used
+	 *    with 512-bit key length;
+	 *
+	 * o  MUST be present and must be equal to "id-tc26-digest-
+	 *    gost3411-12-256" if one of the following values is used as
+	 *    "publicKeyParamSet":
+	 *
+	 *  "id-GostR3410-2001-CryptoPro-A-ParamSet",
+	 *  "id-GostR3410-2001-CryptoPro-B-ParamSet",
+	 *  "id-GostR3410-2001-CryptoPro-C-ParamSet",
+	 *  "id-GostR3410-2001-CryptoPro-XchA-ParamSet",
+	 *  "id-GostR3410-2001-CryptoPro-XchB-ParamSet";
+	 *
+	 * o  SHOULD be omitted if publicKeyParamSet is equal to:
+	 *
+	 *  "id-tc26-gost-3410-2012-256-paramSetA";
+	 *
+	 * o  MUST be omitted if one of the following values is used as
+	 *    publicKeyParamSet:
+	 *
+	 *  "id-tc26-gost-3410-2012-256-paramSetB",
+	 *  "id-tc26-gost-3410-2012-256-paramSetC",
+	 *  "id-tc26-gost-3410-2012-256-paramSetD".
+	 *
+	 * XXX At the moment, we just verify we either have nothing following
+	 * or a valid OID.
+	 */
+	if (remain == 0)  {
+		ret = 0;
+		goto out;
+	}
+
+	/* If something follows, it must be and OID defining digestParamSet. */
+	ret = parse_OID(buf, remain, &oid_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += oid_len;
+	remain -= oid_len;
+
+	if (remain) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * XXX At that point, we should probably have verified the association of
+	 * OID, curves is valid for GOST. This is not done yet
+	 */
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*
+ * Used for parsing AlgorithmIdentifiter parameters for GOST R3410-2001 public
+ * key. As described in RFC 4491:
+ *
+ *  When the id-GostR3410-2001 algorithm identifier appears as the algorithm
+ *  field in an AlgorithmIdentifier, the encoding MAY omit the parameters field
+ *  or set it to NULL.  Otherwise, this field MUST have the following structure:
+ *
+ *     GostR3410-2001-PublicKeyParameters ::=
+ *         SEQUENCE {
+ *             publicKeyParamSet
+ *                 OBJECT IDENTIFIER,
+ *             digestParamSet
+ *                 OBJECT IDENTIFIER,
+ *             encryptionParamSet
+ *                 OBJECT IDENTIFIER DEFAULT
+ *                     id-Gost28147-89-CryptoPro-A-ParamSet
+ *         }
+ */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_algoid_params_pub_gost_r3410_2001(const u8 *buf, u16 len, alg_param ATTRIBUTE_UNUSED *param)
+{
+	u16 remain, hdr_len = 0, data_len = 0;
+	u16 parsed = 0;
+	u16 oid_len = 0;
+	int ret;
+
+	if ((buf == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	if (len == 0) { /* the encoding MAY omit the parameters field ... */
+		ret = 0;
+		goto out;
+	}
+
+	if (len == 2 && !parse_null(buf, len, &parsed)) { /* or set it to NULL */
+		ret = 0;
+		goto out;
+	}
+
+	/*
+	 * From now on, we expect a ostR3410-2001-PublicKeyParameters as
+	 * defined above. It must start with a valid sequence.
+	 */
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+	remain = data_len;
+
+	/*
+	 * The first thing we should find in the sequence is an OID for
+	 * publicKeyParamSet
+	 */
+	ret = parse_OID(buf, remain, &oid_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += oid_len;
+	remain -= oid_len;
+
+	/* Then, we may  find an OID for digestParamSet. It is not optional */
+	/* If something follows, it must be and OID defining digestParamSet. */
+	ret = parse_OID(buf, remain, &oid_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += oid_len;
+	remain -= oid_len;
+
+	if (remain == 0)  {
+		ret = 0;
+		goto out;
+	}
+
+	/* Something follows. This must be the OID for encryptionParamSet. */
+	ret = parse_OID(buf, remain, &oid_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += oid_len;
+	remain -= oid_len;
+
+	/* Nothings should remain behind */
+	if (remain) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*
+ * Used for parsing AlgorithmIdentifiter parameters for GOST R3410-2001 with 256
+ * bits public key
+ */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_algoid_params_pub_gost_r3410_2012_256(const u8 *buf, u16 len, alg_param *param)
+{
+	return parse_algoid_params_gost2012PublicKey(buf, len, param);
+}
+
+/*
+ * Used for parsing AlgorithmIdentifiter parameters for GOST R3410-2012 with 512
+ * bit public key.
+ */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_algoid_params_pub_gost_r3410_2012_512(const u8 *buf, u16 len, alg_param *param)
+{
+	return parse_algoid_params_gost2012PublicKey(buf, len, param);
+}
+
+/*
+ * As specified in draft-deremin-rfc4491-bis-06:
+ *
+ * "When either of these OID [NDLR: 1.2.643.7.1.1.3.2, 1.2.643.7.1.1.3.3] is
+ *  used as the algorithm field in an AlgorithmIdentifier structure, the
+ *  encoding MUST omit the parameters field."
+ *
+ * This function is used as a parser for GOST signature algorithms for
+ * which the parameter field must be omitted.
+ *
+ * For some people omit was understood as: add a NULL ASN.1 object. We support
+ * that case too.
+ */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires (param != \null) ==> \valid_read(param);
+  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (param == \null) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @ assigns \nothing;
+  @*/
+static int parse_algoid_params_sig_gost_none(const u8 *buf, u16 len,
+					     alg_param *param)
+{
+	u16 parsed = 0;
+	int ret;
+
+	if ((buf == NULL) || (param == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	switch (len) {
+	case 0: /* Nice ! */
+		ret = 0;
+		break;
+	case 2: /* Null ? */
+		ret = parse_null(buf, len, &parsed);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+		}
+		break;
+	default: /* Crap ! */
+		ret = -1;
+		ERROR_TRACE_APPEND(__LINE__);
+		break;
+	}
+
+out:
+	return ret;
+}
+
 
 #ifdef TEMPORARY_BADALGS
 /*
@@ -2795,8 +3388,21 @@ static int parse_x509_AlgorithmIdentifier(const u8 *buf, u16 len,
 	buf += oid_len;
 	param_len = data_len - oid_len;
 
-	/*@ assert talg->parse_algoid_params \in { parse_algoid_params_generic, parse_algoid_params_ecdsa_with, parse_algoid_params_ecPublicKey, parse_algoid_params_rsa, parse_algoid_params_sm2, parse_algoid_params_eddsa }; @*/
-	/*@ calls parse_algoid_params_generic, parse_algoid_params_ecdsa_with, parse_algoid_params_ecPublicKey, parse_algoid_params_rsa, parse_algoid_params_sm2, parse_algoid_params_eddsa; @*/
+	/*@ assert talg->parse_algoid_params \in {
+		  parse_algoid_params_generic, parse_algoid_params_ecdsa_with,
+		  parse_algoid_params_ecPublicKey, parse_algoid_params_rsa,
+		  parse_algoid_params_sm2, parse_algoid_params_eddsa,
+		  parse_algoid_params_pub_gost_r3410_2001,
+		  parse_algoid_params_pub_gost_r3410_2012_256,
+		  parse_algoid_params_pub_gost_r3410_2012_512,
+		  parse_algoid_params_sig_gost_none }; @*/
+	/*@ calls parse_algoid_params_generic, parse_algoid_params_ecdsa_with,
+		  parse_algoid_params_ecPublicKey, parse_algoid_params_rsa,
+		  parse_algoid_params_sm2, parse_algoid_params_eddsa,
+		  parse_algoid_params_pub_gost_r3410_2001,
+		  parse_algoid_params_pub_gost_r3410_2012_256,
+		  parse_algoid_params_pub_gost_r3410_2012_512,
+		  parse_algoid_params_sig_gost_none; @*/
 	ret = talg->parse_algoid_params(buf, param_len, param);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
@@ -4200,15 +4806,16 @@ static int parse_AttributeTypeAndValue(const u8 *buf, u16 len, u16 *eaten)
 	 * following the OID has a valid format.
 	 */
 	/*@ assert cur->parse_rdn_val \in {
-		  parse_rdn_val_cn, parse_rdn_val_org,
-		  parse_rdn_val_org_unit, parse_rdn_val_title,
-		  parse_rdn_val_dn_qual, parse_rdn_val_pseudo,
-		  parse_rdn_val_dc, parse_rdn_val_x520name,
+		  parse_rdn_val_cn, parse_rdn_val_x520name,
 		  parse_rdn_val_serial, parse_rdn_val_country,
 		  parse_rdn_val_locality, parse_rdn_val_state,
+		  parse_rdn_val_org, parse_rdn_val_org_unit,
+		  parse_rdn_val_title,  parse_rdn_val_dn_qual,
+		  parse_rdn_val_pseudo, parse_rdn_val_dc,
 		  parse_rdn_val_ogrn, parse_rdn_val_snils,
 		  parse_rdn_val_ogrnip, parse_rdn_val_inn,
-		  parse_rdn_val_street_address }; @*/
+		  parse_rdn_val_street_address };
+	  @*/
 	/*@ calls parse_rdn_val_cn, parse_rdn_val_x520name,
 		  parse_rdn_val_serial, parse_rdn_val_country,
 		  parse_rdn_val_locality, parse_rdn_val_state,
@@ -5060,8 +5667,15 @@ static int parse_x509_subjectPublicKeyInfo(const u8 *buf, u16 len, u16 *eaten)
 		goto out;
 	}
 
-	/*@ assert alg->parse_subjectpubkey \in { parse_subjectpubkey_ec, parse_subjectpubkey_rsa, parse_subjectpubkey_ed448, parse_subjectpubkey_ed25519, parse_subjectpubkey_x448, parse_subjectpubkey_x25519 } ; @*/
-	/*@ calls parse_subjectpubkey_ec, parse_subjectpubkey_rsa, parse_subjectpubkey_ed448, parse_subjectpubkey_ed25519, parse_subjectpubkey_x448, parse_subjectpubkey_x25519 ; @*/
+	/*@ assert alg->parse_subjectpubkey \in {
+		  parse_subjectpubkey_ec, parse_subjectpubkey_rsa,
+		  parse_subjectpubkey_ed448, parse_subjectpubkey_ed25519,
+		  parse_subjectpubkey_x448, parse_subjectpubkey_x25519,
+		  parse_subjectpubkey_gost256, parse_subjectpubkey_gost512 } ; @*/
+	/*@ calls parse_subjectpubkey_ec, parse_subjectpubkey_rsa,
+		  parse_subjectpubkey_ed448, parse_subjectpubkey_ed25519,
+		  parse_subjectpubkey_x448, parse_subjectpubkey_x25519,
+		  parse_subjectpubkey_gost256, parse_subjectpubkey_gost512 ; @*/
 	ret = alg->parse_subjectpubkey(buf, remain, &param);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
@@ -8944,8 +9558,23 @@ static int parse_x509_Extension(const u8 *buf, u16 len,
 	}
 
 	/* Parse the parameters for that extension */
-	/*@ assert ext->parse_ext_params \in { parse_ext_AIA, parse_ext_AKI, parse_ext_SKI, parse_ext_keyUsage, parse_ext_certPolicies, parse_ext_policyMapping, parse_ext_SAN, parse_ext_IAN, parse_ext_subjectDirAttr, parse_ext_basicConstraints, parse_ext_nameConstraints, parse_ext_policyConstraints, parse_ext_EKU, parse_ext_CRLDP, parse_ext_inhibitAnyPolicy, parse_ext_bad_oid }; @*/
-	/*@ calls parse_ext_AIA, parse_ext_AKI, parse_ext_SKI, parse_ext_keyUsage, parse_ext_certPolicies, parse_ext_policyMapping, parse_ext_SAN, parse_ext_IAN, parse_ext_subjectDirAttr, parse_ext_basicConstraints, parse_ext_nameConstraints, parse_ext_policyConstraints, parse_ext_EKU, parse_ext_CRLDP, parse_ext_inhibitAnyPolicy, parse_ext_bad_oid ; @*/
+	/*@ assert ext->parse_ext_params \in {
+		  parse_ext_AIA, parse_ext_AKI,
+		  parse_ext_SKI, parse_ext_keyUsage,
+		  parse_ext_certPolicies, parse_ext_policyMapping,
+		  parse_ext_SAN, parse_ext_IAN, parse_ext_subjectDirAttr,
+		  parse_ext_basicConstraints, parse_ext_nameConstraints,
+		  parse_ext_policyConstraints, parse_ext_EKU,
+		  parse_ext_CRLDP, parse_ext_inhibitAnyPolicy,
+		  parse_ext_bad_oid }; @*/
+	/*@ calls parse_ext_AIA, parse_ext_AKI,
+		  parse_ext_SKI, parse_ext_keyUsage,
+		  parse_ext_certPolicies, parse_ext_policyMapping,
+		  parse_ext_SAN, parse_ext_IAN,
+		  parse_ext_subjectDirAttr, parse_ext_basicConstraints,
+		  parse_ext_nameConstraints, parse_ext_policyConstraints,
+		  parse_ext_EKU, parse_ext_CRLDP,
+		  parse_ext_inhibitAnyPolicy, parse_ext_bad_oid ; @*/
 	ret = ext->parse_ext_params(buf, ext_data_len, critical, ctx);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
@@ -9547,6 +10176,104 @@ out:
 }
 #endif
 
+/*
+ * All version of GOST signature algorithms (GOST R34.10-94, -2001 and -2012)
+ * do encode their signature using a bitstring. This is what this generic
+ * helper implements.
+ */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, buf+(..));
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns *eaten;
+  @*/
+static int parse_sig_gost_generic(const u8 *buf, u16 len, u16 *eaten)
+{
+	u16 bs_hdr_len = 0, bs_data_len = 0;
+	int ret;
+
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
+			   &bs_hdr_len, &bs_data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * We expect the bitstring data to contain at least the initial
+	 * octet encoding the number of unused bits in the final
+	 * subsequent octet of the bistring.
+	 * */
+	if (bs_data_len == 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	*eaten = bs_hdr_len + bs_data_len;
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/* Handle GOST R34.10-94 signature parsing */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, buf+(..));
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns *eaten;
+  @*/
+static int parse_sig_gost94(const u8 *buf, u16 len, u16 *eaten)
+{
+	return parse_sig_gost_generic(buf, len, eaten);
+}
+
+/* Handle GOST R34.10-2001 signature parsing */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, buf+(..));
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns *eaten;
+  @*/
+static int parse_sig_gost2001(const u8 *buf, u16 len, u16 *eaten)
+{
+	return parse_sig_gost_generic(buf, len, eaten);
+}
+
+/* Handle GOST R34.10-2012 signature parsing */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, buf+(..));
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns *eaten;
+  @*/
+static int parse_sig_gost2012(const u8 *buf, u16 len, u16 *eaten)
+{
+	return parse_sig_gost_generic(buf, len, eaten);
+}
+
 
 /*
  * RFC 8410 defines Agorithm Identifiers for Ed25519 and Ed448
@@ -9825,8 +10552,15 @@ static int parse_x509_signatureValue(const u8 *buf, u16 len,
 		goto out;
 	}
 
-	/*@ assert sig_alg->parse_sig \in { parse_sig_ecdsa, parse_sig_generic, parse_sig_ed448, parse_sig_ed25519 }; @*/
-	/*@ calls parse_sig_ecdsa, parse_sig_generic, parse_sig_ed448, parse_sig_ed25519; @*/
+	/*@ assert sig_alg->parse_sig \in {
+		  parse_sig_ecdsa, parse_sig_generic,
+		  parse_sig_ed448, parse_sig_ed25519,
+		  parse_sig_gost94, parse_sig_gost2001,
+		  parse_sig_gost2012 }; @*/
+	/*@ calls parse_sig_ecdsa, parse_sig_generic,
+		  parse_sig_ed448, parse_sig_ed25519,
+		  parse_sig_gost94, parse_sig_gost2001,
+		  parse_sig_gost2012; @*/
 	ret = sig_alg->parse_sig(buf, len, eaten);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
