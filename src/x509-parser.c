@@ -4448,7 +4448,7 @@ static int parse_x509_subjectPublicKeyInfo(const u8 *buf, u16 len, u16 *eaten)
 		goto out;
 	}
 
-	if (alg->alg_type != ALG_PUBKEY) {
+	if (!(alg->alg_type & ALG_PUBKEY)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -8621,7 +8621,7 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
-	if (alg->alg_type != ALG_SIG) {
+	if (!(alg->alg_type & ALG_SIG)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -8881,7 +8881,7 @@ static int parse_x509_signatureAlgorithm(const u8 *buf, u16 len,
 		goto out;
 	}
 
-	if (alg->alg_type != ALG_SIG) {
+	if (!(alg->alg_type & ALG_SIG)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -8953,6 +8953,7 @@ out:
 	return ret;
 }
 #endif
+
 
 /*@
   @ requires len >= 0;
