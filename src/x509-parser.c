@@ -737,6 +737,54 @@ out:
 	return ret;
 }
 
+
+static const u8 null_encoded_val[] = { 0x05, 0x00 };
+
+/*
+ * Implements a function for parsing ASN1. NULL object. On success, the function
+ * returns 0 and set 'parsed' parameters to the amount of bytes parsed (i.e. 2).
+ * -1 is returned on error.
+ */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(parsed);
+  @ requires \separated(parsed, buf+(..));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (\result == 0) ==> *parsed == 2;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns *parsed;
+  @*/
+static int parse_null(const u8 *buf, u16 len, u16 *parsed)
+{
+	int ret;
+
+	if ((len == 0) || (buf == NULL) || (parsed == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	if (len != sizeof(null_encoded_val)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = bufs_differ(buf, null_encoded_val, sizeof(null_encoded_val));
+	if (ret) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = 0;
+	*parsed = sizeof(null_encoded_val);
+
+out:
+	return ret;
+}
+
 /*
  * Implements a function for parsing OID as described in section 8.19
  * of X.690. On success, the function returns 0 and set 'parsed'
@@ -1878,8 +1926,6 @@ out:
 }
 
 
-static const u8 null_encoded_val[] = { 0x05, 0x00 };
-
 /*@
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
@@ -2162,6 +2208,7 @@ out:
   @*/
 static int parse_algoid_params_rsa(const u8 *buf, u16 len, alg_param *param)
 {
+	u16 parsed = 0;
 	int ret;
 
 	if ((len == 0) || (buf == NULL) || (param == NULL)) {
@@ -2178,15 +2225,9 @@ static int parse_algoid_params_rsa(const u8 *buf, u16 len, alg_param *param)
 	 * field MUST be NULL.", i.e. contain { 0x05, 0x00 }
 	 *
 	 */
-	if (len != sizeof(null_encoded_val)) {
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
-
-	ret = bufs_differ(buf, null_encoded_val, sizeof(null_encoded_val));
+	ret = parse_null(buf, len, &parsed);
 	if (ret) {
-		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
