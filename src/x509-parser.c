@@ -1201,7 +1201,9 @@ static int parse_algoid_params_ecPublicKey(const u8 *buf, u16 len, alg_param *pa
 static int parse_algoid_params_sm2(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_eddsa(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_ed448(const u8 *buf, u16 len, alg_param *param);
+static int parse_subjectpubkey_x448(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_ed25519(const u8 *buf, u16 len, alg_param *param);
+static int parse_subjectpubkey_x25519(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_ec(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_rsa(const u8 *buf, u16 len, alg_param *param);
 
@@ -1358,6 +1360,22 @@ static const _alg_id _ed25519_alg = {
 };
 
 
+static const u8 _x25519_name[] = "X25519";
+static const u8 _x25519_printable_oid[] = "1.3.101.110";
+static const u8 _x25519_der_oid[] = { 0x06, 0x03, 0x2b, 0x65, 0x6e };
+
+static const _alg_id _x25519_alg = {
+	.alg_name = _x25519_name,
+	.alg_printable_oid = _x25519_printable_oid,
+	.alg_der_oid = _x25519_der_oid,
+	.alg_der_oid_len = sizeof(_x25519_der_oid),
+	.alg_type = ALG_PUBKEY,
+	.parse_sig = NULL,
+	.parse_subjectpubkey = parse_subjectpubkey_x25519,
+	.parse_algoid_params = parse_algoid_params_eddsa,
+};
+
+
 static const u8 _ed448_name[] = "Ed448";
 static const u8 _ed448_printable_oid[] = "1.3.101.113";
 static const u8 _ed448_der_oid[] = { 0x06, 0x03, 0x2b, 0x65, 0x71 };
@@ -1373,6 +1391,20 @@ static const _alg_id _ed448_alg = {
 	.parse_algoid_params = parse_algoid_params_eddsa, /* for SIG and PUB */
 };
 
+static const u8 _x448_name[] = "X448";
+static const u8 _x448_printable_oid[] = "1.3.101.111";
+static const u8 _x448_der_oid[] = { 0x06, 0x03, 0x2b, 0x65, 0x6f };
+
+static const _alg_id _x448_alg = {
+	.alg_name = _x448_name,
+	.alg_printable_oid = _x448_printable_oid,
+	.alg_der_oid = _x448_der_oid,
+	.alg_der_oid_len = sizeof(_x448_der_oid),
+	.alg_type = ALG_PUBKEY,
+	.parse_sig = NULL,
+	.parse_subjectpubkey = parse_subjectpubkey_x448,
+	.parse_algoid_params = parse_algoid_params_eddsa,
+};
 
 static const u8 _sm2_sm3_name[] = "SM2 w/ SM3";
 static const u8 _sm2_sm3_printable_oid[] = "1.2.156.10197.1.501";
@@ -1757,7 +1789,9 @@ static const _alg_id *known_algs[] = {
 	&_ecdsa_sha512_alg,
 	&_ecpublickey_alg,
 	&_ed25519_alg,
+	&_x25519_alg,
 	&_ed448_alg,
+	&_x448_alg,
 	&_sm2_sm3_alg,
 #ifdef TEMPORARY_BADALGS
 	&_rsa_md2_alg,
@@ -2178,6 +2212,21 @@ static int parse_subjectpubkey_ed25519(const u8 *buf, u16 len, alg_param *param)
 	return parse_subjectpubkey_eddsa(buf, len, ED25519_PUB_LEN, param);
 }
 
+#define X25519_PUB_LEN ED25519_PUB_LEN
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \initialized(&param->curve_param);
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_subjectpubkey_x25519(const u8 *buf, u16 len, alg_param *param)
+{
+	return parse_subjectpubkey_eddsa(buf, len, X25519_PUB_LEN, param);
+}
+
 #define ED448_PUB_LEN  57
 /*@
   @ requires len >= 0;
@@ -2191,6 +2240,21 @@ static int parse_subjectpubkey_ed25519(const u8 *buf, u16 len, alg_param *param)
 static int parse_subjectpubkey_ed448(const u8 *buf, u16 len, alg_param *param)
 {
 	return parse_subjectpubkey_eddsa(buf, len, ED448_PUB_LEN, param);
+}
+
+#define X448_PUB_LEN ED448_PUB_LEN
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \initialized(&param->curve_param);
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_subjectpubkey_x448(const u8 *buf, u16 len, alg_param *param)
+{
+	return parse_subjectpubkey_eddsa(buf, len, X448_PUB_LEN, param);
 }
 
 /*
@@ -4759,8 +4823,8 @@ static int parse_x509_subjectPublicKeyInfo(const u8 *buf, u16 len, u16 *eaten)
 		goto out;
 	}
 
-	/*@ assert alg->parse_subjectpubkey \in { parse_subjectpubkey_ec, parse_subjectpubkey_rsa, parse_subjectpubkey_ed448, parse_subjectpubkey_ed25519 } ; @*/
-	/*@ calls parse_subjectpubkey_ec, parse_subjectpubkey_rsa, parse_subjectpubkey_ed448, parse_subjectpubkey_ed25519 ; @*/
+	/*@ assert alg->parse_subjectpubkey \in { parse_subjectpubkey_ec, parse_subjectpubkey_rsa, parse_subjectpubkey_ed448, parse_subjectpubkey_ed25519, parse_subjectpubkey_x448, parse_subjectpubkey_x25519 } ; @*/
+	/*@ calls parse_subjectpubkey_ec, parse_subjectpubkey_rsa, parse_subjectpubkey_ed448, parse_subjectpubkey_ed25519, parse_subjectpubkey_x448, parse_subjectpubkey_x25519 ; @*/
 	ret = alg->parse_subjectpubkey(buf, remain, &param);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
