@@ -1193,10 +1193,13 @@ typedef struct {
 	int unparsed_param;  /* 1 when generic param was left unparsed */
 } alg_param;
 
+static int parse_sig_ed448(const u8 *buf, u16 len, u16 *eaten);
 static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten);
 static int parse_algoid_params_ecdsa_with(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_ecPublicKey(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_sm2(const u8 *buf, u16 len, alg_param *param);
+static int parse_algoid_params_eddsa(const u8 *buf, u16 len, alg_param *param);
+static int parse_subjectpubkey_ed448(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_ec(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_rsa(const u8 *buf, u16 len, alg_param *param);
 
@@ -1334,6 +1337,22 @@ static const _alg_id _ecpublickey_alg = {
 	.parse_sig = NULL,
 	.parse_subjectpubkey = parse_subjectpubkey_ec,
 	.parse_algoid_params = parse_algoid_params_ecPublicKey,
+};
+
+
+static const u8 _ed448_name[] = "Ed448";
+static const u8 _ed448_printable_oid[] = "1.3.101.113";
+static const u8 _ed448_der_oid[] = { 0x06, 0x03, 0x2b, 0x65, 0x71 };
+
+static const _alg_id _ed448_alg = {
+	.alg_name = _ed448_name,
+	.alg_printable_oid = _ed448_printable_oid,
+	.alg_der_oid = _ed448_der_oid,
+	.alg_der_oid_len = sizeof(_ed448_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_ed448,
+	.parse_subjectpubkey = parse_subjectpubkey_ed448,
+	.parse_algoid_params = parse_algoid_params_eddsa, /* for SIG and PUB */
 };
 
 
@@ -1719,6 +1738,7 @@ static const _alg_id *known_algs[] = {
 	&_ecdsa_sha384_alg,
 	&_ecdsa_sha512_alg,
 	&_ecpublickey_alg,
+	&_ed448_alg,
 	&_sm2_sm3_alg,
 #ifdef TEMPORARY_BADALGS
 	&_rsa_md2_alg,
@@ -2037,6 +2057,95 @@ out:
 }
 
 /*
+ * RFC 8410 defines Agorithm Identifiers for Ed25519 and Ed448
+ *
+ * subject public key encoding:
+ *
+ * SubjectPublicKeyInfo  ::=  SEQUENCE  {
+ *      algorithm         AlgorithmIdentifier,
+ *      subjectPublicKey  BIT STRING
+ * }
+ *
+ *
+ *  The fields in SubjectPublicKeyInfo have the following meanings:
+ *
+ *  o  algorithm is the algorithm identifier and parameters for the
+ *     public key (see above).
+ *
+ *  o  subjectPublicKey contains the byte stream of the public key.  The
+ *     algorithms defined in this document always encode the public key
+ *     as an exact multiple of 8 bits.
+ *
+ * OID are 1.3.101.112 for Ed25519 and 1.3.101.113 for Ed448.
+ */
+#define ED448_PUB_LEN  57
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \initialized(&param->curve_param);
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_subjectpubkey_ed448(const u8 *buf, u16 len, alg_param ATTRIBUTE_UNUSED *param)
+{
+	u16 remain, hdr_len = 0, data_len = 0;
+	int ret;
+
+	if ((buf == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/* subjectPublicKey field of SubjectPublicKeyInfo is a BIT STRING */
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * We expect the bitstring data to contain at least the initial
+	 * octet encoding the number of unused bits in the final
+	 * subsequent octet of the bistring.
+	 * */
+	if (data_len == 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+
+	/*
+	 * We expect the initial octet to encode a value of 0
+	 * indicating that there are no unused bits in the final
+	 * subsequent octet of the bitstring.
+	 */
+	if (buf[0] != 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	buf += 1;
+	remain = data_len - 1;
+
+	if (remain != ED448_PUB_LEN) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*
  *  From RFC 3279:
  *
  *  The elliptic curve public key (an ECPoint which is an
@@ -2221,6 +2330,36 @@ static int parse_algoid_params_sm2(const u8 *buf, u16 len, alg_param *param)
 		ret = -__LINE__;
 		break;
 	}
+
+out:
+	return ret;
+}
+
+/*
+ * RFC 8410 has: "For all of the OIDs, the parameters MUST be absent."
+ * This is what the function enforces.
+ */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires (param != \null) ==> \valid_read(param);
+  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (param == \null) ==> \result < 0;
+  @ ensures (len != 0) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @ assigns \nothing;
+  @*/
+static int parse_algoid_params_eddsa(const u8 *buf, u16 len, alg_param *param)
+{
+	int ret;
+
+	if ((buf == NULL) || (param == NULL) || (len != 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = 0;
 
 out:
 	return ret;
@@ -2544,8 +2683,8 @@ static int parse_x509_AlgorithmIdentifier(const u8 *buf, u16 len,
 	buf += oid_len;
 	param_len = data_len - oid_len;
 
-	/*@ assert talg->parse_algoid_params \in { parse_algoid_params_generic, parse_algoid_params_ecdsa_with, parse_algoid_params_ecPublicKey, parse_algoid_params_rsa, parse_algoid_params_sm2 }; @*/
-	/*@ calls parse_algoid_params_generic, parse_algoid_params_ecdsa_with, parse_algoid_params_ecPublicKey, parse_algoid_params_rsa, parse_algoid_params_sm2; @*/
+	/*@ assert talg->parse_algoid_params \in { parse_algoid_params_generic, parse_algoid_params_ecdsa_with, parse_algoid_params_ecPublicKey, parse_algoid_params_rsa, parse_algoid_params_sm2, parse_algoid_params_eddsa }; @*/
+	/*@ calls parse_algoid_params_generic, parse_algoid_params_ecdsa_with, parse_algoid_params_ecPublicKey, parse_algoid_params_rsa, parse_algoid_params_sm2, parse_algoid_params_eddsa; @*/
 	ret = talg->parse_algoid_params(buf, param_len, param);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
@@ -4572,8 +4711,8 @@ static int parse_x509_subjectPublicKeyInfo(const u8 *buf, u16 len, u16 *eaten)
 		goto out;
 	}
 
-	/*@ assert alg->parse_subjectpubkey \in { parse_subjectpubkey_ec, parse_subjectpubkey_rsa } ; @*/
-	/*@ calls parse_subjectpubkey_ec, parse_subjectpubkey_rsa ; @*/
+	/*@ assert alg->parse_subjectpubkey \in { parse_subjectpubkey_ec, parse_subjectpubkey_rsa, parse_subjectpubkey_ed448 } ; @*/
+	/*@ calls parse_subjectpubkey_ec, parse_subjectpubkey_rsa, parse_subjectpubkey_ed448 ; @*/
 	ret = alg->parse_subjectpubkey(buf, remain, &param);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
@@ -9060,6 +9199,84 @@ out:
 #endif
 
 
+/*
+ * RFC 8410 defines Agorithm Identifiers for Ed25519 and Ed448
+ *
+ * The same algorithm identifiers are used for signatures as are used
+ * for public keys.  When used to identify signature algorithms, the
+ * parameters MUST be absent.
+ */
+#define ED448_SIG_LEN 114
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, buf+(..));
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns *eaten;
+  @*/
+static int parse_sig_ed448(const u8 *buf, u16 len, u16 *eaten)
+{
+	u16 remain, hdr_len = 0, data_len = 0;
+	int ret;
+
+	if ((buf == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * We expect the bitstring data to contain at least the initial
+	 * octet encoding the number of unused bits in the final
+	 * subsequent octet of the bistring.
+	 * */
+	if (data_len == 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+
+	/*
+	 * We expect the initial octet to encode a value of 0
+	 * indicating that there are no unused bits in the final
+	 * subsequent octet of the bitstring.
+	 */
+	if (buf[0] != 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	buf += 1;
+	remain = data_len - 1;
+
+	if (remain != ED448_SIG_LEN) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	*eaten = hdr_len + data_len;
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+
 /*@
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
@@ -9227,8 +9444,8 @@ static int parse_x509_signatureValue(const u8 *buf, u16 len,
 		goto out;
 	}
 
-	/*@ assert sig_alg->parse_sig \in { parse_sig_ecdsa, parse_sig_generic }; @*/
-	/*@ calls parse_sig_ecdsa, parse_sig_generic; @*/
+	/*@ assert sig_alg->parse_sig \in { parse_sig_ecdsa, parse_sig_generic, parse_sig_ed448 }; @*/
+	/*@ calls parse_sig_ecdsa, parse_sig_generic, parse_sig_ed448; @*/
 	ret = sig_alg->parse_sig(buf, len, eaten);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
