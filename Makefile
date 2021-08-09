@@ -54,6 +54,7 @@ frama-c:
 				      _parse_arc:100, \
 				      parse_UTCTime:100, \
 				      find_dn_by_oid:100, \
+				      find_kp_by_oid:100, \
 				      find_curve_by_oid:100, \
 				      find_alg_by_oid:200, \
 				      find_ext_by_oid:200, \
