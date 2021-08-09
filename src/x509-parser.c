@@ -7166,6 +7166,12 @@ static const u8 _id_kp_timeStamping[] = { 0x06, 0x08, 0x2b, 0x06,
 static const u8 _id_kp_OCSPSigning[] =  { 0x06, 0x08, 0x2b, 0x06,
 					  0x01, 0x05, 0x05, 0x07,
 					  0x03, 0x09 };
+static const u8 _id_kp_ns_SGC[] = {  0x06, 0x09, 0x60, 0x86, 0x48,
+				     0x01, 0x86, 0xF8, 0x42, 0x04,
+				     0x01  };
+static const u8 _id_kp_ms_SGC[] = {  0x06, 0x0A, 0x2B, 0x06, 0x01,
+				     0x04, 0x01, 0x82, 0x37, 0x0A,
+				     0x03, 0x03,   };
 
 
 typedef struct {
@@ -7194,6 +7200,12 @@ static const _kp_oid known_kp_oids[] = {
 	},
 	{ .oid = _id_kp_OCSPSigning,
 	  .oid_len = sizeof(_id_kp_OCSPSigning),
+	},
+	{ .oid = _id_kp_ns_SGC,
+	  .oid_len = sizeof(_id_kp_ns_SGC),
+	},
+	{ .oid = _id_kp_ms_SGC,
+	  .oid_len = sizeof(_id_kp_ms_SGC),
 	},
 };
 
