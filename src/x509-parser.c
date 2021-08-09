@@ -2834,6 +2834,45 @@ static int check_bmp_string(const u8 ATTRIBUTE_UNUSED *buf,
 	return -__LINE__;
 }
 
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int check_ia5_string(const u8 *buf, u16 len)
+{
+	int ret;
+	u16 i;
+
+	if ((buf == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@
+	  @ loop invariant \forall integer x ; 0 <= x < i ==>
+		 ((buf[x] <= 0x7f));
+	  @ loop assigns i;
+	  @ loop variant (len - i);
+	  @ */
+	for (i = 0; i < len; i++) {
+		if (buf[i] > 0x7f) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+	}
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
 /*
  * Most RDN values are encoded using the directory string type
  * defined below. This function performs the required check to
@@ -2942,6 +2981,12 @@ static int parse_directory_string(const u8 *buf, u16 len, u16 lb, u16 ub)
 			ERROR_TRACE_APPEND(__LINE__);
 		}
 		break;
+	case STR_TYPE_IA5_STRING:
+		ret = check_ia5_string(buf, len);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+		}
+		break;
 #endif
 	default:
 		ret = -__LINE__;
@@ -3015,45 +3060,6 @@ static int parse_printable_string(const u8 *buf, u16 len, u16 lb, u16 ub)
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
-	}
-
-	ret = 0;
-
-out:
-	return ret;
-}
-
-/*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ ensures \result < 0 || \result == 0;
-  @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
-  @*/
-static int check_ia5_string(const u8 *buf, u16 len)
-{
-	int ret;
-	u16 i;
-
-	if ((buf == NULL) || (len == 0)) {
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
-
-	/*@
-	  @ loop invariant \forall integer x ; 0 <= x < i ==>
-		 ((buf[x] <= 0x7f));
-	  @ loop assigns i;
-	  @ loop variant (len - i);
-	  @ */
-	for (i = 0; i < len; i++) {
-		if (buf[i] > 0x7f) {
-			ret = -__LINE__;
-			ERROR_TRACE_APPEND(__LINE__);
-			goto out;
-		}
 	}
 
 	ret = 0;
