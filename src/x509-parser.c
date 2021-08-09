@@ -1804,6 +1804,20 @@ static const _curve _curve_brainpoolP512R1 = {
 	.crv_order_bit_len = 512,
 };
 
+static const u8 _curve_sm2p256v1_name[] = "sm2p256v1";
+static const u8 _curve_sm2p256v1_printable_oid[] = "1.2.156.10197.1.301";
+static const u8 _curve_sm2p256v1_der_oid[] = { 0x06, 0x08, 0x2a, 0x81,
+					       0x1c, 0xcf, 0x55, 0x01,
+					       0x82, 0x2d };
+
+static const _curve _curve_sm2p256v1 = {
+	.crv_name = _curve_sm2p256v1_name,
+	.crv_printable_oid = _curve_sm2p256v1_printable_oid,
+	.crv_der_oid = _curve_sm2p256v1_der_oid,
+	.crv_der_oid_len = sizeof(_curve_sm2p256v1_der_oid),
+	.crv_order_bit_len = 256,
+};
+
 static const _curve *known_curves[] = {
 	&_curve_secp256r1,
 	&_curve_secp384r1,
@@ -1811,6 +1825,7 @@ static const _curve *known_curves[] = {
 	&_curve_brainpoolP256R1,
 	&_curve_brainpoolP384R1,
 	&_curve_brainpoolP512R1,
+	&_curve_sm2p256v1,
 };
 
 #define NUM_KNOWN_CURVES (sizeof(known_curves) / sizeof(known_curves[0]))
