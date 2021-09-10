@@ -5683,23 +5683,29 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(ctx);
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \separated(eaten, cert+(..), ctx);
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @ assigns *eaten, *ctx;
   @*/
-static int parse_x509_subjectPublicKeyInfo(const u8 *buf, u16 len, u16 *eaten)
+static int parse_x509_subjectPublicKeyInfo(cert_parsing_ctx *ctx,
+					   const u8 *cert, u16 off, u16 len,
+					   u16 *eaten)
 {
 	u16 hdr_len = 0, data_len = 0, parsed = 0, remain = 0;
+	const u8 *buf = cert + off;
 	const _alg_id *alg = NULL;
 	alg_param param;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -5715,6 +5721,7 @@ static int parse_x509_subjectPublicKeyInfo(const u8 *buf, u16 len, u16 *eaten)
 
 	buf += hdr_len;
 	remain = data_len;
+	off += hdr_len;
 
 	// memset(&param, 0, sizeof(param));
 	param.curve_param = NULL;
@@ -5735,8 +5742,11 @@ static int parse_x509_subjectPublicKeyInfo(const u8 *buf, u16 len, u16 *eaten)
 		goto out;
 	}
 
+	ctx->spki_alg_oid_start = off;
+	ctx->spki_alg_oid_len = parsed;
 	buf += parsed;
 	remain -= parsed;
+	off += parsed;
 
 	/*
 	 * Let's now check if subjectPublicKey is ok based on the
@@ -5763,6 +5773,8 @@ static int parse_x509_subjectPublicKeyInfo(const u8 *buf, u16 len, u16 *eaten)
 		goto out;
 	}
 
+	ctx->spki_pub_key_start = off;
+	ctx->spki_pub_key_len = remain;
 	*eaten = hdr_len + data_len;
 
 	ret = 0;
@@ -10028,6 +10040,8 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+	ctx->issuer_start = off;
+	ctx->issuer_len = parsed;
 
 	/*
 	 * As described in section 4.1.2.4 of RFC 5280, "The issuer field MUST
@@ -10065,6 +10079,9 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 		goto out;
 	}
 
+	ctx->subject_start = off;
+	ctx->subject_len = parsed;
+
 	subject_ptr = buf;
 	subject_len = parsed;
 
@@ -10082,7 +10099,7 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 
 	/* subjectPublicKeyInfo */
 	ctx->spki_start = tbs_hdr_len + tbs_data_len - remain;
-	ret = parse_x509_subjectPublicKeyInfo(buf, remain, &parsed);
+	ret = parse_x509_subjectPublicKeyInfo(ctx, cert, off, remain, &parsed);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;

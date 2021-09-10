@@ -56,6 +56,10 @@ typedef struct {
 	/* Positions/length of various elements in cert */
 	u16 tbs_start;
 	u16 tbs_len;
+	u16 issuer_start;
+	u16 issuer_len;
+	u16 subject_start;
+	u16 subject_len;
 	u16 spki_start;
 	u16 spki_len;
 	u16 spki_alg_oid_start;
