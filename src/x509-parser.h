@@ -52,12 +52,46 @@ typedef uint64_t u64;
  */
 #define ASN1_MAX_BUFFER_SIZE 65534
 
+typedef struct {
+	/* Positions/length of various elements in cert */
+	u16 tbs_start;
+	u16 tbs_len;
+	u16 spki_start;
+	u16 spki_len;
+	u16 spki_alg_oid_start;
+	u16 spki_alg_oid_len;
+	u16 spki_pub_key_start;
+	u16 spki_pub_key_len;
+	u16 sig_alg_start;
+	u16 sig_alg_len;
+	u16 sig_start;
+	u16 sig_len;
+
+	/* Info we grabbed while parsing */
+	int version;
+	int empty_subject;
+	int san_empty;
+	int san_critical;
+	int ca_true;
+	int bc_critical;
+	int has_ski;
+	int has_keyUsage;
+	int keyCertSign_set;
+	int cRLSign_set;
+	int pathLenConstraint_set;
+	int has_name_constraints;
+	int has_crldp;
+	int one_crldp_has_all_reasons;
+	int aki_has_keyIdentifier;
+	int subject_issuer_identical;
+} cert_parsing_ctx;
+
 /*
  * Return 0 if parsing went OK, a non zero value otherwise.
  * 'len' must exactly match the size of the certificate
  * in the buffer 'buf' (i.e. nothing is expected behind).
  */
-int parse_x509_cert(const u8 *buf, u16 len);
+int parse_x509_cert(cert_parsing_ctx *ctx, const u8 *buf, u16 len);
 
 /*
  * This wrapper around parse_x509_cert() does not expect the buffer

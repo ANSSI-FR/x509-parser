@@ -10,7 +10,6 @@
 
 #include "x509-parser.h"
 
-
 /*
  * Some implementation notes:
  *
@@ -94,6 +93,7 @@ static int bufs_differ(const u8 *b1, const u8 *b2, u16 n)
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (eaten == \null) ==> \result < 0;
   @ ensures (\result == 0) ==> 1 <= *eaten <= len;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (\result == 0) ==> (*eaten > 0);
@@ -105,7 +105,7 @@ static int _extract_complex_tag(const u8 *buf, u16 len, u32 *tag_num, u16 *eaten
 	u32 t = 0;
 	int ret;
 
-	if ((len == 0) || (buf == NULL)) {
+	if ((len == 0) || (buf == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -186,12 +186,13 @@ out:
   @ requires \valid(prim);
   @ requires \valid(tag_num);
   @ requires \valid(eaten);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (eaten == \null) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (0 < *eaten <= len);
   @ ensures (\result == 0) ==> (*cls <= 0x3);
   @ ensures (\result == 0) ==> (*prim <= 0x1);
-  @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
   @ assigns *tag_num, *eaten, *prim, *cls;
   @*/
 static int get_identifier(const u8 *buf, u16 len,
@@ -1038,22 +1039,28 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \valid(ctx);
+  @ requires \separated(eaten, cert+(..), ctx);
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @ ensures (eaten == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ assigns *eaten, *ctx;
   @*/
-static int parse_x509_Version(const u8 *buf, u16 len, u16 *eaten)
+static int parse_x509_Version(cert_parsing_ctx *ctx,
+			      const u8 *cert, u16 off, u16 len, u16 *eaten)
 {
+	const u8 *buf = cert + off;
 	u16 data_len = 0;
 	u16 hdr_len = 0;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -1085,6 +1092,7 @@ static int parse_x509_Version(const u8 *buf, u16 len, u16 *eaten)
 		goto out;
 	}
 
+	ctx->version = buf[0];
 	*eaten = hdr_len + data_len;
 
 	ret = 0;
@@ -1094,10 +1102,9 @@ out:
 }
 
 /*
- * used for CertificateSerialNumber (in tbsCertificate, AKI, etc). As the
- * underlying integer might be used with context specific class and types,
- * those two elements are passed to the function and verified to match in
- * given encoding.
+ * used for SerialNumber (in tbsCertificate or AKI). As the underlying integer
+ * might be used with context specific class and types, those two elements are
+ * passed to the function and verified to match in given encoding.
  *
  *     CertificateSerialNumber  ::=  INTEGER
  *
@@ -1105,23 +1112,26 @@ out:
 #define MAX_SERIAL_NUM_LEN 22 /* w/ header */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \separated(eaten, cert+(..));
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (eaten == \null) ==> \result < 0;
   @ assigns *eaten;
   @*/
-static int parse_CertificateSerialNumber(const u8 *buf, u16 len,
-					 tag_class exp_class, u32 exp_type,
-					 u16 *eaten)
+static int parse_SerialNumber(const u8 *cert, u16 off, u16 len,
+			      tag_class exp_class, u32 exp_type,
+			      u16 *eaten)
 {
+	const u8 *buf = cert + off;
 	u16 parsed = 0;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -1177,6 +1187,77 @@ static int parse_CertificateSerialNumber(const u8 *buf, u16 len,
 out:
 	return ret;
 }
+
+/* Specification version for main serial number field of certificate */
+/*@
+  @ requires len >= 0;
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(eaten);
+  @ requires \valid(ctx);
+  @ requires \separated(eaten, cert+(..), ctx);
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (eaten == \null) ==> \result < 0;
+  @ assigns *eaten;
+  @*/
+static int parse_CertSerialNumber(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+				  const u8 *cert, u16 off, u16 len,
+				  tag_class exp_class, u32 exp_type,
+				  u16 *eaten)
+{
+	int ret;
+
+	ret = parse_SerialNumber(cert, off, len, exp_class, exp_type, eaten);
+	if (ret) {
+	       ERROR_TRACE_APPEND(__LINE__);
+	       goto out;
+	}
+
+	/* XXX At some point, update ctx with useful info */
+
+out:
+	return ret;
+}
+
+/* Specification version for serial number field from AKI */
+/*@
+  @ requires len >= 0;
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(eaten);
+  @ requires \valid(ctx);
+  @ requires \separated(eaten, cert+(..), ctx);
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (eaten == \null) ==> \result < 0;
+  @ assigns *eaten;
+  @*/
+static int parse_AKICertSerialNumber(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+				     const u8 *cert, u16 off, u16 len,
+				     tag_class exp_class, u32 exp_type,
+				     u16 *eaten)
+{
+	int ret;
+
+	ret = parse_SerialNumber(cert, off, len, exp_class, exp_type, eaten);
+	if (ret) {
+	       ERROR_TRACE_APPEND(__LINE__);
+	       goto out;
+	}
+
+	/* XXX At some point, update ctx with useful info */
+
+out:
+	return ret;
+}
+
 
 typedef struct {
 	const u8 *crv_name;
@@ -6166,24 +6247,6 @@ out:
 	return ret;
 }
 
-typedef struct {
-	int empty_subject;
-	int san_empty;
-	int san_critical;
-	int ca_true;
-	int bc_critical;
-	int has_ski;
-	int has_keyUsage;
-	int keyCertSign_set;
-	int cRLSign_set;
-	int pathLenConstraint_set;
-	int has_name_constraints;
-	int has_crldp;
-	int one_crldp_has_all_reasons;
-	int aki_has_keyIdentifier;
-	int subject_issuer_identical;
-} cert_parsing_ctx;
-
 /*
  * 4.2.2.1 - Certificate Authority Information Access
  *
@@ -6215,21 +6278,25 @@ typedef struct {
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx, buf+(..));
+  @ requires \separated(ctx, cert+(..));
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (critical != 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns \nothing;
   @*/
-static int parse_ext_AIA(const u8 *buf, u16 len, int critical, cert_parsing_ctx ATTRIBUTE_UNUSED *ctx)
+static int parse_ext_AIA(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+			 const u8 *cert, u16 off, u16 len, int critical)
 {
 	u16 hdr_len = 0, data_len = 0, remain;
+	const u8 *buf = cert + off;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -6321,23 +6388,27 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx, buf+(..));
+  @ requires \separated(ctx, cert+(..));
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns *ctx;
   @*/
-static int parse_ext_AKI(const u8 *buf, u16 len, int critical, cert_parsing_ctx *ctx)
+static int parse_ext_AKI(cert_parsing_ctx *ctx,
+			 const u8 *cert, u16 off, u16 len, int critical)
 {
 	u16 hdr_len = 0, data_len = 0;
+	const u8 *buf = cert + off;
 	u16 key_id_hdr_len = 0, key_id_data_len = 0;
 	u16 remain;
 	u16 parsed = 0;
 	int ret, has_keyIdentifier = 0;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -6362,6 +6433,7 @@ static int parse_ext_AKI(const u8 *buf, u16 len, int critical, cert_parsing_ctx 
 	}
 
 	buf += hdr_len;
+	off += hdr_len;
 	remain = data_len;
 
 	if (len != (hdr_len + data_len)) {
@@ -6389,6 +6461,7 @@ static int parse_ext_AKI(const u8 *buf, u16 len, int critical, cert_parsing_ctx 
 		}
 
 		buf += key_id_hdr_len + key_id_data_len;
+		off += key_id_hdr_len + key_id_data_len;
 		remain -= key_id_hdr_len + key_id_data_len;
 		has_keyIdentifier = 1;
 	}
@@ -6404,18 +6477,20 @@ static int parse_ext_AKI(const u8 *buf, u16 len, int critical, cert_parsing_ctx 
 		u16 cert_serial_len = 0;
 
 		buf += parsed;
+		off += parsed;
 		remain -= parsed;
 
 		/* CertificateSerialNumber ::= INTEGER */
-		ret = parse_CertificateSerialNumber(buf, remain,
-						    CLASS_CONTEXT_SPECIFIC, 2,
-						    &cert_serial_len);
+		ret = parse_AKICertSerialNumber(ctx, cert, off, remain,
+						CLASS_CONTEXT_SPECIFIC, 2,
+						&cert_serial_len);
 		if (ret) {
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
 		}
 
 		buf += cert_serial_len;
+		off += cert_serial_len;
 		remain -= cert_serial_len;
 	}
 
@@ -6441,21 +6516,25 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx,buf+(..));
+  @ requires \separated(ctx,cert+(..));
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns *ctx;
   @*/
-static int parse_ext_SKI(const u8 *buf, u16 len, int critical, cert_parsing_ctx *ctx)
+static int parse_ext_SKI(cert_parsing_ctx *ctx,
+			 const u8 *cert, u16 off, u16 len, int critical)
 {
 	u16 key_id_hdr_len = 0, key_id_data_len = 0;
+	const u8 *buf = cert + off;
 	u16 remain;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -6728,22 +6807,25 @@ out:
 
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx,buf+(..));
+  @ requires \separated(ctx, cert+(..));
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns *ctx;
   @*/
-static int parse_ext_keyUsage(const u8 *buf, u16 len,
-			      int ATTRIBUTE_UNUSED critical,
-			      cert_parsing_ctx *ctx)
+static int parse_ext_keyUsage(cert_parsing_ctx *ctx,
+			      const u8 *cert, u16 off, u16 len,
+			      int ATTRIBUTE_UNUSED critical)
 {
 	u16 val = 0, hdr_len = 0, data_len = 0;
+	const u8 *buf = cert + off;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -7409,22 +7491,25 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx, buf+(..));
+  @ requires \separated(ctx, cert+(..));
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns \nothing;
   @*/
-static int parse_ext_certPolicies(const u8 *buf, u16 len,
-				  int ATTRIBUTE_UNUSED critical,
-				  cert_parsing_ctx ATTRIBUTE_UNUSED *ctx)
+static int parse_ext_certPolicies(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+				  const u8 *cert, u16 off, u16 len,
+				  int ATTRIBUTE_UNUSED critical)
 {
 	u16 remain = 0, data_len = 0, hdr_len = 0, eaten = 0;
+	const u8 *buf = cert + off;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -7454,6 +7539,7 @@ static int parse_ext_certPolicies(const u8 *buf, u16 len,
 	}
 
 	buf += hdr_len;
+	off += hdr_len;
 	remain = data_len;
 
 	if (len != (hdr_len + data_len)) {
@@ -7464,8 +7550,9 @@ static int parse_ext_certPolicies(const u8 *buf, u16 len,
 
 	/* Let's now check each individual PolicyInformation sequence */
 	/*@
-	  @ loop assigns ret, buf, remain, eaten;
+	  @ loop assigns ret, buf, remain, eaten, off;
 	  @ loop invariant \valid_read(buf + (0 .. (remain - 1)));
+	  @ loop invariant (off + remain) <= 65535;
 	  @ loop variant remain;
 	  @ */
 	while (remain) {
@@ -7476,6 +7563,7 @@ static int parse_ext_certPolicies(const u8 *buf, u16 len,
 		}
 
 		remain -= eaten;
+		off += eaten;
 		buf += eaten;
 	}
 
@@ -7499,21 +7587,25 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx,buf+(..));
+  @ requires \separated(ctx,cert+(..));
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns \nothing;
   @*/
-static int parse_ext_policyMapping(const u8 *buf, u16 len, int critical,
-				   cert_parsing_ctx ATTRIBUTE_UNUSED *ctx)
+static int parse_ext_policyMapping(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+				   const u8 *cert, u16 off, u16 len,
+				   int critical)
 {
 	u16 remain = 0, data_len = 0, hdr_len = 0, eaten = 0;
+	const u8 *buf = cert + off;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -7538,6 +7630,7 @@ static int parse_ext_policyMapping(const u8 *buf, u16 len, int critical,
 	}
 
 	buf += hdr_len;
+	off += hdr_len;
 	remain = data_len;
 
 	if (len != (hdr_len + data_len)) {
@@ -7548,8 +7641,9 @@ static int parse_ext_policyMapping(const u8 *buf, u16 len, int critical,
 
 	/* Let's now check each sequence of {issuer,subject}DomainPolicy pair */
 	/*@
-	  @ loop assigns ret, buf, remain, hdr_len, data_len, eaten;
+	  @ loop assigns ret, buf, remain, hdr_len, data_len, eaten, off;
 	  @ loop invariant \valid_read(buf + (0 .. (remain - 1)));
+	  @ loop invariant (off + remain) <= 65535;
 	  @ loop variant remain;
 	  @ */
 	while (remain) {
@@ -7562,6 +7656,7 @@ static int parse_ext_policyMapping(const u8 *buf, u16 len, int critical,
 		}
 
 		buf += hdr_len;
+		off += hdr_len;
 		remain -= hdr_len;
 
 		/* issuerDomainPolicy (an OID)*/
@@ -7572,6 +7667,7 @@ static int parse_ext_policyMapping(const u8 *buf, u16 len, int critical,
 		}
 
 		buf += eaten;
+		off += eaten;
 		remain -= eaten;
 		data_len -= eaten;
 
@@ -7594,6 +7690,7 @@ static int parse_ext_policyMapping(const u8 *buf, u16 len, int critical,
 		}
 
 		buf += eaten;
+		off += eaten;
 		remain -=  eaten;
 	}
 
@@ -7634,20 +7731,25 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx, buf+(..));
+  @ requires \separated(ctx, cert+(..));
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns *ctx;
   @*/
-static int parse_ext_SAN(const u8 *buf, u16 len, int critical, cert_parsing_ctx *ctx)
+static int parse_ext_SAN(cert_parsing_ctx *ctx,
+			 const u8 *cert, u16 off, u16 len,
+			 int critical)
 {
 	u16 data_len = 0, hdr_len = 0, remain = 0, eaten = 0;
+	const u8 *buf = cert + off;
 	int ret, san_empty, empty_gen_name;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -7672,6 +7774,7 @@ static int parse_ext_SAN(const u8 *buf, u16 len, int critical, cert_parsing_ctx 
 	}
 
 	buf += hdr_len;
+	off += hdr_len;
 	remain = data_len;
 
 	if (len != (hdr_len + data_len)) {
@@ -7751,21 +7854,25 @@ out:
 /* 4.2.1.7. Issuer Alternative Name */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx, buf+(..));
+  @ requires \separated(ctx, cert+(..));
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns \nothing;
   @*/
-static int parse_ext_IAN(const u8 *buf, u16 len, int ATTRIBUTE_UNUSED critical,
-			 cert_parsing_ctx ATTRIBUTE_UNUSED *ctx)
+static int parse_ext_IAN(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+			 const u8 *cert, u16 off, u16 len,
+			 int ATTRIBUTE_UNUSED critical)
 {
 	u16 data_len = 0, hdr_len = 0, remain = 0, eaten = 0;
+	const u8 *buf = cert + off;
 	int ret, unused = 0;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -7805,6 +7912,7 @@ static int parse_ext_IAN(const u8 *buf, u16 len, int ATTRIBUTE_UNUSED critical,
 	}
 
 	buf += hdr_len;
+	off += hdr_len;
 	remain = data_len;
 
 	if (len != (hdr_len + data_len)) {
@@ -7814,8 +7922,9 @@ static int parse_ext_IAN(const u8 *buf, u16 len, int ATTRIBUTE_UNUSED critical,
 	}
 
 	/*@
-	  @ loop assigns ret, buf, remain, eaten, unused;
+	  @ loop assigns ret, buf, remain, eaten, unused, off;
 	  @ loop invariant \valid_read(buf + (0 .. (remain - 1)));
+	  @ loop invariant (off + remain) <= 65535;
 	  @ loop variant remain;
 	  @ */
 	while (remain) {
@@ -7826,6 +7935,7 @@ static int parse_ext_IAN(const u8 *buf, u16 len, int ATTRIBUTE_UNUSED critical,
 		}
 
 		remain -= eaten;
+		off += eaten;
 		buf += eaten;
 	}
 
@@ -7855,21 +7965,25 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx, buf+(..));
+  @ requires \separated(ctx, cert+(..));
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns \nothing;
   @*/
-static int parse_ext_subjectDirAttr(const u8 *buf, u16 len, int critical,
-				    cert_parsing_ctx ATTRIBUTE_UNUSED *ctx)
+static int parse_ext_subjectDirAttr(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+				    const u8 *cert, u16 off, u16 len,
+				    int critical)
 {
 	u16 hdr_len = 0, data_len = 0, oid_len = 0, remain = 0;
+	const u8 *buf = cert + off;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -7894,6 +8008,7 @@ static int parse_ext_subjectDirAttr(const u8 *buf, u16 len, int critical,
 	}
 
 	buf += hdr_len;
+	off += hdr_len;
 	remain = data_len;
 
 	if (len != (hdr_len + data_len)) {
@@ -7903,8 +8018,9 @@ static int parse_ext_subjectDirAttr(const u8 *buf, u16 len, int critical,
 	}
 
 	/*@
-	  @ loop assigns ret, buf, remain, hdr_len, data_len, oid_len;
+	  @ loop assigns ret, buf, remain, hdr_len, data_len, oid_len, off;
 	  @ loop invariant \valid_read(buf + (0 .. (remain - 1)));
+	  @ loop invariant (off + remain) <= 65535;
 	  @ loop variant remain;
 	  @ */
 	while (remain) {
@@ -7918,6 +8034,7 @@ static int parse_ext_subjectDirAttr(const u8 *buf, u16 len, int critical,
 		}
 
 		buf += hdr_len;
+		off += hdr_len;
 		remain -= hdr_len;
 
 		/* ... containing an OID (AttributeType) */
@@ -7930,6 +8047,7 @@ static int parse_ext_subjectDirAttr(const u8 *buf, u16 len, int critical,
 		/* FIXME! check the value depanding on the OID */
 
 		remain -= data_len;
+		off += data_len;
 		buf += data_len;
 	}
 
@@ -7950,23 +8068,27 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx, buf+(..));
+  @ requires \separated(ctx, cert+(..));
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns *ctx;
   @*/
-static int parse_ext_basicConstraints(const u8 *buf, u16 len, int critical,
-				      cert_parsing_ctx *ctx)
+static int parse_ext_basicConstraints(cert_parsing_ctx *ctx,
+				      const u8 *cert, u16 off, u16 len,
+				      int critical)
 {
 	u16 hdr_len = 0, data_len = 0;
 	const u8 ca_true_wo_plc[] = { 0x01, 0x01, 0xff };
 	const u8 ca_true_w_plc[] = { 0x01, 0x01, 0xff, 0x02, 0x01 };
+	const u8 *buf = cert + off;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -7984,6 +8106,7 @@ static int parse_ext_basicConstraints(const u8 *buf, u16 len, int critical,
 	}
 
 	buf += hdr_len;
+	off += hdr_len;
 
 	if (len != (hdr_len + data_len)) {
 		ret = -__LINE__;
@@ -8151,21 +8274,24 @@ out:
 
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx, buf+(..));
+  @ requires \separated(ctx, cert+(..));
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns *ctx;
   @*/
-static int parse_ext_nameConstraints(const u8 *buf, u16 len, int critical,
-				     cert_parsing_ctx *ctx)
+static int parse_ext_nameConstraints(cert_parsing_ctx *ctx,
+				     const u8 *cert, u16 off, u16 len, int critical)
 {
 	u16 remain = 0, hdr_len = 0, data_len = 0;
+	const u8 *buf = cert + off;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -8190,6 +8316,7 @@ static int parse_ext_nameConstraints(const u8 *buf, u16 len, int critical,
 	}
 
 	buf += hdr_len;
+	off += hdr_len;
 
 	/*
 	 * 4.2.1.10 has: "Conforming CAs MUST NOT issue certificates
@@ -8206,6 +8333,7 @@ static int parse_ext_nameConstraints(const u8 *buf, u16 len, int critical,
 			   &hdr_len, &data_len);
 	if (!ret) {
 		buf += hdr_len;
+		off += hdr_len;
 		remain -= hdr_len;
 
 		ret = parse_GeneralSubtrees(buf, data_len);
@@ -8215,6 +8343,7 @@ static int parse_ext_nameConstraints(const u8 *buf, u16 len, int critical,
 		}
 
 		buf += data_len;
+		off += data_len;
 		remain -= data_len;
 	}
 
@@ -8223,6 +8352,7 @@ static int parse_ext_nameConstraints(const u8 *buf, u16 len, int critical,
 			   &hdr_len, &data_len);
 	if (!ret) {
 		buf += hdr_len;
+		off += hdr_len;
 		remain -= hdr_len;
 
 		ret = parse_GeneralSubtrees(buf, data_len);
@@ -8232,6 +8362,7 @@ static int parse_ext_nameConstraints(const u8 *buf, u16 len, int critical,
 		}
 
 		buf += data_len;
+		off += data_len;
 		remain -= data_len;
 	}
 
@@ -8263,21 +8394,25 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx, buf+(..));
+  @ requires \separated(ctx, cert+(..));
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns \nothing;
   @*/
-static int parse_ext_policyConstraints(const u8 *buf, u16 len, int critical,
-				       cert_parsing_ctx ATTRIBUTE_UNUSED *ctx)
+static int parse_ext_policyConstraints(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+				       const u8 *cert, u16 off, u16 len,
+				       int critical)
 {
 	u16 data_len = 0, hdr_len = 0, remain = 0, parsed = 0;
+	const u8 *buf = cert + off;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -8313,6 +8448,7 @@ static int parse_ext_policyConstraints(const u8 *buf, u16 len, int critical,
 	}
 
 	buf += hdr_len;
+	off += hdr_len;
 	remain = data_len;
 
 	/* Check if we have a requireExplicitPolicy */
@@ -8331,6 +8467,7 @@ static int parse_ext_policyConstraints(const u8 *buf, u16 len, int critical,
 		}
 
 		buf += parsed;
+		off += parsed;
 		remain -= parsed;
 	}
 
@@ -8350,6 +8487,7 @@ static int parse_ext_policyConstraints(const u8 *buf, u16 len, int critical,
 		}
 
 		buf += parsed;
+		off += parsed;
 		remain -= parsed;
 	}
 
@@ -8489,22 +8627,26 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx, buf+(..));
+  @ requires \separated(ctx, cert+(..));
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns \nothing;
   @*/
-static int parse_ext_EKU(const u8 *buf, u16 len, int critical,
-			 cert_parsing_ctx ATTRIBUTE_UNUSED *ctx)
+static int parse_ext_EKU(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+			 const u8 *cert, u16 off, u16 len,
+			 int critical)
 {
 	u16 remain = 0, data_len = 0, hdr_len = 0, oid_len = 0;
+	const u8 *buf = cert + off;
 	const _kp_oid *kp = NULL;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -8519,6 +8661,7 @@ static int parse_ext_EKU(const u8 *buf, u16 len, int critical,
 	}
 
 	buf += hdr_len;
+	off += hdr_len;
 	remain = data_len;
 
 	if (len != (hdr_len + data_len)) {
@@ -8529,8 +8672,9 @@ static int parse_ext_EKU(const u8 *buf, u16 len, int critical,
 
 	/* Let's now check each individual KeyPurposeId in the sequence */
 	/*@
-	  @ loop assigns ret, oid_len, kp, buf, remain;
+	  @ loop assigns ret, oid_len, kp, buf, remain, off;
 	  @ loop invariant \valid_read(buf + (0 .. (remain - 1)));
+	  @ loop invariant (off + remain) <= 65535;
 	  @ loop variant remain;
 	  @ */
 	while (remain) {
@@ -8559,6 +8703,7 @@ static int parse_ext_EKU(const u8 *buf, u16 len, int critical,
 		}
 
 		buf += oid_len;
+		off += oid_len;
 		remain -= oid_len;
 	}
 
@@ -8590,6 +8735,7 @@ out:
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (eaten == \null) ==> \result < 0;
   @ assigns *eaten;
   @*/
 static int parse_crldp_reasons(const u8 *buf, u16 len, u16 *eaten)
@@ -8597,7 +8743,7 @@ static int parse_crldp_reasons(const u8 *buf, u16 len, u16 *eaten)
 	u16 val, hdr_len = 0, data_len = 0;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((buf == NULL) || (len == 0) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -8658,6 +8804,7 @@ out:
   @ ensures (\result == 0) ==> (0 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (eaten == \null) ==> \result < 0;
   @ assigns *eaten, *ctx;
   @*/
 static int parse_DistributionPoint(const u8 *buf, u16 len, u16 *eaten,
@@ -8668,7 +8815,7 @@ static int parse_DistributionPoint(const u8 *buf, u16 len, u16 *eaten,
 	u16 parsed = 0;
 	int ret, has_all_reasons = 0;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((buf == NULL) || (len == 0) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -8832,21 +8979,25 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx, buf+(..));
+  @ requires \separated(ctx, cert+(..));
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns *ctx;
   @*/
-static int parse_ext_CRLDP(const u8 *buf, u16 len, int critical,
-			   cert_parsing_ctx *ctx)
+static int parse_ext_CRLDP(cert_parsing_ctx *ctx,
+			   const u8 *cert, u16 off, u16 len,
+			   int critical)
 {
 	u16 hdr_len = 0, data_len = 0, remain;
+	const u8 *buf = cert + off;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -8914,22 +9065,26 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx, buf+(..));
+  @ requires \separated(ctx, cert+(..));
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns \nothing;
   @*/
 #define MAX_INHIBITANYPOLICY 64
-static int parse_ext_inhibitAnyPolicy(const u8 *buf, u16 len, int critical,
-				      cert_parsing_ctx ATTRIBUTE_UNUSED *ctx)
+static int parse_ext_inhibitAnyPolicy(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+				      const u8 *cert, u16 off, u16 len,
+				      int critical)
 {
+	const u8 *buf = cert + off;
 	u16 eaten = 0;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -8945,7 +9100,7 @@ static int parse_ext_inhibitAnyPolicy(const u8 *buf, u16 len, int critical,
 		goto out;
 	}
 
-	ret = parse_integer(buf, len,  CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
+	ret = parse_integer(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
 			    &eaten);
 	if (ret) {
 		ret = -__LINE__;
@@ -9004,18 +9159,23 @@ static const u8 _ext_oid_inhibitAnyPolicy[] =  { 0x06, 0x03, 0x55, 0x1d, 0x36 };
 
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
-  @ requires \separated(ctx, buf+(..));
+  @ requires \separated(ctx, cert+(..));
   @ ensures \result <= 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ assigns \nothing;
   @*/
-static int parse_ext_bad_oid(const u8 *buf, u16 len, int ATTRIBUTE_UNUSED critical,
-			     cert_parsing_ctx ATTRIBUTE_UNUSED *ctx)
+static int parse_ext_bad_oid(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+			     const u8 *cert, u16 ATTRIBUTE_UNUSED off, u16 len,
+			     int ATTRIBUTE_UNUSED critical)
 {
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -9168,8 +9328,8 @@ static const u8 _ext_oid_bad_szOID_APP_CERT_POL[] =    { 0x06, 0x03, 0x55, 0x1d,
 typedef struct {
 	const u8 *oid;
 	u8 oid_len;
-	int (*parse_ext_params)(const u8 *buf, u16 len, int critical,
-				cert_parsing_ctx *ctx);
+	int (*parse_ext_params)(cert_parsing_ctx *ctx,
+				const u8 *cert, u16 off, u16 len, int critical);
 } _ext_oid;
 
 static const _ext_oid known_ext_oids[] = {
@@ -9298,7 +9458,7 @@ static const _ext_oid known_ext_oids[] = {
 /*
  * We limit the amount of extensions we accept per certificate. This can be
  * done because each kind of extension is allowed to appear only once in a
- * given certificate. Note that it is logical to allow 
+ * given certificate. Note that it is logical to allow
  */
 #define MAX_EXT_NUM_PER_CERT NUM_KNOWN_EXT_OIDS
 
@@ -9414,7 +9574,8 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
   @ requires \valid(ctx);
   @ requires \valid(parsed_oid_list);
@@ -9422,19 +9583,28 @@ out:
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (1 <= *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (eaten == \null) ==> \result < 0;
   @ assigns parsed_oid_list[0 .. (MAX_EXT_NUM_PER_CERT - 1)], *eaten, *ctx;
   @*/
-static int parse_x509_Extension(const u8 *buf, u16 len,
+static int parse_x509_Extension(cert_parsing_ctx *ctx,
+				const u8 *cert, u16 off, u16 len,
 				const _ext_oid **parsed_oid_list,
-				u16 *eaten, cert_parsing_ctx *ctx)
+				u16 *eaten)
 {
 	u16 data_len = 0, hdr_len = 0, remain = 0;
 	u16 ext_hdr_len = 0, ext_data_len = 0, oid_len = 0;
 	u16 saved_ext_len = 0, parsed = 0;
+	const u8 *buf = cert + off;
 	const _ext_oid *ext = NULL;
 	int critical = 0;
 	int ret;
+
+	if ((cert == NULL) || (len == 0) || (ctx == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
 	/*@ assert \initialized(parsed_oid_list + (0 .. (MAX_EXT_NUM_PER_CERT - 1))); */
 
@@ -9450,6 +9620,7 @@ static int parse_x509_Extension(const u8 *buf, u16 len,
 	}
 
 	buf += ext_hdr_len;
+	off += ext_hdr_len;
 	remain -= ext_hdr_len;
 	saved_ext_len = ext_hdr_len + ext_data_len;
 
@@ -9502,6 +9673,7 @@ static int parse_x509_Extension(const u8 *buf, u16 len,
 	}
 
 	buf += oid_len;
+	off += oid_len;
 	ext_data_len -= oid_len;
 
 	/*
@@ -9532,6 +9704,7 @@ static int parse_x509_Extension(const u8 *buf, u16 len,
 		critical = 1;
 
 		buf += parsed;
+		off += parsed;
 		ext_data_len -= parsed;
 	}
 
@@ -9548,6 +9721,7 @@ static int parse_x509_Extension(const u8 *buf, u16 len,
 	}
 
 	buf += hdr_len;
+	off += hdr_len;
 	ext_data_len -= hdr_len;
 
 	/* Check nothing remains behind the extnValue */
@@ -9575,7 +9749,7 @@ static int parse_x509_Extension(const u8 *buf, u16 len,
 		  parse_ext_nameConstraints, parse_ext_policyConstraints,
 		  parse_ext_EKU, parse_ext_CRLDP,
 		  parse_ext_inhibitAnyPolicy, parse_ext_bad_oid ; @*/
-	ret = ext->parse_ext_params(buf, ext_data_len, critical, ctx);
+	ret = ext->parse_ext_params(ctx, cert, off, ext_data_len, critical);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -9606,27 +9780,32 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
   @ requires \valid(ctx);
-  @ requires \separated(eaten, ctx, buf+(..));
+  @ requires \separated(eaten, ctx, cert+(..));
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (1 <= *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @ ensures (eaten == \null) ==> \result < 0;
   @ assigns *eaten, *ctx;
   @*/
-static int parse_x509_Extensions(const u8 *buf, u16 len, u16 *eaten,
-				 cert_parsing_ctx *ctx)
+static int parse_x509_Extensions(cert_parsing_ctx *ctx,
+				 const u8 *cert, u16 off, u16 len,
+				 u16 *eaten)
 {
 
 	u16 data_len = 0, hdr_len = 0, remain = 0;
+	const u8 *buf = cert + off;
 	u16 saved_len = 0;
 	const _ext_oid *parsed_oid_list[MAX_EXT_NUM_PER_CERT];
 	int ret;
 	u16 i;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -9646,6 +9825,7 @@ static int parse_x509_Extensions(const u8 *buf, u16 len, u16 *eaten,
 
 	remain = data_len;
 	buf += hdr_len;
+	off += hdr_len;
 	/*@ assert \valid_read(buf + (0 .. (remain - 1))); */
 
 	saved_len = hdr_len + data_len;
@@ -9672,15 +9852,16 @@ static int parse_x509_Extensions(const u8 *buf, u16 len, u16 *eaten,
 
 	/* Now, let's work on each extension in the sequence */
 	/*@
-	  @ loop assigns ret, buf, remain, parsed_oid_list[0 .. (MAX_EXT_NUM_PER_CERT - 1)], *ctx;
-	  @ loop invariant (remain != 0) ==> \valid_read(buf + (0 .. (remain - 1)));
+	  @ loop assigns off, ret, buf, remain, parsed_oid_list[0 .. (MAX_EXT_NUM_PER_CERT - 1)], *ctx;
+	  @ loop invariant (remain != 0) ==> \valid_read(cert + (off .. (off + remain - 1)));
+	  @ loop invariant (remain != 0) ==> off + remain <= 65535;
 	  @ loop variant remain;
 	  @*/
 	while (remain) {
 		u16 ext_len = 0;
 
-		ret = parse_x509_Extension(buf, remain, parsed_oid_list,
-					   &ext_len, ctx);
+		ret = parse_x509_Extension(ctx, cert, off, remain,
+					   parsed_oid_list, &ext_len);
 		if (ret) {
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
@@ -9688,6 +9869,7 @@ static int parse_x509_Extensions(const u8 *buf, u16 len, u16 *eaten,
 
 		remain -= ext_len;
 		buf += ext_len;
+		off += ext_len;
 	}
 
 	/*
@@ -9743,57 +9925,41 @@ out:
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(sig_alg, eaten, buf+(..));
+  @ requires \valid(ctx);
+  @ requires \separated(sig_alg, eaten, cert+(..), ctx);
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (sig_alg == \null) ==> \result < 0;
+  @ ensures (eaten == \null) ==> \result < 0;
   @ ensures (\result == 0) ==> (1 < *eaten <= len);
-  @ assigns *eaten, *sig_alg;
+  @ assigns *eaten, *sig_alg, *ctx;
   @*/
-static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
+static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
+				     const u8 *cert, u16 off, u16 len,
 				     const _alg_id **sig_alg, u16 *eaten)
 {
 	u16 tbs_data_len = 0;
 	u16 tbs_hdr_len = 0;
 	u16 remain = 0;
 	u16 parsed = 0;
+	const u8 *buf = cert + off;
 	const u8 *subject_ptr, *issuer_ptr;
 	u16 subject_len, issuer_len;
 	alg_param param;
 	const _alg_id *alg = NULL;
-	cert_parsing_ctx ctx;
 	int ret, empty_issuer = 1;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL) ||
+	    (sig_alg == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
-
-	/*
-	 * FIXME! At the moment, when using Frama-C with Typed memory model
-	 * the use of memset() prevents to validate assigns clause for the
-	 * function. At the moment, we workaround that problem by
-	 * initializing the structure field by field. Yes, this is sad.
-	 */
-	/* memset(&ctx, 0, sizeof(ctx)); */
-	ctx.empty_subject = 0;
-	ctx.san_empty = 0;
-	ctx.san_critical = 0;
-	ctx.ca_true = 0;
-	ctx.bc_critical = 0;
-	ctx.has_ski = 0;
-	ctx.has_keyUsage = 0;
-	ctx.keyCertSign_set = 0;
-	ctx.cRLSign_set = 0;
-	ctx.pathLenConstraint_set = 0;
-	ctx.has_name_constraints = 0;
-	ctx.has_crldp = 0;
-	ctx.one_crldp_has_all_reasons = 0;
-	ctx.aki_has_keyIdentifier = 0;
-	ctx.subject_issuer_identical = 0;
 
 	/*
 	 * Let's first check we are dealing with a valid sequence containing
@@ -9807,6 +9973,7 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	}
 
 	buf += tbs_hdr_len;
+	off += tbs_hdr_len;
 	remain = tbs_data_len;
 
 	/*
@@ -9815,25 +9982,27 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	 */
 
 	/* version */
-	ret = parse_x509_Version(buf, remain, &parsed);
+	ret = parse_x509_Version(ctx, cert, off, remain, &parsed);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
 	buf += parsed;
+	off += parsed;
 	remain -= parsed;
 
 	/* serialNumber */
-	ret = parse_CertificateSerialNumber(buf, remain,
-					    CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
-					    &parsed);
+	ret = parse_CertSerialNumber(ctx, cert, off, remain,
+				     CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
+				     &parsed);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
 	buf += parsed;
+	off += parsed;
 	remain -= parsed;
 
 	/* signature */
@@ -9850,6 +10019,7 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	}
 
 	buf += parsed;
+	off += parsed;
 	remain -= parsed;
 
 	/* issuer */
@@ -9874,6 +10044,7 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	issuer_len = parsed;
 
 	buf += parsed;
+	off += parsed;
 	remain -= parsed;
 
 	/* validity */
@@ -9884,10 +10055,11 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	}
 
 	buf += parsed;
+	off += parsed;
 	remain -= parsed;
 
 	/* subject */
-	ret = parse_x509_Name(buf, remain, &parsed, &ctx.empty_subject);
+	ret = parse_x509_Name(buf, remain, &parsed, &ctx->empty_subject);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -9897,24 +10069,28 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	subject_len = parsed;
 
 	buf += parsed;
+	off += parsed;
 	remain -= parsed;
 
 	/* We can now check if subject and issuer fields are identical */
-	ctx.subject_issuer_identical = 0;
+	ctx->subject_issuer_identical = 0;
 	if (subject_len == issuer_len) {
-		ctx.subject_issuer_identical = !bufs_differ(subject_ptr,
-							    issuer_ptr,
-							    issuer_len);
+		ctx->subject_issuer_identical = !bufs_differ(subject_ptr,
+							     issuer_ptr,
+							     issuer_len);
 	}
 
 	/* subjectPublicKeyInfo */
+	ctx->spki_start = tbs_hdr_len + tbs_data_len - remain;
 	ret = parse_x509_subjectPublicKeyInfo(buf, remain, &parsed);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
+	ctx->spki_len = parsed;
 	buf += parsed;
+	off += parsed;
 	remain -= parsed;
 
 	/*
@@ -9947,13 +10123,14 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	 * a full parsing of the Extensions.
 	 */
 	if (remain) {
-		ret = parse_x509_Extensions(buf, remain, &parsed, &ctx);
+		ret = parse_x509_Extensions(ctx, cert, off, remain, &parsed);
 		if (ret) {
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
 		}
 
 		buf += parsed;
+		off += parsed;
 		remain -= parsed;
 	}
 
@@ -9969,7 +10146,7 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	 * constraints extension (Section 4.2.1.9) where the value of cA is
 	 * TRUE"
 	 */
-	if (ctx.ca_true && !ctx.has_ski) {
+	if (ctx->ca_true && !ctx->has_ski) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -9993,7 +10170,7 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	 * signatures on certificates. This extension MAY appear as a critical
 	 * or non-critical extension in end entity certificates."
 	 */
-	if (ctx.keyCertSign_set && (!ctx.ca_true || !ctx.bc_critical)) {
+	if (ctx->keyCertSign_set && (!ctx->ca_true || !ctx->bc_critical)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -10006,7 +10183,7 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	 * distinguished name matching the contents of the issuer field (Section
 	 * 5.1.2.3) in all CRLs issued by the subject CRL issuer.
 	 */
-	if (ctx.cRLSign_set && ctx.empty_subject) {
+	if (ctx->cRLSign_set && ctx->empty_subject) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -10017,8 +10194,8 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	 * unless the cA boolean is asserted and the key usage extension
 	 * asserts the keyCertSign bit."
 	 */
-	if (ctx.pathLenConstraint_set &&
-	    (!ctx.ca_true || !ctx.keyCertSign_set)) {
+	if (ctx->pathLenConstraint_set &&
+	    (!ctx->ca_true || !ctx->keyCertSign_set)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -10028,7 +10205,7 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	* RFC5280 has "The name constraints extension, which MUST be used only
 	* in a CA certificate, ..."
 	*/
-	if (ctx.has_name_constraints && !ctx.ca_true) {
+	if (ctx->has_name_constraints && !ctx->ca_true) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -10040,7 +10217,7 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	* DistributionPoint that points to a CRL that covers the certificate
 	* for all reasons."
 	*/
-	if (ctx.ca_true && ctx.has_crldp && !ctx.one_crldp_has_all_reasons) {
+	if (ctx->ca_true && ctx->has_crldp && !ctx->one_crldp_has_all_reasons) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -10061,7 +10238,7 @@ static int parse_x509_tbsCertificate(const u8 *buf, u16 len,
 	 * match issuer in a self-signed certificate. This should be
 	 * investigated in a more thorough fashion.
 	 */
-	if (!ctx.subject_issuer_identical && !ctx.aki_has_keyIdentifier) {
+	if (!ctx->subject_issuer_identical && !ctx->aki_has_keyIdentifier) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -10079,24 +10256,30 @@ out:
 
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..), exp_sig_alg);
+  @ requires \valid(ctx);
+  @ requires \separated(eaten, cert+(..), exp_sig_alg, ctx);
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (1 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @ ensures (eaten == \null) ==> \result < 0;
   @ assigns *eaten;
   @*/
-static int parse_x509_signatureAlgorithm(const u8 *buf, u16 len,
+static int parse_x509_signatureAlgorithm(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+					 const u8 *cert, u16 off, u16 len,
 					 const _alg_id *exp_sig_alg, u16 *eaten)
 {
 	const _alg_id *alg = NULL;
+	const u8 *buf = cert + off;
 	alg_param param;
 	u16 parsed = 0;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -10395,20 +10578,32 @@ static int parse_sig_ed25519(const u8 *buf, u16 len, u16 *eaten)
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \separated(eaten, buf+(..), r_start, r_len, s_start, s_len);
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (\result == 0) ==> ((*r_start + *r_len) <= len);
+  @ ensures (\result == 0) ==> ((*s_start + *s_len) <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @ ensures (r_start == \null) ==> \result < 0;
+  @ ensures (r_len == \null) ==> \result < 0;
+  @ ensures (s_start == \null) ==> \result < 0;
+  @ ensures (s_len == \null) ==> \result < 0;
+  @ assigns *eaten, *r_start, *r_len, *s_start, *s_len;
   @*/
-static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten)
+int parse_sig_ecdsa_export_r_s(const u8 *buf, u16 len,
+			       u16 *r_start, u16 *r_len,
+			       u16 *s_start, u16 *s_len,
+			       u16 *eaten)
 {
 	u16 bs_hdr_len = 0, bs_data_len = 0, sig_len = 0, hdr_len = 0;
 	u16 data_len = 0, remain = 0, saved_sig_len = 0;
+	u16 pos;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((buf == NULL) || (len == 0) || (eaten == NULL) ||
+	    (r_start == NULL) || (r_len == NULL) ||
+	    (s_start == NULL) || (s_len == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -10424,6 +10619,8 @@ static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten)
 	saved_sig_len = bs_hdr_len + bs_data_len;
 	/*@ assert saved_sig_len <= len; */
 	buf += bs_hdr_len;
+	pos = bs_hdr_len;
+	/*@ assert pos + bs_data_len <= len; */
 
 	/*
 	 * We expect the bitstring data to contain at least the initial
@@ -10465,7 +10662,10 @@ static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten)
 		goto out;
 	}
 	buf += 1;
+	pos += 1;
 	sig_len = bs_data_len - 1;
+	/*@ assert pos + bs_data_len - 1 <= len; */
+	/*@ assert pos + sig_len <= len; */
 
 	/*
 	 * Now that we know we are indeed dealing w/ an ECDSA sig mechanism,
@@ -10481,6 +10681,8 @@ static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten)
 
 	remain = sig_len - hdr_len;
 	buf += hdr_len;
+	pos += hdr_len;
+	/*@ assert (pos + remain) <= len; */
 
 	/* Now, we should find the first integer, r */
 	ret = parse_id_len(buf, remain, CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
@@ -10490,8 +10692,20 @@ static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten)
 		goto out;
 	}
 
+	/*@ assert hdr_len + data_len <= remain; */
+	/*@ assert (pos + remain) <= len; */
+	/*@ assert (pos + hdr_len + data_len) <= len; */
 	remain -= hdr_len + data_len;
 	buf += hdr_len + data_len;
+	*r_start = pos + hdr_len;
+	/*@ assert *r_start == pos + hdr_len; */
+	*r_len = data_len;
+	/*@ assert *r_len == data_len; */
+	/*@ assert *r_start == pos + hdr_len; */
+	/*@ assert (*r_start + *r_len) == (pos + hdr_len + data_len); */
+	/*@ assert *r_start + *r_len <= len; */
+	pos += hdr_len + data_len;
+	/*@ assert (pos + remain) <= len; */
 
 	/* An then, the second one, s */
 	ret = parse_id_len(buf, remain, CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
@@ -10501,8 +10715,19 @@ static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten)
 		goto out;
 	}
 
+	/*@ assert hdr_len + data_len <= remain; */
+	/*@ assert (pos + remain) <= len; */
+	/*@ assert (pos + hdr_len + data_len) <= len; */
 	remain -= hdr_len + data_len;
 	buf += hdr_len + data_len;
+	*s_start = pos + hdr_len;
+	/*@ assert *s_start == pos + hdr_len; */
+	*s_len = data_len;
+	/*@ assert *s_len == data_len; */
+	/*@ assert *s_start == pos + hdr_len; */
+	/*@ assert (*s_start + *s_len) == (pos + hdr_len + data_len); */
+	/*@ assert *s_start + *s_len <= len; */
+	pos += hdr_len + data_len;
 
 	/*
 	 * Check there is nothing remaining in the bitstring
@@ -10515,6 +10740,8 @@ static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten)
 	}
 
 	/*@ assert saved_sig_len <= len; */
+	/*@ assert *r_start + *r_len <= len; */
+	/*@ assert *s_start + *s_len <= len; */
 	*eaten = saved_sig_len;
 
 	ret = 0;
@@ -10523,36 +10750,62 @@ out:
 	return ret;
 }
 
-
 /*@
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires (sig_alg != \null) ==> \valid_read(sig_alg) && \valid_function(sig_alg->parse_sig);
   @ requires \valid(eaten);
+  @ requires \separated(eaten, buf+(..));
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
   @ assigns *eaten;
   @*/
-static int parse_x509_signatureValue(const u8 *buf, u16 len,
+static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten)
+{
+	u16 r_start, r_len, s_start, s_len;
+
+	return parse_sig_ecdsa_export_r_s(buf, len, &r_start, &r_len,
+					  &s_start, &s_len, eaten);
+}
+
+/*@
+  @ requires len >= 0;
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires (sig_alg != \null) ==> \valid_read(sig_alg) && \valid_function(sig_alg->parse_sig);
+  @ requires \valid(eaten);
+  @ requires \valid(ctx);
+  @ requires \separated(ctx, cert+(..), sig_alg, eaten);
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @ ensures (sig_alg == \null) ==> \result < 0;
+  @ ensures (eaten == \null) ==> \result < 0;
+  @ assigns *eaten;
+  @*/
+static int parse_x509_signatureValue(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+				     const u8 *cert, u16 off, u16 len,
 				     const _alg_id *sig_alg, u16 *eaten)
 {
+	const u8 *buf = cert + off;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (cert == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	if (!sig_alg) {
+	if (sig_alg == NULL) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	if (!sig_alg->parse_sig) {
+	if (sig_alg->parse_sig == NULL) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -10581,29 +10834,70 @@ out:
 
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (0 .. (len - 1)));
+  @ requires \separated(ctx, cert+(..));
+  @ requires \valid(ctx);
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @ ensures (ctx == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ assigns *ctx;
   @*/
-int parse_x509_cert(const u8 *buf, u16 len) {
+int parse_x509_cert(cert_parsing_ctx *ctx, const u8 *cert, u16 len)
+{
 	u16 seq_data_len = 0;
 	u16 eaten = 0;
+	u16 off = 0;
 	const _alg_id *sig_alg = NULL;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
 	/*
+	 * FIXME! At the moment, when using Frama-C with Typed memory model
+	 * the use of memset() prevents to validate assigns clause for the
+	 * function. At the moment, we workaround that problem by
+	 * initializing the structure field by field. Yes, this is sad.
+	 */
+	/* memset(&ctx, 0, sizeof(ctx)); */
+	ctx->tbs_start = 0;
+	ctx->tbs_len = 0;
+	ctx->spki_alg_oid_start = 0;
+	ctx->spki_alg_oid_len = 0;
+	ctx->spki_pub_key_start = 0;
+	ctx->spki_pub_key_len = 0;
+	ctx->sig_alg_start = 0;
+	ctx->sig_alg_len = 0;
+	ctx->sig_start = 0;
+	ctx->sig_len = 0;
+	ctx->version = 0;
+	ctx->empty_subject = 0;
+	ctx->san_empty = 0;
+	ctx->san_critical = 0;
+	ctx->ca_true = 0;
+	ctx->bc_critical = 0;
+	ctx->has_ski = 0;
+	ctx->spki_start = 0;
+	ctx->spki_len = 0;
+	ctx->has_keyUsage = 0;
+	ctx->keyCertSign_set = 0;
+	ctx->cRLSign_set = 0;
+	ctx->pathLenConstraint_set = 0;
+	ctx->has_name_constraints = 0;
+	ctx->has_crldp = 0;
+	ctx->one_crldp_has_all_reasons = 0;
+	ctx->aki_has_keyIdentifier = 0;
+	ctx->subject_issuer_identical = 0;
+
+	/*
 	 * Parse beginning of buffer to verify it's a sequence and get
 	 * the length of the data it contains.
 	 */
-	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
+	ret = parse_id_len(cert, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
 			   &eaten, &seq_data_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
@@ -10611,7 +10905,8 @@ int parse_x509_cert(const u8 *buf, u16 len) {
 	}
 
 	len -= eaten;
-	buf += eaten;
+	off += eaten;
+	/*@ assert off + len <= 65535; */
 
 	/*
 	 * We do expect advertised length to match what now remains in buffer
@@ -10624,31 +10919,40 @@ int parse_x509_cert(const u8 *buf, u16 len) {
 	}
 
 	/* Parse first element of the sequence: tbsCertificate */
-	ret = parse_x509_tbsCertificate(buf, len, &sig_alg, &eaten);
+	ret = parse_x509_tbsCertificate(ctx, cert, off, len, &sig_alg, &eaten);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
+	ctx->tbs_start = off;
+	ctx->tbs_len = eaten;
+
 	len -= eaten;
-	buf += eaten;
+	off += eaten;
 
 	/* Parse second element of the sequence: signatureAlgorithm */
-	ret = parse_x509_signatureAlgorithm(buf, len, sig_alg, &eaten);
+	ret = parse_x509_signatureAlgorithm(ctx, cert, off, len, sig_alg, &eaten);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	ctx->sig_alg_start = off;
+	ctx->sig_alg_len = eaten;
 
 	len -= eaten;
-	buf += eaten;
+	off += eaten;
 
 	/* Parse second element of the sequence: signatureValue */
-	ret = parse_x509_signatureValue(buf, len, sig_alg, &eaten);
+	ret = parse_x509_signatureValue(ctx, cert, off, len, sig_alg, &eaten);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	ctx->sig_start = off;
+	ctx->sig_len = eaten;
 
 	/* Check there is nothing left behind */
 	if (len != eaten) {
@@ -10669,17 +10973,24 @@ out:
   @ requires \separated(eaten, buf+(..));
   @ requires \valid(eaten);
   @ ensures \result <= 1;
+  @ ensures (eaten == \null) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (\result == 0) ==> (*eaten > 0);
-  @ ensures (\result < 0) ==> (*eaten <= len);
-  @ ensures (\result < 0) ==> (*eaten > 0);
   @ assigns *eaten;
  */
 int parse_x509_cert_relaxed(const u8 *buf, u16 len, u16 *eaten)
 {
+	cert_parsing_ctx ctx;
 	u16 seq_data_len = 0;
 	u16 rbytes = 0;
 	int ret;
+
+	if ((buf == NULL) || (len == 0) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
 	/*
 	 * Parse beginning of buffer to verify it's a sequence and get
@@ -10697,7 +11008,7 @@ int parse_x509_cert_relaxed(const u8 *buf, u16 len, u16 *eaten)
 	*eaten = rbytes + seq_data_len;
 
 	/* Parse it */
-	ret = parse_x509_cert(buf, rbytes + seq_data_len);
+	ret = parse_x509_cert(&ctx, buf, rbytes + seq_data_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -10718,6 +11029,7 @@ out:
 
 int main(int argc, char *argv[]) {
 	u8 buf[RAND_BUF_SIZE];
+	cert_parsing_ctx ctx;
 	u16 len;
 	int ret;
 
@@ -10727,7 +11039,7 @@ int main(int argc, char *argv[]) {
 	len = Frama_C_interval(0, RAND_BUF_SIZE);
 	/*@ assert 0 <= len <= RAND_BUF_SIZE; */
 
-	ret = parse_x509_cert(buf, len);
+	ret = parse_x509_cert(&ctx, buf, len);
 
 	return ret;
 }
@@ -10739,6 +11051,7 @@ int main(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
 	u8 buf[RAND_BUF_SIZE];
+	cert_parsing_ctx ctx;
 	u16 len;
 	int ret;
 
@@ -10747,7 +11060,7 @@ int main(int argc, char *argv[]) {
 	len = __ikos_nondet_uint();
 	__ikos_assume(len <= RAND_BUF_SIZE);
 
-	ret = parse_x509_cert(buf, len);
+	ret = parse_x509_cert(&ctx, buf, len);
 
 	return ret;
 }
