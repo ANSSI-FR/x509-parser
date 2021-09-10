@@ -109,4 +109,14 @@ int parse_x509_cert(cert_parsing_ctx *ctx, const u8 *buf, u16 len);
 int parse_x509_cert_relaxed(const u8 *buf, u16 len, u16 *eaten);
 
 
+int parse_sig_ecdsa_export_r_s(const u8 *buf, u16 len,
+			       u16 *r_start_off, u16 *r_len,
+			       u16 *s_start_off, u16 *s_len,
+			       u16 *eaten);
+
+int parse_sig_eddsa_export_r_s(const u8 *buf, u16 len,
+			       u16 *r_start_off, u16 *r_len,
+			       u16 *s_start_off, u16 *s_len,
+			       u16 *eaten);
+
 #endif /* __X509_PARSER_H__ */

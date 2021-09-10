@@ -10501,6 +10501,33 @@ static int parse_sig_gost2012(const u8 *buf, u16 len, u16 *eaten)
   @*/
 static int parse_sig_eddsa(const u8 *buf, u16 len, u16 exp_sig_len, u16 *eaten)
 {
+	u16 r_start_off = 0, r_len = 0, s_start_off = 0, s_len = 0;
+	int ret;
+
+	ret = parse_sig_eddsa_export_r_s(buf, len,
+					 &r_start_off, &r_len,
+					 &s_start_off, &s_len,
+					 eaten);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	if ((r_len + s_len) != exp_sig_len) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+#if 0
+static int parse_sig_eddsa(const u8 *buf, u16 len, u16 exp_sig_len, u16 *eaten)
+{
 	u16 remain, hdr_len = 0, data_len = 0;
 	int ret;
 
@@ -10556,6 +10583,7 @@ static int parse_sig_eddsa(const u8 *buf, u16 len, u16 exp_sig_len, u16 *eaten)
 out:
 	return ret;
 }
+#endif
 
 #define ED448_SIG_LEN 114
 /*@
@@ -10595,22 +10623,22 @@ static int parse_sig_ed25519(const u8 *buf, u16 len, u16 *eaten)
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..), r_start, r_len, s_start, s_len);
+  @ requires \separated(eaten, buf+(..), r_start_off, r_len, s_start_off, s_len);
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
-  @ ensures (\result == 0) ==> ((*r_start + *r_len) <= len);
-  @ ensures (\result == 0) ==> ((*s_start + *s_len) <= len);
+  @ ensures (\result == 0) ==> ((*r_start_off + *r_len) <= len);
+  @ ensures (\result == 0) ==> ((*s_start_off + *s_len) <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
-  @ ensures (r_start == \null) ==> \result < 0;
+  @ ensures (r_start_off == \null) ==> \result < 0;
   @ ensures (r_len == \null) ==> \result < 0;
-  @ ensures (s_start == \null) ==> \result < 0;
+  @ ensures (s_start_off == \null) ==> \result < 0;
   @ ensures (s_len == \null) ==> \result < 0;
-  @ assigns *eaten, *r_start, *r_len, *s_start, *s_len;
+  @ assigns *eaten, *r_start_off, *r_len, *s_start_off, *s_len;
   @*/
 int parse_sig_ecdsa_export_r_s(const u8 *buf, u16 len,
-			       u16 *r_start, u16 *r_len,
-			       u16 *s_start, u16 *s_len,
+			       u16 *r_start_off, u16 *r_len,
+			       u16 *s_start_off, u16 *s_len,
 			       u16 *eaten)
 {
 	u16 bs_hdr_len = 0, bs_data_len = 0, sig_len = 0, hdr_len = 0;
@@ -10619,8 +10647,8 @@ int parse_sig_ecdsa_export_r_s(const u8 *buf, u16 len,
 	int ret;
 
 	if ((buf == NULL) || (len == 0) || (eaten == NULL) ||
-	    (r_start == NULL) || (r_len == NULL) ||
-	    (s_start == NULL) || (s_len == NULL)) {
+	    (r_start_off == NULL) || (r_len == NULL) ||
+	    (s_start_off == NULL) || (s_len == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -10714,13 +10742,13 @@ int parse_sig_ecdsa_export_r_s(const u8 *buf, u16 len,
 	/*@ assert (pos + hdr_len + data_len) <= len; */
 	remain -= hdr_len + data_len;
 	buf += hdr_len + data_len;
-	*r_start = pos + hdr_len;
-	/*@ assert *r_start == pos + hdr_len; */
+	*r_start_off = pos + hdr_len;
+	/*@ assert *r_start_off == pos + hdr_len; */
 	*r_len = data_len;
 	/*@ assert *r_len == data_len; */
-	/*@ assert *r_start == pos + hdr_len; */
-	/*@ assert (*r_start + *r_len) == (pos + hdr_len + data_len); */
-	/*@ assert *r_start + *r_len <= len; */
+	/*@ assert *r_start_off == pos + hdr_len; */
+	/*@ assert (*r_start_off + *r_len) == (pos + hdr_len + data_len); */
+	/*@ assert *r_start_off + *r_len <= len; */
 	pos += hdr_len + data_len;
 	/*@ assert (pos + remain) <= len; */
 
@@ -10737,13 +10765,13 @@ int parse_sig_ecdsa_export_r_s(const u8 *buf, u16 len,
 	/*@ assert (pos + hdr_len + data_len) <= len; */
 	remain -= hdr_len + data_len;
 	buf += hdr_len + data_len;
-	*s_start = pos + hdr_len;
-	/*@ assert *s_start == pos + hdr_len; */
+	*s_start_off = pos + hdr_len;
+	/*@ assert *s_start_off == pos + hdr_len; */
 	*s_len = data_len;
 	/*@ assert *s_len == data_len; */
-	/*@ assert *s_start == pos + hdr_len; */
-	/*@ assert (*s_start + *s_len) == (pos + hdr_len + data_len); */
-	/*@ assert *s_start + *s_len <= len; */
+	/*@ assert *s_start_off == pos + hdr_len; */
+	/*@ assert (*s_start_off + *s_len) == (pos + hdr_len + data_len); */
+	/*@ assert *s_start_off + *s_len <= len; */
 	pos += hdr_len + data_len;
 
 	/*
@@ -10757,11 +10785,121 @@ int parse_sig_ecdsa_export_r_s(const u8 *buf, u16 len,
 	}
 
 	/*@ assert saved_sig_len <= len; */
-	/*@ assert *r_start + *r_len <= len; */
-	/*@ assert *s_start + *s_len <= len; */
+	/*@ assert *r_start_off + *r_len <= len; */
+	/*@ assert *s_start_off + *s_len <= len; */
 	*eaten = saved_sig_len;
 
 	ret = 0;
+
+out:
+	return ret;
+}
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, buf+(..));
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (\result == 0) ==> ((*r_start_off + *r_len) <= len);
+  @ ensures (\result == 0) ==> ((*s_start_off + *s_len) <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (r_start_off == \null) ==> \result < 0;
+  @ ensures (r_len == \null) ==> \result < 0;
+  @ ensures (s_start_off == \null) ==> \result < 0;
+  @ ensures (s_len == \null) ==> \result < 0;
+  @ assigns *eaten, *r_start_off, *r_len, *s_start_off, *s_len;
+  @*/
+int parse_sig_eddsa_export_r_s(const u8 *buf, u16 len,
+			       u16 *r_start_off, u16 *r_len,
+			       u16 *s_start_off, u16 *s_len,
+			       u16 *eaten)
+{
+	u16 sig_len = 0, hdr_len = 0, data_len = 0, remain = 0;
+	u16 comp_len;
+	int ret;
+
+	if ((buf == NULL) || (len == 0) || (eaten == NULL) ||
+	    (r_start_off == NULL) || (r_len == NULL) ||
+	    (s_start_off == NULL) || (s_len == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+
+	if (len != (hdr_len + data_len)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	/*@ assert hdr_len + data_len == len; */
+
+	/*
+	 * We expect the bitstring data to contain at least the initial
+	 * octet encoding the number of unused bits in the final
+	 * subsequent octet of the bistring.
+	 * */
+	if (data_len == 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * We expect the initial octet to encode a value of 0
+	 * indicating that there are no unused bits in the final
+	 * subsequent octet of the bitstring.
+	 */
+	if (buf[0] != 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	buf += 1;
+	sig_len = data_len - 1;
+	comp_len = sig_len / 2;
+
+	if (sig_len != (comp_len * 2)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	/*@ assert sig_len == 2 * comp_len; */
+
+	*r_start_off = hdr_len + 1;
+	*r_len = comp_len;
+	/*@ assert *r_len == comp_len; */
+	/*@ assert *r_start_off + *r_len <= len; */
+
+	*s_start_off = hdr_len + 1 + comp_len;
+	*s_len = comp_len;
+	/*@ assert *s_len == comp_len; */
+	/*@ assert (*s_start_off + *s_len) <= len; */
+
+	/*
+	 * Check there is nothing remaining in the bitstring
+	 * after the two integers
+	 */
+	if (remain != 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	*eaten = hdr_len + data_len;
+	ret = 0;
+	/*@ assert (*r_start_off + *r_len) <= len; */
+	/*@ assert (*s_start_off + *s_len) <= len; */
 
 out:
 	return ret;
@@ -10780,10 +10918,10 @@ out:
   @*/
 static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten)
 {
-	u16 r_start, r_len, s_start, s_len;
+	u16 r_start_off, r_len, s_start_off, s_len;
 
-	return parse_sig_ecdsa_export_r_s(buf, len, &r_start, &r_len,
-					  &s_start, &s_len, eaten);
+	return parse_sig_ecdsa_export_r_s(buf, len, &r_start_off, &r_len,
+					  &s_start_off, &s_len, eaten);
 }
 
 /*@
