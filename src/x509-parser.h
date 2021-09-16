@@ -58,6 +58,8 @@ typedef struct {
 	u16 tbs_len;
 	u16 issuer_start;
 	u16 issuer_len;
+	u16 serial_start;
+	u16 serial_len;
 	u16 subject_start;
 	u16 subject_len;
 	u16 spki_start;

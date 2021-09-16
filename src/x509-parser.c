@@ -1117,7 +1117,7 @@ out:
   @ requires \valid(eaten);
   @ requires \separated(eaten, cert+(..));
   @ ensures \result < 0 || \result == 0;
-  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (\result == 0) ==> (2 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
@@ -1143,6 +1143,7 @@ static int parse_SerialNumber(const u8 *cert, u16 off, u16 len,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+	/*@ assert parsed > 2; */
 
 	/*
 	 * We now have the guarantee the integer has the following format:
@@ -1181,8 +1182,8 @@ static int parse_SerialNumber(const u8 *cert, u16 off, u16 len,
 	}
 
 	*eaten = parsed;
-
 	ret = 0;
+	/*@ assert *eaten > 2; */
 
 out:
 	return ret;
@@ -1202,9 +1203,9 @@ out:
   @ ensures (ctx == \null) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @ assigns *eaten, *ctx;
   @*/
-static int parse_CertSerialNumber(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+static int parse_CertSerialNumber(cert_parsing_ctx *ctx,
 				  const u8 *cert, u16 off, u16 len,
 				  tag_class exp_class, u32 exp_type,
 				  u16 *eaten)
@@ -1217,7 +1218,8 @@ static int parse_CertSerialNumber(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 	       goto out;
 	}
 
-	/* XXX At some point, update ctx with useful info */
+	ctx->serial_start = off + 2; /* 2 bytes long hdr for a valid SN */
+	ctx->serial_len = *eaten - 2;
 
 out:
 	return ret;
