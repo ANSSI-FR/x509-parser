@@ -2982,7 +2982,7 @@ static int parse_algoid_params_pub_gost_r3410_2001(const u8 *buf, u16 len, alg_p
 	u16 oid_len = 0;
 	int ret;
 
-	if ((buf == NULL)) {
+	if (buf == NULL) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
