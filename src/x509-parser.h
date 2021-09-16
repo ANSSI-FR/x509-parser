@@ -75,6 +75,8 @@ typedef struct {
 
 	/* Info we grabbed while parsing */
 	int version;
+	u64 not_before;
+	u64 not_after;
 	int empty_subject;
 	int san_empty;
 	int san_critical;

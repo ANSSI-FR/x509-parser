@@ -5557,17 +5557,22 @@ static int _verify_correct_time_use(u8 time_type, u16 yyyy)
  */
 /*@
   @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires off + len <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(ctx);
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \separated(eaten, cert+(..), ctx);
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @ assigns *eaten, *ctx;
   @*/
-static int parse_x509_Validity(const u8 *buf, u16 len, u16 *eaten)
+static int parse_x509_Validity(cert_parsing_ctx *ctx,
+			       const u8 *cert, u16 off, u16 len, u16 *eaten)
 {
+	const u8 *buf = cert + off;
 	int ret;
 	u16 hdr_len = 0;
 	u16 remain = 0;
@@ -5576,8 +5581,9 @@ static int parse_x509_Validity(const u8 *buf, u16 len, u16 *eaten)
 	u8 na_month = 0, na_day = 0, na_hour = 0, na_min = 0, na_sec = 0;
 	u8 nb_month = 0, nb_day = 0, nb_hour = 0, nb_min = 0, nb_sec = 0;
 	u8 t_type = 0;
+	u64 not_after, not_before;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -5634,40 +5640,27 @@ static int parse_x509_Validity(const u8 *buf, u16 len, u16 *eaten)
 		goto out;
 	}
 
-	/* Compare value to verify notAfter is indeed after notBefore */
-	if (na_year < nb_year) {
+	/*
+	 * To export time to context we do not bother converting to unix
+	 * but encode all the components on a u64 in the following way.
+	 * this makes resulting not_after and not_before values comparable.
+	 */
+	not_after   = (((u64)na_year) << 40) + (((u64)na_month) << 32);
+	not_after  +=  (((u64)na_day) << 24) +  (((u64)na_hour) << 16);
+	not_after  +=  (((u64)na_min) <<  8) +  (((u64)na_sec));
+
+	not_before  = (((u64)nb_year) << 40) + (((u64)nb_month) << 32);
+	not_before +=  (((u64)nb_day) << 24) +  (((u64)nb_hour) << 16);
+	not_before +=  (((u64)nb_min) <<  8) +  (((u64)nb_sec));
+
+	if (not_before >= not_after) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
-	} else if (na_year == nb_year) { /* Same year, check difference */
-		u32 na_rem_secs, nb_rem_secs; /* sec in a year fit on u32 */
-
-#define SEC_PER_MIN   60
-#define SEC_PER_HOUR  (60 * SEC_PER_MIN)
-#define SEC_PER_DAY   (24 * SEC_PER_HOUR)
-#define SEC_PER_MONTH (31 * SEC_PER_DAY)
-
-		na_rem_secs = 0;
-		na_rem_secs += na_month * SEC_PER_MONTH;
-		na_rem_secs += na_day * SEC_PER_DAY;
-		na_rem_secs += na_hour * SEC_PER_HOUR;
-		na_rem_secs += na_min * SEC_PER_MIN;
-		na_rem_secs += na_sec;
-
-		nb_rem_secs = 0;
-		nb_rem_secs += nb_month * SEC_PER_MONTH;
-		nb_rem_secs += nb_day * SEC_PER_DAY;
-		nb_rem_secs += nb_hour * SEC_PER_HOUR;
-		nb_rem_secs += nb_min * SEC_PER_MIN;
-		nb_rem_secs += nb_sec;
-
-		if (na_rem_secs <= nb_rem_secs) {
-			ret = -__LINE__;
-			ERROR_TRACE_APPEND(__LINE__);
-			goto out;
-		}
 	}
 
+	ctx->not_before = not_before;
+	ctx->not_after = not_after;
 	*eaten = hdr_len + data_len;
 
 	ret = 0;
@@ -10064,7 +10057,7 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 	remain -= parsed;
 
 	/* validity */
-	ret = parse_x509_Validity(buf, remain, &parsed);
+	ret = parse_x509_Validity(ctx, cert, off, remain, &parsed);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
