@@ -2048,6 +2048,72 @@ static int parse_algoid_params_ecdsa_with(const u8 *buf, u16 len, alg_param *par
 	return ret;
 }
 
+static const u8 _curve_prime192v1_name[] = "prime192v1";
+static const u8 _curve_prime192v1_printable_oid[] = "1.2.840.10045.3.0.1";
+static const u8 _curve_prime192v1_der_oid[] = { 0x06, 0x08, 0x2a, 0x86,
+						0x48, 0xce, 0x3d, 0x03,
+						0x01, 0x01,  };
+
+static const _curve _curve_prime192v1 = {
+	.crv_name = _curve_prime192v1_name,
+	.crv_printable_oid = _curve_prime192v1_printable_oid,
+	.crv_der_oid = _curve_prime192v1_der_oid,
+	.crv_der_oid_len = sizeof(_curve_prime192v1_der_oid),
+	.crv_order_bit_len = 192,
+};
+
+static const u8 _curve_c2pnb163v1_name[] = "c2pnb163v1";
+static const u8 _curve_c2pnb163v1_printable_oid[] = "1.2.840.10045.3.0.1";
+static const u8 _curve_c2pnb163v1_der_oid[] = { 0x06, 0x08, 0x2a, 0x86,
+						0x48, 0xce, 0x3d, 0x03,
+						0x00, 0x01 };
+
+static const _curve _curve_c2pnb163v1 = {
+	.crv_name = _curve_c2pnb163v1_name,
+	.crv_printable_oid = _curve_c2pnb163v1_printable_oid,
+	.crv_der_oid = _curve_c2pnb163v1_der_oid,
+	.crv_der_oid_len = sizeof(_curve_c2pnb163v1_der_oid),
+	.crv_order_bit_len = 163,
+};
+
+static const u8 _curve_sect571k1_name[] = "sect571k1";
+static const u8 _curve_sect571k1_printable_oid[] = "1.3.132.0.38";
+static const u8 _curve_sect571k1_der_oid[] = { 0x06, 0x05, 0x2b, 0x81,
+					       0x04, 0x00, 0x26 };
+
+static const _curve _curve_sect571k1 = {
+	.crv_name = _curve_sect571k1_name,
+	.crv_printable_oid = _curve_sect571k1_printable_oid,
+	.crv_der_oid = _curve_sect571k1_der_oid,
+	.crv_der_oid_len = sizeof(_curve_sect571k1_der_oid),
+	.crv_order_bit_len = 571,
+};
+
+static const u8 _curve_sect163k1_name[] = "sect163k1";
+static const u8 _curve_sect163k1_printable_oid[] = "1.3.132.0.1";
+static const u8 _curve_sect163k1_der_oid[] = { 0x06, 0x05, 0x2b, 0x81,
+					       0x04, 0x00, 0x01 };
+
+static const _curve _curve_sect163k1 = {
+	.crv_name = _curve_sect163k1_name,
+	.crv_printable_oid = _curve_sect163k1_printable_oid,
+	.crv_der_oid = _curve_sect163k1_der_oid,
+	.crv_der_oid_len = sizeof(_curve_sect163k1_der_oid),
+	.crv_order_bit_len = 163,
+};
+
+static const u8 _curve_secp256k1_name[] = "secp256k1";
+static const u8 _curve_secp256k1_printable_oid[] = "1.3.132.0.10";
+static const u8 _curve_secp256k1_der_oid[] = { 0x06, 0x05, 0x2b, 0x81,
+					       0x04, 0x00, 0x0a	 };
+
+static const _curve _curve_secp256k1 = {
+	.crv_name = _curve_secp256k1_name,
+	.crv_printable_oid = _curve_secp256k1_printable_oid,
+	.crv_der_oid = _curve_secp256k1_der_oid,
+	.crv_der_oid_len = sizeof(_curve_secp256k1_der_oid),
+	.crv_order_bit_len = 256,
+};
 
 static const u8 _curve_secp256r1_name[] = "secp256r1";
 static const u8 _curve_secp256r1_printable_oid[] = "1.2.840.10045.3.1.7";
@@ -2152,6 +2218,11 @@ static const _curve *known_curves[] = {
 	&_curve_brainpoolP384R1,
 	&_curve_brainpoolP512R1,
 	&_curve_sm2p256v1,
+	&_curve_prime192v1,
+	&_curve_c2pnb163v1,
+	&_curve_sect571k1,
+	&_curve_sect163k1,
+	&_curve_secp256k1,
 };
 
 #define NUM_KNOWN_CURVES (sizeof(known_curves) / sizeof(known_curves[0]))
