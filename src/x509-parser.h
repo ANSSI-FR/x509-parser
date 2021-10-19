@@ -61,6 +61,12 @@ typedef uint64_t u64;
 #define TEMPORARY_LAXIST_SERIAL_NULL
 
 /*
+ * Allow certificates w/ full basic constraints boolean explicitly set to false.
+ * As this is the DEFAULT value, DER forbids encoding of that value.
+ */
+#define TEMPORARY_LAXIST_CA_BASIC_CONSTRAINTS_BOOLEAN_EXPLICIT_FALSE
+
+/*
  * The following can be defined to enable an error trace to be
  * printed on standard output. The error path is made of the
  * lines in the representing the call graph leading to the

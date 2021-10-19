@@ -8347,16 +8347,38 @@ static int parse_ext_basicConstraints(cert_parsing_ctx *ctx,
 	case 0: /* empty sequence */
 		ret = 0;
 		break;
-	case 3: /* cA set, no pathLenConstraint */
+	case 3: /* no pathLenConstraint */
+		/*
+		 * We should indeed find a CA TRUE here. If this is
+		 * the case everything is fine.
+		 */
 		ret = bufs_differ(buf, ca_true_wo_plc, 3);
-		if (ret) {
-			ret = -__LINE__;
-			ERROR_TRACE_APPEND(__LINE__);
-			goto out;
+		if (!ret) {
+			ctx->ca_true = 1;
+			break;
 		}
-		ctx->ca_true = 1;
+
+		/*
+		 * Here, we should directly leave w/o spending more
+		 * time except if we were instructed to accept
+		 * wrongdoing CAs asserting FALSE boolean for CA.
+		 */
+#ifdef TEMPORARY_LAXIST_CA_BASIC_CONSTRAINTS_BOOLEAN_EXPLICIT_FALSE
+		{
+			const u8 ca_false_explicit_wo_plc[] = { 0x01, 0x01, 0x00 };
+
+			ret = bufs_differ(buf, ca_false_explicit_wo_plc, 3);
+			if (!ret) {
+				break;
+			}
+		}
+#endif
+
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
 		break;
-	case 6: /* cA set, pathLenConstraint given ([0,127] allowed) */
+	case 6: /* CA set, pathLenConstraint given ([0,127] allowed) */
 		ret = bufs_differ(buf, ca_true_w_plc, 5);
 		if (ret) {
 			ret = -__LINE__;
