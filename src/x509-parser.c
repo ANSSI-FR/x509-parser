@@ -9960,11 +9960,19 @@ static int parse_x509_Extension(cert_parsing_ctx *ctx,
 		 * accept an encoded value of FALSE. Note that we
 		 * sanity check the value we expect for the length
 		 */
-		if ((parsed != 3) || (buf[2] == 0x00)) {
+		if (parsed != 3) {
 			ret = -__LINE__;
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
 		}
+
+#ifndef TEMPORARY_LAXIST_EXTENSION_CRITICAL_FLAG_BOOLEAN_EXPLICIT_FALSE
+		if (buf[2] == 0x00) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+#endif
 
 		/*
 		 * We now know the BOOLEAN is present and has

@@ -67,6 +67,12 @@ typedef uint64_t u64;
 #define TEMPORARY_LAXIST_CA_BASIC_CONSTRAINTS_BOOLEAN_EXPLICIT_FALSE
 
 /*
+ * Allow certificates w/ extension's critical flag explicitly set to false.
+ * As this is the DEFAULT value, DER forbids encoding of that value.
+ */
+#define TEMPORARY_LAXIST_EXTENSION_CRITICAL_FLAG_BOOLEAN_EXPLICIT_FALSE
+
+/*
  * Allow serial DN component encoded as an IA5String whereas RFC 5280
  * requires such element to be encoded using printable string.
  */
