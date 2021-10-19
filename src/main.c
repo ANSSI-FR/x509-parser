@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 		eaten = 0;
 		ret = parse_x509_cert_relaxed(buf, copied, &eaten);
 #ifdef ERROR_TRACE_ENABLE
-		printf("%05d %ld %d %s\n", -ret, offset, eaten, path);
+		printf("- %05d %ld %d %s\n", -ret, offset, eaten, path);
 #endif
 		if (ret == 1) {
 			eaten = 1;
