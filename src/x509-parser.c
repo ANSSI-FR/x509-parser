@@ -1157,9 +1157,13 @@ static int parse_SerialNumber(const u8 *cert, u16 off, u16 len,
 	 * being 0.
 	 */
 	if ((parsed == 3) && (buf[2] == 0)) {
+#ifndef TEMPORARY_LAXIST_SERIAL_NULL
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
+#else
+		ret = 0;
+#endif
 	}
 
 	/*

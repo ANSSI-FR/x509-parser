@@ -52,6 +52,12 @@ typedef uint64_t u64;
 #define TEMPORARY_LAXIST_SERIAL_LENGTH
 
 /*
+ * Serial value is not expected to be 0. This knob make such certificate
+ * valid.
+ */
+#define TEMPORARY_LAXIST_SERIAL_NULL
+
+/*
  * The following can be defined to enable an error trace to be
  * printed on standard output. The error path is made of the
  * lines in the representing the call graph leading to the
