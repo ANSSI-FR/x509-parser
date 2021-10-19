@@ -41,6 +41,11 @@ typedef uint64_t u64;
 #define TEMPORARY_LAXIST_DIRECTORY_STRING
 
 /*
+ * Allow negative serial value
+ */
+#define TEMPORARY_LAXIST_SERIAL_NEGATIVE
+
+/*
  * The following can be defined to enable an error trace to be
  * printed on standard output. The error path is made of the
  * lines in the representing the call graph leading to the

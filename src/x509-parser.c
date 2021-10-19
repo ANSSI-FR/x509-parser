@@ -1176,9 +1176,18 @@ static int parse_SerialNumber(const u8 *cert, u16 off, u16 len,
 
 	/* ... and be positive */
 	if (buf[2] & 0x80) {
+#ifndef TEMPORARY_LAXIST_SERIAL_NEGATIVE
+		/*
+		 * RFC has a MUST (4.1.2.2) for serial integer to
+		 * be positive.
+		 */
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
+#else
+		/* here, we let it happen */
+		ret = 0;
+#endif
 	}
 
 	*eaten = parsed;
