@@ -25,6 +25,9 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
+/* Allow CA certificates w/o SKI. */
+#define TEMPORARY_LAXIST_CA_WO_SKI
+
 /* Allow emailAddress using UTF-8 encoding instead for IA5String. */
 #define TEMPORARY_LAXIST_EMAILADDRESS_WITH_UTF8_ENCODING
 

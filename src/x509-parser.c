@@ -10388,11 +10388,13 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 	 * constraints extension (Section 4.2.1.9) where the value of cA is
 	 * TRUE"
 	 */
+#ifndef TEMPORARY_LAXIST_CA_WO_SKI
 	if (ctx->ca_true && !ctx->has_ski) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+#endif
 
 	/*
 	 * RFC 5280 has "If the keyCertSign bit is asserted, then the cA bit in
