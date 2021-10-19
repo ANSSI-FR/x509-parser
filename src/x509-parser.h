@@ -67,6 +67,12 @@ typedef uint64_t u64;
 #define TEMPORARY_LAXIST_CA_BASIC_CONSTRAINTS_BOOLEAN_EXPLICIT_FALSE
 
 /*
+ * Allow serial DN component encoded as an IA5String whereas RFC 5280
+ * requires such element to be encoded using printable string.
+ */
+#define TEMPORARY_LAXIST_SERIAL_RDN_AS_IA5STRING
+
+/*
  * The following can be defined to enable an error trace to be
  * printed on standard output. The error path is made of the
  * lines in the representing the call graph leading to the

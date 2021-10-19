@@ -4557,7 +4557,16 @@ static int parse_rdn_val_emailaddress(const u8 *buf, u16 len)
   @*/
 static int parse_rdn_val_serial(const u8 *buf, u16 len)
 {
-	return parse_printable_string(buf, len, 1, UB_SERIAL_NUMBER);
+	int ret;
+
+	ret = parse_printable_string(buf, len, 1, UB_SERIAL_NUMBER);
+	if (ret) {
+#ifdef TEMPORARY_LAXIST_SERIAL_RDN_AS_IA5STRING
+		ret = parse_ia5_string(buf, len, 1, UB_SERIAL_NUMBER);
+#endif
+	}
+
+	return ret;
 }
 
 #define UB_COUNTRY 2
