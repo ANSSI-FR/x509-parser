@@ -46,6 +46,12 @@ typedef uint64_t u64;
 #define TEMPORARY_LAXIST_SERIAL_NEGATIVE
 
 /*
+ * Allow large serial value. Limit is 20 bytes but some implementation
+ * use larger serial.
+ */
+#define TEMPORARY_LAXIST_SERIAL_LENGTH
+
+/*
  * The following can be defined to enable an error trace to be
  * printed on standard output. The error path is made of the
  * lines in the representing the call graph leading to the

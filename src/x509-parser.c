@@ -1169,9 +1169,13 @@ static int parse_SerialNumber(const u8 *cert, u16 off, u16 len,
 	 * header following the type/class byte.
 	 */
 	if (parsed > MAX_SERIAL_NUM_LEN) {
-	       ret = -__LINE__;
+#ifndef TEMPORARY_LAXIST_SERIAL_LENGTH
+		ret = -__LINE__;
 	       ERROR_TRACE_APPEND(__LINE__);
 	       goto out;
+#else
+	       ret = 0;
+#endif
 	}
 
 	/* ... and be positive */
