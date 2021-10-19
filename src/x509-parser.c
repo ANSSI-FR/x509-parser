@@ -9416,8 +9416,19 @@ static const u8 _ext_oid_bad_ns_ca_policy_url[] =      { 0x06, 0x09, 0x60, 0x86,
 static const u8 _ext_oid_bad_szOID_CERTSRV_CA_VERS[] = { 0x06, 0x09, 0x2b, 0x06,
 							 0x01, 0x04, 0x01, 0x82,
 							 0x37, 0x15, 0x01 };
-static const u8 _ext_oid_bad_szOID_APP_CERT_POL[] =    { 0x06, 0x03, 0x55, 0x1d,
+static const u8 _ext_oid_bad_szOID_APP_CERT_POL[] =    { 0x06, 0x09, 0x2b, 0x06,
+							 0x01, 0x04, 0x01, 0x82,
+							 0x37, 0x15, 0x0a };
+static const u8 _ext_oid_bad_priv_key_usage_period[] = { 0x06, 0x03, 0x55, 0x1d,
 							 0x10 };
+static const u8 _ext_oid_bad_subject_signing_tool[] = { 0x06, 0x05, 0x2a, 0x85,
+							0x03, 0x64, 0x6f };
+static const u8 _ext_oid_bad_issuer_signing_tool[] = { 0x06, 0x05, 0x2a, 0x85,
+							0x03, 0x64, 0x70 };
+static const u8 _ext_oid_bad_szOID_CERTSRV_PREVIOUS_CERT_HASH[] = {
+							0x06, 0x09, 0x2b, 0x06,
+							0x01, 0x04, 0x01, 0x82,
+							0x37, 0x15, 0x02 };
 #endif
 
 /*
@@ -9641,6 +9652,22 @@ static const _ext_oid known_ext_oids[] = {
 	},
 	{ .oid = _ext_oid_bad_szOID_APP_CERT_POL,
 	  .oid_len = sizeof(_ext_oid_bad_szOID_APP_CERT_POL),
+	  .parse_ext_params = parse_ext_bad_oid,
+	},
+	{ .oid = _ext_oid_bad_priv_key_usage_period,
+	  .oid_len = sizeof(_ext_oid_bad_priv_key_usage_period),
+	  .parse_ext_params = parse_ext_bad_oid,
+	},
+	{ .oid = _ext_oid_bad_subject_signing_tool,
+	  .oid_len = sizeof(_ext_oid_bad_subject_signing_tool),
+	  .parse_ext_params = parse_ext_bad_oid,
+	},
+	{ .oid = _ext_oid_bad_issuer_signing_tool,
+	  .oid_len = sizeof(_ext_oid_bad_issuer_signing_tool),
+	  .parse_ext_params = parse_ext_bad_oid,
+	},
+	{ .oid = _ext_oid_bad_szOID_CERTSRV_PREVIOUS_CERT_HASH,
+	  .oid_len = sizeof(_ext_oid_bad_szOID_CERTSRV_PREVIOUS_CERT_HASH),
 	  .parse_ext_params = parse_ext_bad_oid,
 	},
 #endif
