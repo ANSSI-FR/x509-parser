@@ -3985,7 +3985,11 @@ out:
 	return ret;
 }
 
-
+/*
+ * Teletex string is not supposed to be supported and there is no good
+ * defintiion of allowed charset. At the moment, we perform the check
+ * using printable string charset
+ */
 /*@
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
@@ -3994,11 +3998,9 @@ out:
   @ ensures (buf == \null) ==> \result < 0;
   @ assigns \nothing;
   @*/
-static int check_teletex_string(const u8 ATTRIBUTE_UNUSED *buf,
-				u16 ATTRIBUTE_UNUSED len)
+static int check_teletex_string(const u8 *buf, u16 len)
 {
-	/* Support is OPTIONAL */
-	return -__LINE__;
+	return check_printable_string(buf, len);
 }
 
 /*@
@@ -4012,7 +4014,6 @@ static int check_teletex_string(const u8 ATTRIBUTE_UNUSED *buf,
 static int check_universal_string(const u8 ATTRIBUTE_UNUSED *buf,
 				  u16 ATTRIBUTE_UNUSED len)
 {
-	/* Support is OPTIONAL */
 	return -__LINE__;
 }
 
