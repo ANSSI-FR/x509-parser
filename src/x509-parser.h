@@ -25,6 +25,9 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
+/* Allow emailAddress using UTF-8 encoding instead for IA5String. */
+#define TEMPORARY_LAXIST_EMAILADDRESS_WITH_UTF8_ENCODING
+
 /* Allow weak/bad algs w/o to parse more certificate fields from our set. */
 #define TEMPORARY_BADALGS
 
