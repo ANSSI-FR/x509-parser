@@ -40,12 +40,12 @@ TIMEOUT:=15
 
 frama-c:
 	frama-c-gui src/x509-parser.c -machdep x86_64 \
-	            -warn-left-shift-negative \
-	            -warn-right-shift-negative \
-	            -warn-signed-downcast \
-	            -warn-signed-overflow \
-	            -warn-unsigned-downcast \
-	            -warn-unsigned-overflow \
+		    -warn-left-shift-negative \
+		    -warn-right-shift-negative \
+		    -warn-signed-downcast \
+		    -warn-signed-overflow \
+		    -warn-unsigned-downcast \
+		    -warn-unsigned-overflow \
 		    -rte \
 		    -eva \
 		    -wp-dynamic \
