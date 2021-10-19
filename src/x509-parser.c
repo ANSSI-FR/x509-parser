@@ -10164,13 +10164,13 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 	}
 
 	/* subjectPublicKeyInfo */
-	ctx->spki_start = tbs_hdr_len + tbs_data_len - remain;
 	ret = parse_x509_subjectPublicKeyInfo(ctx, cert, off, remain, &parsed);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
+	ctx->spki_start = off;
 	ctx->spki_len = parsed;
 	buf += parsed;
 	off += parsed;
