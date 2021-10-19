@@ -6766,11 +6766,15 @@ static int parse_ext_SKI(cert_parsing_ctx *ctx,
 	 * As specified in section 4.2.1.1. of RFC 5280, conforming CA
 	 * must mark this extension as non-critical.
 	 */
+#ifdef TEMPORARY_LAXIST_SKI_CRITICAL_FLAG_SET
+	(void)critical;
+#else
 	if (critical) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+#endif
 
 	ret = parse_id_len(buf, remain, CLASS_UNIVERSAL, ASN1_TYPE_OCTET_STRING,
 			   &key_id_hdr_len, &key_id_data_len);

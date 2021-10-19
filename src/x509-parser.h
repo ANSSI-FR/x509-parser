@@ -73,6 +73,12 @@ typedef uint64_t u64;
 #define TEMPORARY_LAXIST_EXTENSION_CRITICAL_FLAG_BOOLEAN_EXPLICIT_FALSE
 
 /*
+ * Allow certificates w/ SKI extension critical flag set. Section 4.2.1.1. of
+ * RFC 5280 forbids that with a MUST.
+ */
+#define TEMPORARY_LAXIST_SKI_CRITICAL_FLAG_SET
+
+/*
  * Allow serial DN component encoded as an IA5String whereas RFC 5280
  * requires such element to be encoded using printable string.
  */
