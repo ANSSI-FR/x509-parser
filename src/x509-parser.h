@@ -25,6 +25,12 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
+/*
+ * Double the defined upper upper bound value of on common RDN components
+ * (CN, O and OU) length from 64 to 128.
+ */
+#define TEMPORARY_LAXIST_RDN_UPPER_BOUND
+
 /* Allow CA certificates w/o SKI. */
 #define TEMPORARY_LAXIST_CA_WO_SKI
 

@@ -4471,7 +4471,11 @@ out:
  *       utf8String        UTF8String      (SIZE (1..ub-common-name)),
  *       bmpString         BMPString       (SIZE (1..ub-common-name)) }
  */
+#ifdef TEMPORARY_LAXIST_RDN_UPPER_BOUND
+#define UB_COMMON_NAME 128
+#else
 #define UB_COMMON_NAME 64
+#endif
 /*@
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
@@ -4611,7 +4615,11 @@ static int parse_rdn_val_state(const u8 *buf, u16 len)
 	return parse_directory_string(buf, len, 1, UB_STATE_NAME);
 }
 
+#ifdef TEMPORARY_LAXIST_RDN_UPPER_BOUND
 #define UB_ORGANIZATION_NAME 64
+#else
+#define UB_ORGANIZATION_NAME 128
+#endif
 /*@
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
@@ -4625,7 +4633,11 @@ static int parse_rdn_val_org(const u8 *buf, u16 len)
 	return parse_directory_string(buf, len, 1, UB_ORGANIZATION_NAME);
 }
 
+#ifdef TEMPORARY_LAXIST_RDN_UPPER_BOUND
+#define UB_ORGANIZATION_UNIT_NAME 128
+#else
 #define UB_ORGANIZATION_UNIT_NAME 64
+#endif
 /*@
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
