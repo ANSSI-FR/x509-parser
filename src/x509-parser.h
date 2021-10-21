@@ -27,7 +27,7 @@ typedef uint64_t u64;
 
 
 /* Knob to skip over currently unknown RDN elements */
-//#define TEMPORARY_LAXIST_HANDLE_ALL_REMAINING_RDN_OIDS
+#define TEMPORARY_LAXIST_HANDLE_ALL_REMAINING_RDN_OIDS
 
 /*
  * Each certificate extension is made of an OID and an associated data value
