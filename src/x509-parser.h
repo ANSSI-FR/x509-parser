@@ -25,6 +25,10 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
+
+/* Knob to skip over currently unknown RDN elements */
+//#define TEMPORARY_LAXIST_HANDLE_ALL_REMAINING_RDN_OIDS
+
 /*
  * Each certificate extension is made of an OID and an associated data value
  * for which we need a specific parsing function to validate the structure
@@ -71,6 +75,12 @@ typedef uint64_t u64;
  * internal reference to the OID
  */
 #define TEMPORARY_BAD_EXT_OIDS
+
+/*
+ * Same for otherwise unsupported RDN but for which we have an internal
+ * reference to the OID
+ */
+#define TEMPORARY_BAD_OID_RDN
 
 /* Allow certificates w/ full directoryString . */
 #define TEMPORARY_LAXIST_DIRECTORY_STRING

@@ -4902,6 +4902,25 @@ typedef struct {
 	int (*parse_rdn_val)(const u8 *buf, u16 len);
 } _name_oid;
 
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ assigns \nothing;
+  @*/
+static int parse_rdn_val_bad_oid(const u8 *buf, u16 len)
+{
+	(void) buf;
+	(void) len;
+	return 0;
+}
+
+static const _name_oid generic_unsupported_rdn_oid = {
+	.oid = NULL,
+	.oid_len = 0,
+	.parse_rdn_val = parse_rdn_val_bad_oid
+};
+
 static const _name_oid known_dn_oids[] = {
 	{ .oid = _dn_oid_cn,
 	  .oid_len = sizeof(_dn_oid_cn),
@@ -4994,7 +5013,6 @@ static const _name_oid known_dn_oids[] = {
 };
 
 #define NUM_KNOWN_DN_OIDS (sizeof(known_dn_oids) / sizeof(known_dn_oids[0]))
-
 
 /*@
   @ requires len >= 0;
@@ -5099,9 +5117,21 @@ static int parse_AttributeTypeAndValue(const u8 *buf, u16 len, u16 *eaten)
 
 	cur = find_dn_by_oid(buf, oid_len);
 	if (cur == NULL) {
+#ifndef TEMPORARY_LAXIST_HANDLE_ALL_REMAINING_RDN_OIDS
+		/*
+		 * OID not found => over. The trick below is a nop
+		 * to let generic_unsupported_rdn_oid and
+		 * parse_rdn_val_bad_oid() it contains be available
+		 * and defined for Frama-C in all cases for the assert
+		 * and calls just below.
+		 */
+		(void)generic_unsupported_rdn_oid;
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
+#else
+		cur = &generic_unsupported_rdn_oid;
+#endif
 	}
 
 	data_len -= oid_len;
@@ -5121,7 +5151,8 @@ static int parse_AttributeTypeAndValue(const u8 *buf, u16 len, u16 *eaten)
 		  parse_rdn_val_ogrn, parse_rdn_val_snils,
 		  parse_rdn_val_ogrnip, parse_rdn_val_inn,
 		  parse_rdn_val_street_address,
-		  parse_rdn_val_emailaddress };
+		  parse_rdn_val_emailaddress,
+		  parse_rdn_val_bad_oid };
 	  @*/
 	/*@ calls parse_rdn_val_cn, parse_rdn_val_x520name,
 		  parse_rdn_val_serial, parse_rdn_val_country,
@@ -5132,7 +5163,8 @@ static int parse_AttributeTypeAndValue(const u8 *buf, u16 len, u16 *eaten)
 		  parse_rdn_val_ogrn, parse_rdn_val_snils,
 		  parse_rdn_val_ogrnip, parse_rdn_val_inn,
 		  parse_rdn_val_street_address,
-		  parse_rdn_val_emailaddress;
+		  parse_rdn_val_emailaddress,
+		  parse_rdn_val_bad_oid;
 	  @*/
 	ret = cur->parse_rdn_val(buf, data_len);
 	if (ret) {
