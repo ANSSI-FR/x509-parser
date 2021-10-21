@@ -9413,8 +9413,6 @@ static const u8 _ext_oid_EKU[] =               { 0x06, 0x03, 0x55, 0x1d, 0x25 };
 static const u8 _ext_oid_FreshestCRL[] =       { 0x06, 0x03, 0x55, 0x1d, 0x2e };
 static const u8 _ext_oid_inhibitAnyPolicy[] =  { 0x06, 0x03, 0x55, 0x1d, 0x36 };
 
-#ifdef TEMPORARY_BAD_EXT_OIDS
-
 /*@
   @ requires len >= 0;
   @ requires off + len <= 65535;
@@ -9445,154 +9443,76 @@ out:
 	return ret;
 }
 
-/* The OID we temporarily support in order to improve code coverage */
-static const u8 _ext_oid_bad_ct1[] =                   { 0x06, 0x08, 0x2b, 0x06,
-							 0x01, 0x05, 0x05, 0x07,
-							 0x01, 0x01 };
-static const u8 _ext_oid_bad_ct_poison[] =             { 0x06, 0x0a, 0x2b, 0x06,
-							 0x01, 0x04, 0x01, 0xd6,
-							 0x79, 0x02, 0x04, 0x03 };
-static const u8 _ext_oid_bad_ct_enabled[] =            { 0x06, 0x0a, 0x2b, 0x06,
-							 0x01, 0x04, 0x01, 0xd6,
-							 0x79, 0x02, 0x04, 0x02 };
-static const u8 _ext_oid_bad_ns_cert_type[] =          { 0x06, 0x09, 0x60, 0x86,
-							 0x48, 0x01, 0x86, 0xf8,
-							 0x42, 0x01, 0x01 };
-static const u8 _ext_oid_bad_szOID_ENROLL[] =          { 0x06, 0x09, 0x2b, 0x06,
-							 0x01, 0x04, 0x01, 0x82,
-							 0x37, 0x14, 0x02 };
-static const u8 _ext_oid_bad_smime_cap[] =             { 0x06, 0x09, 0x2a, 0x86,
-							 0x48, 0x86, 0xf7, 0x0d,
-							 0x01, 0x09, 0x0f };
-static const u8 _ext_oid_bad_ns_comment[] =            { 0x06, 0x09, 0x60, 0x86,
-							 0x48, 0x01, 0x86, 0xf8,
-							 0x42, 0x01, 0x0d };
-static const u8 _ext_oid_bad_deprecated_AKI[] =        { 0x06, 0x03, 0x55, 0x1d,
-							 0x01 };
-static const u8 _ext_oid_bad_szOID_CERT_TEMPLATE[] =   { 0x06, 0x09, 0x2b, 0x06,
-							 0x01, 0x04, 0x01, 0x82,
-							 0x37, 0x15, 0x07 };
-static const u8 _ext_oid_bad_pkixFixes[] =             { 0x06, 0x0a, 0x2b, 0x06,
-							 0x01, 0x04, 0x01, 0x97,
-							 0x55, 0x03, 0x01, 0x05 };
-static const u8 _ext_oid_bad_ns_ca_policy_url[] =      { 0x06, 0x09, 0x60, 0x86,
-							 0x48, 0x01, 0x86, 0xf8,
-							 0x42, 0x01, 0x08 };
-static const u8 _ext_oid_bad_szOID_CERTSRV_CA_VERS[] = { 0x06, 0x09, 0x2b, 0x06,
-							 0x01, 0x04, 0x01, 0x82,
-							 0x37, 0x15, 0x01 };
-static const u8 _ext_oid_bad_szOID_APP_CERT_POL[] =    { 0x06, 0x09, 0x2b, 0x06,
-							 0x01, 0x04, 0x01, 0x82,
-							 0x37, 0x15, 0x0a };
-static const u8 _ext_oid_bad_priv_key_usage_period[] = { 0x06, 0x03, 0x55, 0x1d,
-							 0x10 };
-static const u8 _ext_oid_bad_subject_signing_tool[] = { 0x06, 0x05, 0x2a, 0x85,
-							0x03, 0x64, 0x6f };
-static const u8 _ext_oid_bad_issuer_signing_tool[] = { 0x06, 0x05, 0x2a, 0x85,
-							0x03, 0x64, 0x70 };
-static const u8 _ext_oid_bad_szOID_CERTSRV_PREVIOUS_CERT_HASH[] = {
-							0x06, 0x09, 0x2b, 0x06,
-							0x01, 0x04, 0x01, 0x82,
-							0x37, 0x15, 0x02 };
-#endif
-
+#ifdef TEMPORARY_LAXIST_HANDLE_COMMON_UNSUPPORTED_EXT_OIDS
 /*
- * Some OIDs we do not support yet (not meaning we will implement them):
- *
- *   6063 06092b060104018237150a
- *   4424 06096086480186f842010c
- *   1503 0603551d2e
- *   1048 06032b654d
- *    954 06082b06010505070103
- *    905 06092a864886f67d074100
- *    552 06092b0601050507300105
- *    521 06092b0601040182371502
- *    261 060a2b06010401823702011b
- *    261 06096086480186f8420103
- *    261 06082b0601050507010b
- *    241 06096086480186f8420104
- *    184 0603551d04
- *    179 060a2b060104019a49080101
- *    158 06096086480186f8420102
- *     88 06072a28000a010101
- *     81 06082b06010505070118
- *     69 0603551d0a
- *     64 06072a28000a010102
- *     48 060a2b0601040182370a0b0b
- *     48 06082b0601050507010c
- *     30 06056038010801
- *     25 060a6086480186fd69010102
- *     18 06082b06010401bb6201
- *     16 0603551d63
- *     15 060b6086480186f83701090401
- *     15 060b60857405040201020d0202
- *     15 06096086480186fa6b1e01
- *     14 060a6086480186f845011003
- *     14 06092b060104018b770a01
- *      8 06086085540102020401
- *      7 06072b060104a16421
- *      6 060b2a864886f76364061b0b02
- *      6 060b2a864886f76364061b0402
- *      6 06062a8570220201
- *      5 060a2b06010401823702010a
- *      5 060a2a864886f76364061b02
- *      5 06092b0601040182371516
- *      5 0603551d07
- *      4 060b2a864886f76364061b0802
- *      4 06092a864886f70d010901
- *      4 0605551d876701
- *      4 06032a0304
- *      3 060b2b0601040181ed40010601
- *      3 060b2a864886f76364061b0602
- *      3 060a2b06010401818f1c1301
- *      3 060a2a864886f72f01010902
- *      3 0609551d0f0186f842010d
- *      3 06086086480186f84201
- *      3 06082b06010387670101
- *      2 060a6086480186f845010609
- *      2 060a2b06010401bf6d020306
- *      2 060a2b0601040181b8480403
- *      2 060a2a864886f7636406020c
- *      2 060a2a864886f76364060203
- *      2 060a2a864886f76364060201
- *      2 060a2a864886f72f01010901
- *      2 06092b06010401c06d0305
- *      2 06072a280024040103
- *      2 0604672a0700
- *      2 0603551d40
- *      2 0603550403
- *      1 060b2b0601040181981c020306
- *      1 060b2b06010401819248030101
- *      1 060b2a864886f76364061b1102
- *      1 060b2a864886f76364061b0f02
- *      1 060b2a864886f76364061b0702
- *      1 060b2a864886f76364061b0302
- *      1 060a6086480186fd69010105
- *      1 060a6086480186f845011004
- *      1 060a2b06010401f7340a0201
- *      1 060a2b0601040182370d0203
- *      1 060a2b0601040181f4076402
- *      1 060a2b0601040181f4076401
- *      1 060a2a864886f76364061b10
- *      1 060a2a864886f76364061b09
- *      1 060a2a864886f76364060210
- *      1 060a2a864886f7636406020b
- *      1 060a2a864886f76364060209
- *      1 060a2a864886f76364060206
- *      1 060a2a864886f76364060109
- *      1 06096086480186f843050b
- *      1 06092b0601040181b84805
- *      1 06092a864886f763640616
- *      1 06092a24a390951701ce19
- *      1 06082a817a0147010205
- *      1 06072a280024040100
- *      1 0606550101010101
- *      1 0605551d876702
- *      1 06052b0601037b
- *      1 0603551d19
- *      1 0603551d03
- *      1 06032a2137
+ * Some common OID for which we DO NOT CURRENTLY support data parsing but may
+ * include for tests only to progress in certificates and improve code coverage
  */
+static const u8 _ext_oid_bad_ct1[] = {
+	0x06, 0x08, 0x2b, 0x06, 0x01, 0x05, 0x05, 0x07,
+	0x01, 0x01
+};
+static const u8 _ext_oid_bad_ct_poison[] = {
+	0x06, 0x0a, 0x2b, 0x06, 0x01, 0x04, 0x01, 0xd6,
+	0x79, 0x02, 0x04, 0x03
+};
+static const u8 _ext_oid_bad_ct_enabled[] = {
+	0x06, 0x0a, 0x2b, 0x06,	 0x01, 0x04, 0x01, 0xd6,
+	0x79, 0x02, 0x04, 0x02
+};
+static const u8 _ext_oid_bad_ns_cert_type[] = {
+	0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x86, 0xf8,
+	0x42, 0x01, 0x01
+};
+static const u8 _ext_oid_bad_szOID_ENROLL[] = {
+	0x06, 0x09, 0x2b, 0x06,  0x01, 0x04, 0x01, 0x82,
+	0x37, 0x14, 0x02
+};
+static const u8 _ext_oid_bad_smime_cap[] = {
+	0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d,
+	0x01, 0x09, 0x0f
+};
+static const u8 _ext_oid_bad_ns_comment[] = {
+	0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x86, 0xf8,
+	0x42, 0x01, 0x0d
+};
+static const u8 _ext_oid_bad_deprecated_AKI[] = {
+	0x06, 0x03, 0x55, 0x1d, 0x01
+};
+static const u8 _ext_oid_bad_szOID_CERT_TEMPLATE[] = {
+	0x06, 0x09, 0x2b, 0x06, 0x01, 0x04, 0x01, 0x82,
+	0x37, 0x15, 0x07
+};
+static const u8 _ext_oid_bad_pkixFixes[] = {
+	0x06, 0x0a, 0x2b, 0x06, 0x01, 0x04, 0x01, 0x97,
+	0x55, 0x03, 0x01, 0x05
+};
+static const u8 _ext_oid_bad_ns_ca_policy_url[] = {
+	0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x86, 0xf8,
+	0x42, 0x01, 0x08
+};
+static const u8 _ext_oid_bad_szOID_CERTSRV_CA_VERS[] = {
+	0x06, 0x09, 0x2b, 0x06, 0x01, 0x04, 0x01, 0x82,
+	0x37, 0x15, 0x01
+};
+static const u8 _ext_oid_bad_szOID_APP_CERT_POL[] = {
+	0x06, 0x09, 0x2b, 0x06, 0x01, 0x04, 0x01, 0x82,
+	0x37, 0x15, 0x0a
+};
+static const u8 _ext_oid_bad_priv_key_usage_period[] = {
+	0x06, 0x03, 0x55, 0x1d, 0x10
+};
+static const u8 _ext_oid_bad_subject_signing_tool[] = {
+	0x06, 0x05, 0x2a, 0x85,	0x03, 0x64, 0x6f
+};
+static const u8 _ext_oid_bad_issuer_signing_tool[] = {
+	0x06, 0x05, 0x2a, 0x85,	0x03, 0x64, 0x70
+};
+static const u8 _ext_oid_bad_szOID_CERTSRV_PREVIOUS_CERT_HASH[] = {
+	0x06, 0x09, 0x2b, 0x06,	0x01, 0x04, 0x01,
+	0x82, 0x37, 0x15, 0x02
+};
+#endif
 
 typedef struct {
 	const u8 *oid;
@@ -9600,6 +9520,12 @@ typedef struct {
 	int (*parse_ext_params)(cert_parsing_ctx *ctx,
 				const u8 *cert, u16 off, u16 len, int critical);
 } _ext_oid;
+
+static const _ext_oid generic_unsupported_ext_oid = {
+	.oid = NULL,
+	.oid_len = 0,
+	.parse_ext_params = parse_ext_bad_oid
+};
 
 static const _ext_oid known_ext_oids[] = {
 	{ .oid = _ext_oid_AIA,
@@ -9666,7 +9592,7 @@ static const _ext_oid known_ext_oids[] = {
 	  .oid_len = sizeof(_ext_oid_FreshestCRL),
 	  .parse_ext_params = parse_ext_CRLDP,
 	},
-#ifdef TEMPORARY_BAD_EXT_OIDS
+#ifdef TEMPORARY_LAXIST_HANDLE_COMMON_UNSUPPORTED_EXT_OIDS
 	{ .oid = _ext_oid_bad_ct1,
 	  .oid_len = sizeof(_ext_oid_bad_ct1),
 	  .parse_ext_params = parse_ext_bad_oid,
@@ -9759,7 +9685,7 @@ static _ext_oid const * find_ext_by_oid(const u8 *buf, u16 len)
 {
 	const _ext_oid *found = NULL;
 	const _ext_oid *cur = NULL;
-	u8 k;
+	u16 k;
 
 	if ((buf == NULL) || (len == 0)) {
 		goto out;
@@ -9925,36 +9851,49 @@ static int parse_x509_Extension(cert_parsing_ctx *ctx,
 
 	ext = find_ext_by_oid(buf, oid_len);
 	if (ext == NULL) {
+#ifndef TEMPORARY_LAXIST_HANDLE_ALL_REMAINING_EXT_OIDS
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
+#else
+		ext = &generic_unsupported_ext_oid;
+#endif
 	}
 
 	/*@ assert \initialized(parsed_oid_list + (0 .. (MAX_EXT_NUM_PER_CERT - 1))); */
 
 	/*
-	 * Now that we know the OID is one we support, we verify
-	 * this is the first time we handle an instance of this
-	 * type. Having multiple instances of a given extension
-	 * in a certificate is forbidden by both section 4.2 of
-	 * RFC5280 and section 8 of X.509, w/ respectively
-	 *
-	 * - "A certificate MUST NOT include more than one
-	 *    instance of a particular extension."
-	 * - "For all certificate extensions, CRL extensions,
-	 *    and CRL entry extensions defined in this Directory
-	 *    Specification, there shall be no more than one
-	 *    instance of each extension type in any certificate,
-	 *    CRL, or CRL entry, respectively."
-	 *
-	 * This is done by recording for each extension we
-	 * processed the pointer to its vtable and compare
-	 * it with current one.
+	 * There is no efficient way to support check of duplicate OID for
+	 * extension we do not known, i.e. if
+	 * TEMPORARY_LAXIST_HANDLE_ALL_REMAINING_EXT_OIDS has been enabled
+	 * _and_ we end up on an unsupported OID, we just skip duplicate
+	 * check, as documented.
 	 */
-	ret = check_record_ext_unknown(ext, parsed_oid_list);
-	if (ret) {
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
+	if (ext != &generic_unsupported_ext_oid) {
+		/*
+		 * Now that we know the OID is one we support, we verify
+		 * this is the first time we handle an instance of this
+		 * type. Having multiple instances of a given extension
+		 * in a certificate is forbidden by both section 4.2 of
+		 * RFC5280 and section 8 of X.509, w/ respectively
+		 *
+		 * - "A certificate MUST NOT include more than one
+		 *    instance of a particular extension."
+		 * - "For all certificate extensions, CRL extensions,
+		 *    and CRL entry extensions defined in this Directory
+		 *    Specification, there shall be no more than one
+		 *    instance of each extension type in any certificate,
+		 *    CRL, or CRL entry, respectively."
+		 *
+		 * This is done by recording for each extension we
+		 * processed the pointer to its vtable and compare
+		 * it with current one.
+		 */
+		ret = check_record_ext_unknown(ext, parsed_oid_list);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
 	}
 
 	buf += oid_len;

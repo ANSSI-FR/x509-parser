@@ -26,6 +26,32 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 
 /*
+ * Each certificate extension is made of an OID and an associated data value
+ * for which we need a specific parsing function to validate the structure
+ * of the data. This means that by default a certificate will be rejected if
+ * an extensions is unknown. We define two macros to allow parsing to continue
+ * when encoutering unsupported extensions (for which we do not have a specific
+ * parsing function for data value)
+ *
+ * The first (TEMPORARY_LAXIST_HANDLE_COMMON_UNSUPPORTED_EXT_OIDS) handles
+ * common extensions found in certificates which we know of but currently
+ * have no parsing functions. Those extensions OID are explicitly referenced
+ * in known_ext_oids table. When the knob is defined, the extensions data is
+ * skipped to continue parsing, i.e. the structure of the data it carries is
+ * NOT VERIFIED AT ALL. The check that the extension only appear once in the
+ * certificate is performed.
+ *
+ * The second (TEMPORARY_LAXIST_HANDLE_ALL_REMAINING_EXT_OIDS) is used as a
+ * catch-all for extensions that are not known. When the knob is defined:
+ *
+ *  - unknown extensions data structure is NOT VERIFIED AT ALL
+ *  - NO CHECK is performed to verify that the extension appears only once
+ *    in the certificate.
+ */
+#define TEMPORARY_LAXIST_HANDLE_COMMON_UNSUPPORTED_EXT_OIDS
+#define TEMPORARY_LAXIST_HANDLE_ALL_REMAINING_EXT_OIDS
+
+/*
  * Double the defined upper upper bound value of on common RDN components
  * (CN, O and OU) length from 64 to 128.
  */
