@@ -28,7 +28,8 @@ int main(int argc, char *argv[])
 	char *path = argv[1];
 	u16 rem, copied, eaten;
 	int ret, eof = 0;
-	int fd, num_certs, num_certs_ok;
+	int fd, num_v3_certs, num_v3_certs_ok, num_not_v3;
+	int more;
 
 	if (argc != 2) {
 		usage(argv[0]);
@@ -42,9 +43,11 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	num_certs = 0;
-	num_certs_ok = 0;
-	while (1) {
+	num_not_v3 = 0;
+	num_v3_certs = 0;
+	num_v3_certs_ok = 0;
+	more = 1;
+	while (more) {
 		pos = lseek(fd, offset, SEEK_SET);
 		if (pos == (off_t)-1) {
 			printf("lseek failed %s\n", path);
@@ -70,27 +73,48 @@ int main(int argc, char *argv[])
 			break;
 		}
 
-		num_certs += 1;
 		eaten = 0;
 		ret = parse_x509_cert_relaxed(buf, copied, &eaten);
 #ifdef ERROR_TRACE_ENABLE
 		printf("- %05d %ld %d %s\n", -ret, offset, eaten, path);
 #endif
-		if (ret == 1) {
-			eaten = 1;
-			printf("not a sequence %ld %d\n", offset, num_certs);
-		}
-		if (ret == 0) {
-			num_certs_ok += 1;
-		}
+		switch (ret) {
+		case 0:
+			num_v3_certs_ok += 1;
+			num_v3_certs += 1;
+			offset += eaten;
+			more = 1;
+			break;
 
-		offset += eaten;
+		case 1:
+			printf("Invalid sequence for cert #%d at offset %d\n",
+				num_v3_certs + num_not_v3, offset);
+			more = 0;
+			break;
+
+		case X509_PARSER_ERROR_VERSION_NOT_3:
+		case X509_PARSER_ERROR_VERSION_ABSENT:
+		case X509_PARSER_ERROR_VERSION_UNEXPECTED_LENGTH:
+			num_not_v3 += 1;
+			offset += eaten;
+			more = 1;
+			break;
+
+		default:
+			num_v3_certs += 1;
+			offset += eaten;
+			more = 1;
+			break;
+		}
 	}
 	close(fd);
 
 	ret = 0;
 
-	printf("num_certs OK %d/%d\n", num_certs_ok, num_certs);
+	printf("%d/%d (%.2f%%) valid X.509v3 certificate(s) (and %d non-v3 certs)\n",
+		num_v3_certs_ok, num_v3_certs,
+		((float)(100*num_v3_certs_ok) / ((float)num_v3_certs)),
+		num_not_v3);
 
 out:
 	return ret;

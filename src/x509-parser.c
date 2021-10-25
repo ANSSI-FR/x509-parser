@@ -1070,6 +1070,7 @@ static int parse_x509_Version(cert_parsing_ctx *ctx,
 				    CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
 				    &hdr_len, &data_len);
 	if (ret) {
+		ret = X509_PARSER_ERROR_VERSION_ABSENT;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
@@ -1081,13 +1082,13 @@ static int parse_x509_Version(cert_parsing_ctx *ctx,
 	 * data_len must be 1.
 	 */
 	if (data_len != 1) {
-		ret = -__LINE__;
+		ret = X509_PARSER_ERROR_VERSION_UNEXPECTED_LENGTH;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
 	if (buf[0] != 0x02) {
-		ret = -__LINE__;
+		ret = X509_PARSER_ERROR_VERSION_NOT_3;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}

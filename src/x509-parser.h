@@ -25,6 +25,16 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
+/*
+ * FIXME: document error values
+ */
+
+typedef enum {
+	X509_PARSER_ERROR_VERSION_ABSENT            = -1,
+	X509_PARSER_ERROR_VERSION_UNEXPECTED_LENGTH = -2,
+	X509_PARSER_ERROR_VERSION_NOT_3             = -3,
+} x509_parser_errors;
+
 
 /* Knob to skip over currently unknown RDN elements */
 #define TEMPORARY_LAXIST_HANDLE_ALL_REMAINING_RDN_OIDS
