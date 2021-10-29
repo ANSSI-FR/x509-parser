@@ -1278,6 +1278,220 @@ out:
 	return ret;
 }
 
+typedef struct {
+	const u8 *alg_name;
+	const u8 *alg_printable_oid;
+	const u8 *alg_der_oid;
+	const u8 alg_der_oid_len;
+} _hash;
+
+static const u8 _hash_alg_md2_name[] = "md2";
+static const u8 _hash_alg_md2_printable_oid[] = "1.2.840.113549.2.2";
+static const u8 _hash_alg_md2_der_oid[] = { 0x06, 0x09, 0x2a, 0x86,
+					    0x48, 0x86, 0xf7, 0x0d,
+					    0x02, 0x02 };
+
+static const _hash _md2_hash_alg = {
+	.alg_name = _hash_alg_md2_name,
+	.alg_printable_oid = _hash_alg_md2_printable_oid,
+	.alg_der_oid = _hash_alg_md2_der_oid,
+	.alg_der_oid_len = sizeof(_hash_alg_md2_der_oid),
+};
+
+static const u8 _hash_alg_md5_name[] = "md5";
+static const u8 _hash_alg_md5_printable_oid[] = "1.2.840.113549.2.5";
+static const u8 _hash_alg_md5_der_oid[] = { 0x06, 0x09, 0x2a, 0x86,
+					    0x48, 0x86, 0xf7, 0x0d,
+					    0x02, 0x05 };
+
+static const _hash _md5_hash_alg = {
+	.alg_name = _hash_alg_md5_name,
+	.alg_printable_oid = _hash_alg_md5_printable_oid,
+	.alg_der_oid = _hash_alg_md5_der_oid,
+	.alg_der_oid_len = sizeof(_hash_alg_md5_der_oid),
+};
+
+static const u8 _hash_alg_sha1_name[] = "sha1";
+static const u8 _hash_alg_sha1_printable_oid[] = "1.3.14.3.2.26";
+static const u8 _hash_alg_sha1_der_oid[] = { 0x06, 0x05, 0x2b, 0x0e,
+					     0x03, 0x02, 0x1a };
+
+static const _hash _sha1_hash_alg = {
+	.alg_name = _hash_alg_sha1_name,
+	.alg_printable_oid = _hash_alg_sha1_printable_oid,
+	.alg_der_oid = _hash_alg_sha1_der_oid,
+	.alg_der_oid_len = sizeof(_hash_alg_sha1_der_oid),
+};
+
+static const u8 _hash_alg_sha224_name[] = "sha224";
+static const u8 _hash_alg_sha224_printable_oid[] = "2.16.840.1.101.3.4.2.4";
+static const u8 _hash_alg_sha224_der_oid[] = { 0x06, 0x09, 0x60, 0x86,
+					       0x48, 0x01, 0x65, 0x03,
+					       0x04, 0x02, 0x04 };
+
+static const _hash _sha224_hash_alg = {
+	.alg_name = _hash_alg_sha224_name,
+	.alg_printable_oid = _hash_alg_sha224_printable_oid,
+	.alg_der_oid = _hash_alg_sha224_der_oid,
+	.alg_der_oid_len = sizeof(_hash_alg_sha224_der_oid),
+};
+
+static const u8 _hash_alg_sha256_name[] = "sha256";
+static const u8 _hash_alg_sha256_printable_oid[] = "2.16.840.1.101.3.4.2.1";
+static const u8 _hash_alg_sha256_der_oid[] = {  0x06, 0x09, 0x60, 0x86, 0x48,
+						0x01, 0x65, 0x03, 0x04, 0x02,
+						0x01 };
+
+static const _hash _sha256_hash_alg = {
+	.alg_name = _hash_alg_sha256_name,
+	.alg_printable_oid = _hash_alg_sha256_printable_oid,
+	.alg_der_oid = _hash_alg_sha256_der_oid,
+	.alg_der_oid_len = sizeof(_hash_alg_sha256_der_oid),
+};
+
+static const u8 _hash_alg_sha384_name[] = "sha384";
+static const u8 _hash_alg_sha384_printable_oid[] = "2.16.840.1.101.3.4.2.2";
+static const u8 _hash_alg_sha384_der_oid[] = { 0x06, 0x09, 0x60, 0x86,
+					       0x48, 0x01, 0x65, 0x03,
+					       0x04, 0x02, 0x02  };
+
+static const _hash _sha384_hash_alg = {
+	.alg_name = _hash_alg_sha384_name,
+	.alg_printable_oid = _hash_alg_sha384_printable_oid,
+	.alg_der_oid = _hash_alg_sha384_der_oid,
+	.alg_der_oid_len = sizeof(_hash_alg_sha384_der_oid),
+};
+
+static const u8 _hash_alg_sha512_name[] = "sha512";
+static const u8 _hash_alg_sha512_printable_oid[] = "2.16.840.1.101.3.4.2.3";
+static const u8 _hash_alg_sha512_der_oid[] = { 0x06, 0x09, 0x60, 0x86,
+					       0x48, 0x01, 0x65, 0x03,
+					       0x04, 0x02, 0x03  };
+
+static const _hash _sha512_hash_alg = {
+	.alg_name = _hash_alg_sha512_name,
+	.alg_printable_oid = _hash_alg_sha512_printable_oid,
+	.alg_der_oid = _hash_alg_sha512_der_oid,
+	.alg_der_oid_len = sizeof(_hash_alg_sha512_der_oid),
+};
+
+static const u8 _hash_alg_sha512_224_name[] = "sha512_224";
+static const u8 _hash_alg_sha512_224_printable_oid[] = "2.16.840.1.101.3.4.2.5";
+static const u8 _hash_alg_sha512_224_der_oid[] = { 0x06, 0x09, 0x60, 0x86,
+					       0x48, 0x01, 0x65, 0x03,
+					       0x04, 0x02, 0x05  };
+
+static const _hash _sha512_224_hash_alg = {
+	.alg_name = _hash_alg_sha512_224_name,
+	.alg_printable_oid = _hash_alg_sha512_224_printable_oid,
+	.alg_der_oid = _hash_alg_sha512_224_der_oid,
+	.alg_der_oid_len = sizeof(_hash_alg_sha512_224_der_oid),
+};
+
+static const u8 _hash_alg_sha512_256_name[] = "sha512_256";
+static const u8 _hash_alg_sha512_256_printable_oid[] = "2.16.840.1.101.3.4.2.6";
+static const u8 _hash_alg_sha512_256_der_oid[] = { 0x06, 0x09, 0x60, 0x86,
+					       0x48, 0x01, 0x65, 0x03,
+					       0x04, 0x02, 0x06  };
+
+static const _hash _sha512_256_hash_alg = {
+	.alg_name = _hash_alg_sha512_256_name,
+	.alg_printable_oid = _hash_alg_sha512_256_printable_oid,
+	.alg_der_oid = _hash_alg_sha512_256_der_oid,
+	.alg_der_oid_len = sizeof(_hash_alg_sha512_256_der_oid),
+};
+
+static const _hash *known_hashes[] = {
+	&_md2_hash_alg,
+	&_md5_hash_alg,
+	&_sha1_hash_alg,
+	&_sha224_hash_alg,
+	&_sha256_hash_alg,
+	&_sha384_hash_alg,
+	&_sha512_hash_alg,
+	&_sha512_224_hash_alg,
+	&_sha512_256_hash_alg,
+};
+
+#define NUM_KNOWN_HASHES (sizeof(known_hashes) / sizeof(known_hashes[0]))
+
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != NULL)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures (\result != NULL) ==> \exists integer i ; 0 <= i < NUM_KNOWN_HASHES && \result == known_hashes[i];
+  @ ensures (len == 0) ==> \result == NULL;
+  @ ensures (buf == NULL) ==> \result == NULL;
+  @ assigns \nothing;
+  @*/
+static _hash const * find_hash_by_oid(const u8 *buf, u16 len)
+{
+	const _hash *found = NULL;
+	const _hash *cur = NULL;
+	u8 k;
+
+	if ((buf == NULL) || (len == 0)) {
+		goto out;
+	}
+
+	/*@
+	  @ loop invariant 0 <= k <= NUM_KNOWN_HASHES;
+	  @ loop invariant found == NULL;
+	  @ loop assigns cur, found, k;
+	  @ loop variant (NUM_KNOWN_HASHES - k);
+	  @*/
+	for (k = 0; k < NUM_KNOWN_HASHES; k++) {
+		int ret;
+
+		cur = known_hashes[k];
+
+		/*@ assert cur == known_hashes[k];*/
+		if (cur->alg_der_oid_len != len) {
+			continue;
+		}
+
+		/*@ assert \valid_read(buf + (0 .. (len - 1))); @*/
+		ret = !bufs_differ(cur->alg_der_oid, buf, cur->alg_der_oid_len);
+		if (ret) {
+			found = cur;
+			break;
+		}
+	}
+
+out:
+	return found;
+}
+
+
+typedef struct {
+	const u8 *alg_name;
+	const u8 *alg_printable_oid;
+	const u8 *alg_der_oid;
+	const u8 alg_der_oid_len;
+} _mgf;
+
+static const u8 _mgf_alg_mgf1_name[] = "MGF1";
+static const u8 _mgf_alg_mgf1_printable_oid[] = "1.2.840.113549.1.1.8";
+static const u8 _mgf_alg_mgf1_der_oid[] = { 0x06, 0x09, 0x2a, 0x86,
+					    0x48, 0x86, 0xf7, 0x0d,
+					    0x01, 0x01, 0x08 };
+
+static const _mgf _mgf1_alg = {
+	.alg_name = _mgf_alg_mgf1_name,
+	.alg_printable_oid = _mgf_alg_mgf1_printable_oid,
+	.alg_der_oid = _mgf_alg_mgf1_der_oid,
+	.alg_der_oid_len = sizeof(_mgf_alg_mgf1_der_oid),
+};
+
+typedef struct {
+	const _hash *hash;
+	const _mgf *mgf;
+	const _hash *mgf_hash;
+	u8 salt_len;
+	u8 trailer_field;
+} _rsassa_pss;
+
+
+
 
 typedef struct {
 	const u8 *crv_name;
@@ -1292,6 +1506,7 @@ typedef struct {
 	const u8 *null_param;      /* pointer to null_encoded_val */
 	int ecdsa_no_param;  /* 1 when ECDSA has no param */
 	int unparsed_param;  /* 1 when generic param was left unparsed */
+	_rsassa_pss rsassa_pss_param;  /* For RSASSA-PSS */
 } alg_param;
 
 static int parse_sig_ed448(const u8 *buf, u16 len, u16 *eaten);
@@ -1534,6 +1749,7 @@ static const _alg_id _sm2_sm3_alg = {
 
 
 #ifdef TEMPORARY_BADALGS
+
 static const u8 _rsa_md2_name[] = "md2WithRSAEncryption";
 static const u8 _rsa_md2_printable_oid[] = "1.2.840.113549.1.1.2";
 static const u8 _rsa_md2_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
@@ -1547,7 +1763,7 @@ static const _alg_id _rsa_md2_alg = {
 	.alg_type = ALG_SIG,
 	.parse_sig = parse_sig_generic,
 	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
+	.parse_algoid_params = parse_algoid_params_rsa,
 };
 
 
@@ -1564,7 +1780,7 @@ static const _alg_id _rsa_md4_alg = {
 	.alg_type = ALG_SIG,
 	.parse_sig = parse_sig_generic,
 	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
+	.parse_algoid_params = parse_algoid_params_rsa,
 };
 
 
@@ -1615,7 +1831,7 @@ static const _alg_id _rsa_sha256_alg = {
 	.alg_type = ALG_SIG,
 	.parse_sig = parse_sig_generic,
 	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
+	.parse_algoid_params = parse_algoid_params_rsa,
 };
 
 
@@ -1632,7 +1848,7 @@ static const _alg_id _rsa_sha224_alg = {
 	.alg_type = ALG_SIG,
 	.parse_sig = parse_sig_generic,
 	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
+	.parse_algoid_params = parse_algoid_params_rsa,
 };
 
 
@@ -1649,7 +1865,7 @@ static const _alg_id _rsa_sha384_alg = {
 	.alg_type = ALG_SIG,
 	.parse_sig = parse_sig_generic,
 	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
+	.parse_algoid_params = parse_algoid_params_rsa,
 };
 
 
@@ -1666,14 +1882,14 @@ static const _alg_id _rsa_sha512_alg = {
 	.alg_type = ALG_SIG,
 	.parse_sig = parse_sig_generic,
 	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
+	.parse_algoid_params = parse_algoid_params_rsa,
 };
 
 
 static const u8 _dsa_sha1_name[] = "dsaWithSHA1";
 static const u8 _dsa_sha1_printable_oid[] = "1.3.14.3.2.27";
-static const u8 _dsa_sha1_der_oid[] = {0x06, 0x07, 0x2a, 0x86, 0x48,
-				       0xce, 0x38, 0x04, 0x03 };
+static const u8 _dsa_sha1_der_oid[] = { 0x06, 0x05, 0x2b, 0x0e,
+					0x03, 0x02, 0x1b };
 
 static const _alg_id _dsa_sha1_alg = {
 	.alg_name = _dsa_sha1_name,
@@ -1704,6 +1920,377 @@ static const _alg_id _pkcs1_rsaEncryption_alg = {
 	.parse_algoid_params = parse_algoid_params_rsa,
 };
 
+
+/*
+ * HashAlgorithm is a sequence containing an OID and parameters which are
+ * always NULL for all the hash functions defined in RFC 8017. For that
+ * reason, the function only returns a pointer to a known hash alg(from
+ * known_hashes) on success (i.e. parameters is useless). The function
+ * returns a negative value on error. On success, the length of
+ * HashAlgorithm structure is returned.
+ */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(eaten);
+  @ requires \valid(hash_alg);
+  @ requires \separated(eaten, buf+(..), hash_alg);
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (eaten == \null) ==> \result < 0;
+  @ ensures (hash_alg == \null) ==> \result < 0;
+  @ assigns *eaten, *hash_alg;
+  @*/
+static int parse_HashAlgorithm(const u8 *buf, u16 len, _hash const **hash_alg,
+			       u16 *eaten)
+{
+	u16 hdr_len = 0, data_len = 0, oid_len = 0, remain = 0;
+	int ret;
+
+	if ((buf == NULL) || (hash_alg == NULL) || (eaten == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/* We expect a sequence ...  */
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+	remain = data_len;
+
+	/* ... starting with a hash OID ... */
+	ret = parse_OID(buf, remain, &oid_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	*hash_alg = find_hash_by_oid(buf, oid_len);
+	if (*hash_alg == NULL) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += oid_len;
+	remain -= oid_len;
+
+	/* ... followed by a NULL ... */
+	if ((remain != 2) || (buf[0] != 0x05) || (buf[1] != 0x00)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	*eaten = hdr_len + data_len;
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*
+ * The function Parses the parameters associated with id-RSASSA-PSS
+ * OID (1.2.840.113549.1.1.10) found in signature AlgorithmIdentifier
+ * The expected structure of the parameters is:
+ *
+ * RSASSA-PSS-params ::= SEQUENCE {
+ *      hashAlgorithm      [0] HashAlgorithm      DEFAULT sha1,
+ *      maskGenAlgorithm   [1] MaskGenAlgorithm   DEFAULT mgf1SHA1,
+ *      saltLength         [2] INTEGER            DEFAULT 20,
+ *      trailerField       [3] TrailerField       DEFAULT trailerFieldBC
+ *  }
+ *
+ */
+
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(param);
+  @ requires \separated(param,buf+(..));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns param->rsassa_pss_param;
+  @*/
+static int parse_algoid_params_rsassa_pss(const u8 *buf, u16 len,
+					  alg_param *param)
+{
+	u16 remain, hdr_len = 0, data_len = 0, oid_len = 0;
+	u16 attr_hdr_len = 0, attr_data_len = 0, eaten = 0, salt_len = 0;
+	_hash const *hash = NULL;
+	_mgf const *mgf = NULL;
+	_hash const *mgf_hash = NULL;
+	u8 trailer_field = 0;
+	int ret;
+
+	if ((buf == NULL) || (param == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/* Check we are dealing with a valid sequence */
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+	remain = data_len;
+
+	/*****************************************************************
+	 * hashAlgorithm      [0] HashAlgorithm      DEFAULT sha1,
+	 *****************************************************************/
+	ret = parse_id_len(buf, remain, CLASS_CONTEXT_SPECIFIC, 0,
+			   &attr_hdr_len, &attr_data_len);
+	if (ret) {
+		/*
+		 * hashAlgorithm is missing, which means hash algorithm
+		 * to use is the default, i.e. sha1.
+		 */
+		hash = &_sha1_hash_alg;
+	} else {
+		buf += attr_hdr_len;
+		remain -= attr_hdr_len;
+
+		ret = parse_HashAlgorithm(buf, attr_data_len, &hash, &eaten);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+		/* Verify we have no trailing data */
+		if (eaten != attr_data_len) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+		buf += eaten;
+		remain -= eaten;
+	}
+
+	param->rsassa_pss_param.hash = hash;
+
+	/*****************************************************************
+	 * maskGenAlgorithm   [1] MaskGenAlgorithm   DEFAULT mgf1SHA1,   *
+	 *****************************************************************/
+	ret = parse_id_len(buf, remain, CLASS_CONTEXT_SPECIFIC, 1,
+			   &attr_hdr_len, &attr_data_len);
+	if (ret) {
+		/*
+		 * maskGenAlgorithm is missing, which means MGF
+		 * to use is the default, i.e. MGF1 (the only one
+		 * defined).
+		 */
+		mgf = &_mgf1_alg;
+		mgf_hash = &_sha1_hash_alg;
+	} else {
+		buf += attr_hdr_len;
+		remain -= attr_hdr_len;
+
+		/* We expect a sequence ...  */
+		ret = parse_id_len(buf, remain, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
+				   &hdr_len, &data_len);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+		/*
+		 * Length of the sequence should match data length of attribute,
+		 * i.e. we do not accept trailing data
+		 */
+		if (attr_data_len != (hdr_len + data_len)) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+		buf += hdr_len;
+		remain -= hdr_len;
+
+		/* ... starting with a MGF OID ... */
+		ret = parse_OID(buf, data_len, &oid_len);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+		/* Check this is indeed the only OID we support (MGF1 oid). */
+		if ((oid_len != _mgf1_alg.alg_der_oid_len) ||
+		    bufs_differ(buf, _mgf1_alg.alg_der_oid, oid_len)) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+		mgf = &_mgf1_alg;
+
+		buf += oid_len;
+		remain -= oid_len;
+		data_len -= oid_len;
+
+		/*
+		 * ... followed by a HashAlgorithm (a sequence containing a hash
+		 * OID and a NULL for associated parameters) ...
+		 */
+		ret = parse_HashAlgorithm(buf, data_len, &mgf_hash, &eaten);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+		buf += eaten;
+		remain -= eaten;
+		data_len -= eaten;
+
+		/* Verify we have no trailing data */
+		if (data_len != 0) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+	}
+
+	param->rsassa_pss_param.mgf = mgf;
+	param->rsassa_pss_param.mgf_hash = mgf_hash;
+
+	/*****************************************************************
+	 * saltLength         [2] INTEGER            DEFAULT 20,         *
+	 *****************************************************************/
+	ret = parse_id_len(buf, remain, CLASS_CONTEXT_SPECIFIC, 2,
+			   &attr_hdr_len, &attr_data_len);
+	if (ret) {
+		/*
+		 * saltLength is missing, which means the default should
+		 * be used.
+		 */
+		salt_len = 20;
+	} else {
+		buf += attr_hdr_len;
+		remain -= attr_hdr_len;
+
+		ret = parse_integer(buf, attr_data_len, CLASS_UNIVERSAL,
+				    ASN1_TYPE_INTEGER, &eaten);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+		/* We expect no trailing data */
+		if (eaten != attr_data_len) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+		/*
+		 * The spec has no limit on salt length value. As it does not
+		 * make sense for salt length to be more than 255 bytes, we
+		 * limit integer value to 255, i.e. we expect its value to be
+		 * encoded on one byte.
+		 */
+		if (eaten != 3) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+		salt_len = buf[2];
+
+		buf += eaten;
+		remain -= eaten;
+	}
+
+	param->rsassa_pss_param.salt_len = salt_len;
+
+	/*****************************************************************
+	 * trailerField       [3] TrailerField    DEFAULT trailerFieldBC *
+	 *****************************************************************/
+	ret = parse_id_len(buf, remain, CLASS_CONTEXT_SPECIFIC, 3,
+			   &attr_hdr_len, &attr_data_len);
+	if (ret) {
+		/*
+		 * trailerField is missing, which means the default (0xbc)
+		 * should be used.
+		 */
+		trailer_field = 1; /* indicating 0xbc trailerfield */
+	} else {
+		/*
+		 * The spec only support value 1 for trailerField, which is
+		 * the default. Here, the certificate contains an explicit
+		 * integer value, which either 1 (same as the default, so
+		 * DER makes that invalid) or different (which we do not
+		 * support. In both cases, this is invalid. We just go a
+		 * bit furtuer in parsing to report a more specific error.
+		 */
+		buf += attr_hdr_len;
+		remain -= attr_hdr_len;
+
+		ret = parse_integer(buf, attr_data_len, CLASS_UNIVERSAL,
+				    ASN1_TYPE_INTEGER, &eaten);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+		/* We expect no trailing data */
+		if (eaten != attr_data_len) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+		if (eaten != 3) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+		if (buf[2] == 1) {
+			/*
+			 * This is the default trailer field. DER prevents
+			 * explicit setting of the default value
+			 */
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+		/*
+		 * Another value than 1 is also invalid because RFC5280
+		 * does not support it
+		 */
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	param->rsassa_pss_param.trailer_field = trailer_field;
+
+	if (remain) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
 static const u8 _rsassapss_name[] = "RSASSA-PSS";
 static const u8 _rsassapss_printable_oid[] = "1.2.840.113549.1.1.10";
 static const u8 _rsassapss_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
@@ -1717,9 +2304,8 @@ static const _alg_id _rsassapss_alg = {
 	.alg_type = ALG_SIG,
 	.parse_sig = parse_sig_generic,
 	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
+	.parse_algoid_params = parse_algoid_params_rsassa_pss,
 };
-
 
 static const u8 _odd1_name[] = "oiw-sha-1WithRSAEncryption";
 static const u8 _odd1_printable_oid[] = "1.3.14.3.2.29";
@@ -1734,7 +2320,7 @@ static const _alg_id _odd1_alg = {
 	.alg_type = ALG_SIG,
 	.parse_sig = parse_sig_generic,
 	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
+	.parse_algoid_params = parse_algoid_params_generic, /* FIXME */
 };
 
 
@@ -1751,7 +2337,7 @@ static const _alg_id _odd2_alg = {
 	.alg_type = ALG_SIG,
 	.parse_sig = parse_sig_generic,
 	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
+	.parse_algoid_params = parse_algoid_params_generic, /* FIXME */
 };
 
 
@@ -1768,7 +2354,7 @@ static const _alg_id _odd3_alg = {
 	.alg_type = ALG_INVALID,
 	.parse_sig = parse_sig_generic,
 	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
+	.parse_algoid_params = parse_algoid_params_generic, /* FIXME */
 };
 
 
@@ -3275,6 +3861,11 @@ out:
 	return ret;
 }
 
+/*
+ * Parser for parameters associated with the OID for RSA public key
+ * (rsaEncryption) and common PKCS#1 v1.5 signature OID (sha*WithRSAEncryption,
+ * md5WithRSAEncryption). Those expect a NULL parameter.
+ */
 /*@
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
@@ -3567,14 +4158,16 @@ static int parse_x509_AlgorithmIdentifier(const u8 *buf, u16 len,
 		  parse_algoid_params_pub_gost_r3410_2001,
 		  parse_algoid_params_pub_gost_r3410_2012_256,
 		  parse_algoid_params_pub_gost_r3410_2012_512,
-		  parse_algoid_params_sig_gost_none }; @*/
+		  parse_algoid_params_sig_gost_none,
+		  parse_algoid_params_rsassa_pss }; @*/
 	/*@ calls parse_algoid_params_generic, parse_algoid_params_ecdsa_with,
 		  parse_algoid_params_ecPublicKey, parse_algoid_params_rsa,
 		  parse_algoid_params_sm2, parse_algoid_params_eddsa,
 		  parse_algoid_params_pub_gost_r3410_2001,
 		  parse_algoid_params_pub_gost_r3410_2012_256,
 		  parse_algoid_params_pub_gost_r3410_2012_512,
-		  parse_algoid_params_sig_gost_none; @*/
+		  parse_algoid_params_sig_gost_none,
+		  parse_algoid_params_rsassa_pss; @*/
 	ret = talg->parse_algoid_params(buf, param_len, param);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);

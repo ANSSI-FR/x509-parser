@@ -57,6 +57,7 @@ frama-c:
 				      find_kp_by_oid:100, \
 				      find_curve_by_oid:100, \
 				      find_alg_by_oid:200, \
+				      find_hash_by_oid:200, \
 				      find_ext_by_oid:200, \
 				      parse_AccessDescription:400, \
 				      parse_x509_Extension:400, \
@@ -64,7 +65,7 @@ frama-c:
 				      parse_x509_Extensions:400, \
 				      bufs_differ:200, \
 				      parse_x509_tbsCertificate:400, \
-				      parse_x509_AlgorithmIdentifier:200" \
+				      parse_x509_AlgorithmIdentifier:300" \
 		    -eva-warn-undefined-pointer-comparison none \
 		    -then \
 		    -wp \
