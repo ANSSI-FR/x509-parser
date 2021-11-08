@@ -58,6 +58,7 @@ static int bufs_differ(const u8 *b1, const u8 *b2, u16 n)
 	  @ loop invariant 0 <= i <= n;
 	  @ loop invariant bmatch(b1, b2, i);
 	  @ loop assigns i;
+	  @ loop variant n - i;
 	  @*/
 	for (i = 0; i < n; i++) {
 		if(b1[i] != b2[i]) {
