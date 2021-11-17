@@ -20,15 +20,15 @@ build/x509-parser.o: src/x509-parser.c src/x509-parser.h
 
 clean:
 	@rm -f $(LIBS) $(EXEC)
-	@find -name '*.o' -exec rm -f '{}' \;
-	@find -name '*~'  -exec rm -f '{}' \;
+	@find . -name '*.o' -exec rm -f '{}' \;
+	@find . -name '*~'  -exec rm -f '{}' \;
 
 #####################################################################
 # Frama-C
 #####################################################################
 
 SESSION:=frama-c-rte-val-wp.session
-JOBS:=$(shell nproc)
+JOBS:=$(shell nproc 2> /dev/null || echo 1)
 TIMEOUT:=15
 
 # "-val-warn-undefined-pointer-comparison none" is to deal with the
