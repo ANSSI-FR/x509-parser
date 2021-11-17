@@ -5984,7 +5984,7 @@ out:
   @ ensures 0 <= \result <= 99;
   @ assigns \nothing;
   @*/
-u8 compute_decimal(u8 d, u8 u)
+static u8 compute_decimal(u8 d, u8 u)
 {
 	return (d - 0x30) * 10 + (u - 0x30);
 }
@@ -6143,7 +6143,7 @@ out:
   @ ensures 0 <= \result <= 9999;
   @ assigns \nothing;
   @*/
-u16 compute_year(u8 d1, u8 d2, u8 d3, u8 d4)
+static u16 compute_year(u8 d1, u8 d2, u8 d3, u8 d4)
 {
 	return ((u16)d1 - (u16)0x30) * 1000 +
 	       ((u16)d2 - (u16)0x30) * 100 +
