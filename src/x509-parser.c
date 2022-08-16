@@ -2359,23 +2359,6 @@ static const _alg_id _odd3_alg = {
 };
 
 
-static const u8 _odd4_name[] = "oiw-dsaWithSHA1";
-static const u8 _odd4_printable_oid[] = "1.3.14.3.2.27";
-static const u8 _odd4_der_oid[] = { 0x06, 0x05, 0x2b, 0x0e,
-				    0x03, 0x02, 0x1b };
-
-static const _alg_id _odd4_alg = {
-	.alg_name = _odd4_name,
-	.alg_printable_oid = _odd4_printable_oid,
-	.alg_der_oid = _odd4_der_oid,
-	.alg_der_oid_len = sizeof(_odd4_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-
 static const u8 _gost1_name[] = "gostR3411-94-with-gostR3410-2001";
 static const u8 _gost1_printable_oid[] = "1.2.643.2.2.3";
 static const u8 _gost1_der_oid[] = { 0x06, 0x06, 0x2a, 0x85,
@@ -2592,7 +2575,6 @@ static const _alg_id *known_algs[] = {
 	&_odd1_alg,
 	&_odd2_alg,
 	&_odd3_alg,
-	&_odd4_alg,
 	&_gost1_alg,
 	&_gost2_alg,
 	&_gost3_alg,
