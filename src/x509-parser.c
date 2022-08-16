@@ -1534,6 +1534,7 @@ static int parse_subjectpubkey_gost512(const u8 *buf, u16 len, alg_param *param)
 static int parse_subjectpubkey_rsa(const u8 *buf, u16 len, alg_param *param);
 #ifdef TEMPORARY_BADALGS
 static int parse_sig_generic(const u8 *buf, u16 len, u16 *eaten);
+static int parse_subjectpubkey_generic(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_generic(const u8 *buf, u16 ATTRIBUTE_UNUSED len, alg_param *param);
 static int parse_algoid_params_rsa(const u8 *buf, u16 len, alg_param *param);
 #endif
@@ -1750,7 +1751,6 @@ static const _alg_id _sm2_sm3_alg = {
 
 
 #ifdef TEMPORARY_BADALGS
-
 static const u8 _rsa_md2_name[] = "md2WithRSAEncryption";
 static const u8 _rsa_md2_printable_oid[] = "1.2.840.113549.1.1.2";
 static const u8 _rsa_md2_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
@@ -2546,6 +2546,337 @@ static const _alg_id _weird3_alg = {
 	.parse_subjectpubkey = NULL,
 	.parse_algoid_params = parse_algoid_params_generic,
 };
+
+static const u8 _weird_060100_name[] = "ITU-T Recommendations";
+static const u8 _weird_060100_printable_oid[] = "0.0";
+static const u8 _weird_060100_der_oid[] = { 0x06, 0x01, 0x00,  };
+
+static const _alg_id _weird_060100_alg = {
+	.alg_name = _weird_060100_name,
+	.alg_printable_oid = _weird_060100_printable_oid,
+	.alg_der_oid = _weird_060100_der_oid,
+	.alg_der_oid_len = sizeof(_weird_060100_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_060455080101_name[] = "Enveloped digital signature algorithm applied to Rivest, Shamir and Adleman (RSA) encrypted or signed content";
+static const u8 _weird_060455080101_printable_oid[] = "2.5.8.1.1";
+static const u8 _weird_060455080101_der_oid[] = { 0x06, 0x04, 0x55, 0x08, 0x01, 0x01,  };
+
+static const _alg_id _weird_060455080101_alg = {
+	.alg_name = _weird_060455080101_name,
+	.alg_printable_oid = _weird_060455080101_printable_oid,
+	.alg_der_oid = _weird_060455080101_der_oid,
+	.alg_der_oid_len = sizeof(_weird_060455080101_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_060455080364_name[] = "Unknown sig alg under ISO ITU";
+static const u8 _weird_060455080364_printable_oid[] = "2.5.8.3.100";
+static const u8 _weird_060455080364_der_oid[] = { 0x06, 0x04, 0x55, 0x08, 0x03, 0x64,  };
+
+static const _alg_id _weird_060455080364_alg = {
+	.alg_name = _weird_060455080364_name,
+	.alg_printable_oid = _weird_060455080364_printable_oid,
+	.alg_der_oid = _weird_060455080364_der_oid,
+	.alg_der_oid_len = sizeof(_weird_060455080364_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06062a8503020214_name[] = "gostR3410-94";
+static const u8 _weird_06062a8503020214_printable_oid[] = "1.2.643.2.2.20";
+static const u8 _weird_06062a8503020214_der_oid[] = { 0x06, 0x06, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x14,  };
+
+static const _alg_id _weird_06062a8503020214_alg = {
+	.alg_name = _weird_06062a8503020214_name,
+	.alg_printable_oid = _weird_06062a8503020214_printable_oid,
+	.alg_der_oid = _weird_06062a8503020214_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06062a8503020214_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06072a8648ce380401_name[] = "DSA subject public key";
+static const u8 _weird_06072a8648ce380401_printable_oid[] = "1.2.840.10040.4.1";
+static const u8 _weird_06072a8648ce380401_der_oid[] = { 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x38, 0x04, 0x01, };
+
+static const _alg_id _weird_06072a8648ce380401_alg = {
+	.alg_name = _weird_06072a8648ce380401_name,
+	.alg_printable_oid = _weird_06072a8648ce380401_printable_oid,
+	.alg_der_oid = _weird_06072a8648ce380401_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06072a8648ce380401_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06072a8648ce380403_name[] = "dsa-with-sha1";
+static const u8 _weird_06072a8648ce380403_printable_oid[] = "1.2.840.10040.4.3";
+static const u8 _weird_06072a8648ce380403_der_oid[] = { 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x38, 0x04, 0x03,  };
+
+static const _alg_id _weird_06072a8648ce380403_alg = {
+	.alg_name = _weird_06072a8648ce380403_name,
+	.alg_printable_oid = _weird_06072a8648ce380403_printable_oid,
+	.alg_der_oid = _weird_06072a8648ce380403_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06072a8648ce380403_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06072a8648ce3d0403_name[] = "ecdsa-with-SHA2";
+static const u8 _weird_06072a8648ce3d0403_printable_oid[] = "1.2.840.10045.4.3";
+static const u8 _weird_06072a8648ce3d0403_der_oid[] = { 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03,  };
+
+static const _alg_id _weird_06072a8648ce3d0403_alg = {
+	.alg_name = _weird_06072a8648ce3d0403_name,
+	.alg_printable_oid = _weird_06072a8648ce3d0403_printable_oid,
+	.alg_der_oid = _weird_06072a8648ce3d0403_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06072a8648ce3d0403_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06082a817a0147020601_name[] = "OID under GIP-CPS (responsible for the distribution all healthcare professional cards in France)";
+static const u8 _weird_06082a817a0147020601_printable_oid[] = "1.2.250.1.71.2.6.1";
+static const u8 _weird_06082a817a0147020601_der_oid[] = { 0x06, 0x08, 0x2a, 0x81, 0x7a, 0x01, 0x47, 0x02, 0x06, 0x01,  };
+
+static const _alg_id _weird_06082a817a0147020601_alg = {
+	.alg_name = _weird_06082a817a0147020601_name,
+	.alg_printable_oid = _weird_06082a817a0147020601_printable_oid,
+	.alg_der_oid = _weird_06082a817a0147020601_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06082a817a0147020601_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06092a7000020022652d0c_name[] = "Belarus Signature standard TB 34.101.45-2013";
+static const u8 _weird_06092a7000020022652d0c_printable_oid[] = "1.2.112.0.2.0.34.101.45.12";
+static const u8 _weird_06092a7000020022652d0c_der_oid[] = { 0x06, 0x09, 0x2a, 0x70, 0x00, 0x02, 0x00, 0x22, 0x65, 0x2d, 0x0c,  };
+
+static const _alg_id _weird_06092a7000020022652d0c_alg = {
+	.alg_name = _weird_06092a7000020022652d0c_name,
+	.alg_printable_oid = _weird_06092a7000020022652d0c_printable_oid,
+	.alg_der_oid = _weird_06092a7000020022652d0c_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06092a7000020022652d0c_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06092a864486f70d010105_name[] = "unknown oid";
+static const u8 _weird_06092a864486f70d010105_printable_oid[] = "1.2.836.113549.1.1.5";
+static const u8 _weird_06092a864486f70d010105_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x44, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05,  };
+
+static const _alg_id _weird_06092a864486f70d010105_alg = {
+	.alg_name = _weird_06092a864486f70d010105_name,
+	.alg_printable_oid = _weird_06092a864486f70d010105_printable_oid,
+	.alg_der_oid = _weird_06092a864486f70d010105_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06092a864486f70d010105_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06092a864886770d010101_name[] = "unknown oid";
+static const u8 _weird_06092a864886770d010101_printable_oid[] = "1.2.840.887.13.1.1.1";
+static const u8 _weird_06092a864886770d010101_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0x77, 0x0d, 0x01, 0x01, 0x01,  };
+
+static const _alg_id _weird_06092a864886770d010101_alg = {
+	.alg_name = _weird_06092a864886770d010101_name,
+	.alg_printable_oid = _weird_06092a864886770d010101_printable_oid,
+	.alg_der_oid = _weird_06092a864886770d010101_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06092a864886770d010101_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06092a864886f70d000105_name[] = "PKCS#5";
+static const u8 _weird_06092a864886f70d000105_printable_oid[] = "1.2.840.113549.0.1.5";
+static const u8 _weird_06092a864886f70d000105_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x00, 0x01, 0x05,  };
+
+static const _alg_id _weird_06092a864886f70d000105_alg = {
+	.alg_name = _weird_06092a864886f70d000105_name,
+	.alg_printable_oid = _weird_06092a864886f70d000105_printable_oid,
+	.alg_der_oid = _weird_06092a864886f70d000105_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06092a864886f70d000105_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06092a864886f70d010163_name[] = "Unknown RSA Labs OID";
+static const u8 _weird_06092a864886f70d010163_printable_oid[] = "1.2.840.113549.1.1.99";
+static const u8 _weird_06092a864886f70d010163_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x63,  };
+
+static const _alg_id _weird_06092a864886f70d010163_alg = {
+	.alg_name = _weird_06092a864886f70d010163_name,
+	.alg_printable_oid = _weird_06092a864886f70d010163_printable_oid,
+	.alg_der_oid = _weird_06092a864886f70d010163_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06092a864886f70d010163_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06092a864886f74501010b_name[] = "uknown oid";
+static const u8 _weird_06092a864886f74501010b_printable_oid[] = "1.2.840.113605.1.1.11";
+static const u8 _weird_06092a864886f74501010b_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x45, 0x01, 0x01, 0x0b, };
+
+static const _alg_id _weird_06092a864886f74501010b_alg = {
+	.alg_name = _weird_06092a864886f74501010b_name,
+	.alg_printable_oid = _weird_06092a864886f74501010b_printable_oid,
+	.alg_der_oid = _weird_06092a864886f74501010b_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06092a864886f74501010b_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06092a865886f70d010105_name[] = "unknown oid";
+static const u8 _weird_06092a865886f70d010105_printable_oid[] = "1.2.856.113549.1.1.5";
+static const u8 _weird_06092a865886f70d010105_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x58, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05,  };
+
+static const _alg_id _weird_06092a865886f70d010105_alg = {
+	.alg_name = _weird_06092a865886f70d010105_name,
+	.alg_printable_oid = _weird_06092a865886f70d010105_printable_oid,
+	.alg_der_oid = _weird_06092a865886f70d010105_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06092a865886f70d010105_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06092a866886f70d010105_name[] = "sha1-with-rsa-signature";
+static const u8 _weird_06092a866886f70d010105_printable_oid[] = "1.2.872.113549.1.1.5";
+static const u8 _weird_06092a866886f70d010105_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x68, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05,  };
+
+static const _alg_id _weird_06092a866886f70d010105_alg = {
+	.alg_name = _weird_06092a866886f70d010105_name,
+	.alg_printable_oid = _weird_06092a866886f70d010105_printable_oid,
+	.alg_der_oid = _weird_06092a866886f70d010105_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06092a866886f70d010105_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06092b06010401e2700125_name[] = "unknown OID 1.37 from Avest Plc.";
+static const u8 _weird_06092b06010401e2700125_printable_oid[] = "1.3.6.1.4.1.12656.1.37";
+static const u8 _weird_06092b06010401e2700125_der_oid[] = { 0x06, 0x09, 0x2b, 0x06, 0x01, 0x04, 0x01, 0xe2, 0x70, 0x01, 0x25,  };
+
+static const _alg_id _weird_06092b06010401e2700125_alg = {
+	.alg_name = _weird_06092b06010401e2700125_name,
+	.alg_printable_oid = _weird_06092b06010401e2700125_printable_oid,
+	.alg_der_oid = _weird_06092b06010401e2700125_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06092b06010401e2700125_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_06093a864886f70d010101_name[] = "rsaEncryption";
+static const u8 _weird_06093a864886f70d010101_printable_oid[] = "1.18.840.113549.1.1.1";
+static const u8 _weird_06093a864886f70d010101_der_oid[] = { 0x06, 0x09, 0x3a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01,  };
+
+static const _alg_id _weird_06093a864886f70d010101_alg = {
+	.alg_name = _weird_06093a864886f70d010101_name,
+	.alg_printable_oid = _weird_06093a864886f70d010101_printable_oid,
+	.alg_der_oid = _weird_06093a864886f70d010101_der_oid,
+	.alg_der_oid_len = sizeof(_weird_06093a864886f70d010101_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_0609608648016503040201_name[] = "sha256";
+static const u8 _weird_0609608648016503040201_printable_oid[] = "2.16.840.1.101.3.4.2.1";
+static const u8 _weird_0609608648016503040201_der_oid[] = { 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01,  };
+
+static const _alg_id _weird_0609608648016503040201_alg = {
+	.alg_name = _weird_0609608648016503040201_name,
+	.alg_printable_oid = _weird_0609608648016503040201_printable_oid,
+	.alg_der_oid = _weird_0609608648016503040201_der_oid,
+	.alg_der_oid_len = sizeof(_weird_0609608648016503040201_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_0609608648016503040302_name[] = "id-dsa-with-sha256";
+static const u8 _weird_0609608648016503040302_printable_oid[] = "2.16.840.1.101.3.4.3.2";
+static const u8 _weird_0609608648016503040302_der_oid[] = { 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x03, 0x02,  };
+
+static const _alg_id _weird_0609608648016503040302_alg = {
+	.alg_name = _weird_0609608648016503040302_name,
+	.alg_printable_oid = _weird_0609608648016503040302_printable_oid,
+	.alg_der_oid = _weird_0609608648016503040302_der_oid,
+	.alg_der_oid_len = sizeof(_weird_0609608648016503040302_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_0609608648016503040310_name[] = "id-rsassa-pkcs1-v1-5-with-sha3-512";
+static const u8 _weird_0609608648016503040310_printable_oid[] = "2.16.840.1.101.3.4.3.16";
+static const u8 _weird_0609608648016503040310_der_oid[] = { 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x03, 0x10,  };
+
+static const _alg_id _weird_0609608648016503040310_alg = {
+	.alg_name = _weird_0609608648016503040310_name,
+	.alg_printable_oid = _weird_0609608648016503040310_printable_oid,
+	.alg_der_oid = _weird_0609608648016503040310_der_oid,
+	.alg_der_oid_len = sizeof(_weird_0609608648016503040310_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+static const u8 _weird_060a2b0601040182a25a0101_name[] = "unknown OID from The Monkeysphere Project";
+static const u8 _weird_060a2b0601040182a25a0101_printable_oid[] = "1.3.6.1.4.1.37210.1.1";
+static const u8 _weird_060a2b0601040182a25a0101_der_oid[] = { 0x06, 0x0a, 0x2b, 0x06, 0x01, 0x04, 0x01, 0x82, 0xa2, 0x5a, 0x01, 0x01,  };
+
+static const _alg_id _weird_060a2b0601040182a25a0101_alg = {
+	.alg_name = _weird_060a2b0601040182a25a0101_name,
+	.alg_printable_oid = _weird_060a2b0601040182a25a0101_printable_oid,
+	.alg_der_oid = _weird_060a2b0601040182a25a0101_der_oid,
+	.alg_der_oid_len = sizeof(_weird_060a2b0601040182a25a0101_der_oid),
+	.alg_type = ALG_SIG | ALG_PUBKEY,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = parse_subjectpubkey_generic,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
 #endif
 
 static const _alg_id *known_algs[] = {
@@ -2586,6 +2917,28 @@ static const _alg_id *known_algs[] = {
 	&_weird1_alg,
 	&_weird2_alg,
 	&_weird3_alg,
+	&_weird_060100_alg,
+	&_weird_060455080101_alg,
+	&_weird_060455080364_alg,
+	&_weird_06062a8503020214_alg,
+	&_weird_06072a8648ce380401_alg,
+	&_weird_06072a8648ce380403_alg,
+	&_weird_06072a8648ce3d0403_alg,
+	&_weird_06082a817a0147020601_alg,
+	&_weird_06092a7000020022652d0c_alg,
+	&_weird_06092a864486f70d010105_alg,
+	&_weird_06092a864886770d010101_alg,
+	&_weird_06092a864886f70d000105_alg,
+	&_weird_06092a864886f70d010163_alg,
+	&_weird_06092a864886f74501010b_alg,
+	&_weird_06092a865886f70d010105_alg,
+	&_weird_06092a866886f70d010105_alg,
+	&_weird_06092b06010401e2700125_alg,
+	&_weird_06093a864886f70d010101_alg,
+	&_weird_0609608648016503040201_alg,
+	&_weird_0609608648016503040302_alg,
+	&_weird_0609608648016503040310_alg,
+	&_weird_060a2b0601040182a25a0101_alg,
 #endif
 };
 
@@ -6591,11 +6944,13 @@ static int parse_x509_subjectPublicKeyInfo(cert_parsing_ctx *ctx,
 		  parse_subjectpubkey_ec, parse_subjectpubkey_rsa,
 		  parse_subjectpubkey_ed448, parse_subjectpubkey_ed25519,
 		  parse_subjectpubkey_x448, parse_subjectpubkey_x25519,
-		  parse_subjectpubkey_gost256, parse_subjectpubkey_gost512 } ; @*/
+		  parse_subjectpubkey_gost256, parse_subjectpubkey_gost512,
+		  parse_subjectpubkey_generic } ; @*/
 	/*@ calls parse_subjectpubkey_ec, parse_subjectpubkey_rsa,
 		  parse_subjectpubkey_ed448, parse_subjectpubkey_ed25519,
 		  parse_subjectpubkey_x448, parse_subjectpubkey_x25519,
-		  parse_subjectpubkey_gost256, parse_subjectpubkey_gost512 ; @*/
+		  parse_subjectpubkey_gost256, parse_subjectpubkey_gost512,
+		  parse_subjectpubkey_generic ; @*/
 	ret = alg->parse_subjectpubkey(buf, remain, &param);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
@@ -10853,6 +11208,7 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
 	if (!(alg->alg_type & ALG_SIG)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
@@ -11184,6 +11540,43 @@ static int parse_sig_generic(const u8 *buf, u16 len, u16 *eaten)
 	}
 
 	*eaten = bs_hdr_len + bs_data_len;
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_subjectpubkey_generic(const u8 *buf, u16 len, alg_param ATTRIBUTE_UNUSED *param)
+{
+	u16 bs_hdr_len = 0, bs_data_len = 0;
+	int ret;
+
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
+			   &bs_hdr_len, &bs_data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * We expect the bitstring data to contain at least the initial
+	 * octet encoding the number of unused bits in the final
+	 * subsequent octet of the bistring.
+	 * */
+	if (bs_data_len == 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
 	ret = 0;
 
