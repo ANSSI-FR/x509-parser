@@ -453,6 +453,7 @@ out:
 }
 
 typedef enum {
+	ASN1_TYPE_BOOLEAN         = 0x01,
 	ASN1_TYPE_INTEGER         = 0x02,
 	ASN1_TYPE_BIT_STRING      = 0x03,
 	ASN1_TYPE_OCTET_STRING    = 0x04,
@@ -1003,7 +1004,7 @@ static int parse_boolean(const u8 *buf, u16 len, u16 *eaten)
 		goto out;
 	}
 
-	if ((buf[0] != 0x01) || (buf[1] != 0x01)) {
+	if ((buf[0] != ASN1_TYPE_BOOLEAN) || (buf[1] != 0x01)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
