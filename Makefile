@@ -14,7 +14,7 @@ all: $(LIBS) $(EXEC)
 $(BUILD_DIR)/x509-parser: src/main.c build/x509-parser.o
 	$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) $^ -o $@
 
-build/x509-parser.o: src/x509-parser.c src/x509-parser.h
+build/x509-parser.o: src/x509-parser.c src/x509-parser.h src/x509-parser-internal-decl.h
 	@mkdir -p  $(BUILD_DIR)
 	$(CC) $(LIB_CFLAGS) -c $< -o $@
 
@@ -40,6 +40,7 @@ TIMEOUT:=15
 
 frama-c:
 	frama-c-gui src/x509-parser.c -machdep x86_64 \
+		    -instantiate \
 		    -warn-left-shift-negative \
 		    -warn-right-shift-negative \
 		    -warn-signed-downcast \
@@ -56,16 +57,19 @@ frama-c:
 				      find_dn_by_oid:100, \
 				      find_kp_by_oid:100, \
 				      find_curve_by_oid:100, \
-				      find_alg_by_oid:200, \
+				      find_pubkey_alg_by_oid:200, \
+				      find_sig_alg_by_oid:200, \
 				      find_hash_by_oid:200, \
 				      find_ext_by_oid:200, \
 				      parse_AccessDescription:400, \
 				      parse_x509_Extension:400, \
-				      parse_x509_subjectPublicKeyInfo:300, \
+				      parse_x509_subjectPublicKeyInfo:400, \
 				      parse_x509_Extensions:400, \
 				      bufs_differ:200, \
 				      parse_x509_tbsCertificate:400, \
-				      parse_x509_AlgorithmIdentifier:300" \
+				      parse_x509_tbsCert_sig_AlgorithmIdentifier:100, \
+				      parse_x509_pubkey_AlgorithmIdentifier:100, \
+				      parse_x509_cert:100", \
 		    -eva-warn-undefined-pointer-comparison none \
 		    -then \
 		    -wp \

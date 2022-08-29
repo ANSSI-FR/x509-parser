@@ -1,7 +1,7 @@
 # x509-parser project
 
 ## Copyright and license
-Copyright (C) 2019
+Copyright (C) 2022
 
 This software is licensed under a dual BSD and GPL v2 license.
 See [LICENSE](LICENSE) file at the root folder of the project.

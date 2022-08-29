@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2019 - This file is part of x509-parser project
+ *  Copyright (C) 2022 - This file is part of x509-parser project
  *
  *  Author:
  *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
@@ -9,6 +9,7 @@
  */
 
 #include "x509-parser.h"
+#include "x509-parser-internal-decl.h"
 
 /*
  * Some implementation notes:
@@ -47,6 +48,7 @@ typedef enum {
   @
   @ requires \valid_read(b1 + (0 .. n-1));
   @ requires \valid_read(b2 + (0 .. n-1));
+  @
   @ assigns \nothing;
   @*/
 static int bufs_differ(const u8 *b1, const u8 *b2, u16 n)
@@ -85,12 +87,11 @@ static int bufs_differ(const u8 *b1, const u8 *b2, u16 n)
  * Note that the function does verify that extracted tag is indeed >= 0x1f.
  */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==>
-	    \valid_read(buf + (0 .. (len - 1)));
-  @ requires \separated(tag_num, eaten, buf+(..));
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(tag_num);
   @ requires \valid(eaten);
+  @ requires \separated(tag_num, eaten, buf+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
@@ -98,6 +99,7 @@ static int bufs_differ(const u8 *b1, const u8 *b2, u16 n)
   @ ensures (\result == 0) ==> 1 <= *eaten <= len;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (\result == 0) ==> (*eaten > 0);
+  @
   @ assigns *tag_num, *eaten;
   @*/
 static int _extract_complex_tag(const u8 *buf, u16 len, u32 *tag_num, u16 *eaten)
@@ -179,14 +181,14 @@ out:
  * higher than that is found.
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==>
 	     \valid_read(buf + (0 .. (len - 1)));
-  @ requires \separated(cls, prim, tag_num, eaten, buf+(..));
   @ requires \valid(cls);
   @ requires \valid(prim);
   @ requires \valid(tag_num);
   @ requires \valid(eaten);
+  @ requires \separated(cls, prim, tag_num, eaten, buf+(..));
+  @
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
@@ -194,6 +196,7 @@ out:
   @ ensures (\result == 0) ==> (0 < *eaten <= len);
   @ ensures (\result == 0) ==> (*cls <= 0x3);
   @ ensures (\result == 0) ==> (*prim <= 0x1);
+  @
   @ assigns *tag_num, *eaten, *prim, *cls;
   @*/
 static int get_identifier(const u8 *buf, u16 len,
@@ -291,17 +294,18 @@ out:
  * length is returned in 'eaten'.
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \separated(adv_len, eaten, buf+(..));
   @ requires \valid(adv_len);
   @ requires \valid(eaten);
+  @ requires \separated(adv_len, eaten, buf+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (0 < *eaten <= len);
   @ ensures (\result == 0) ==> (*adv_len <= len);
   @ ensures (\result == 0) ==> ((*adv_len + *eaten) <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *adv_len, *eaten;
   @*/
 static int get_length(const u8 *buf, u16 len, u16 *adv_len, u16 *eaten)
@@ -484,17 +488,18 @@ typedef enum {
  * This function is critical for the security of the module.
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(parsed);
   @ requires \valid(content_len);
   @ requires \separated(parsed, content_len, buf+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (1 < *parsed <= len);
   @ ensures (\result == 0) ==> (*content_len <= len);
-  @ ensures (\result == 0) ==> ((*content_len + *parsed) <= len);
+  @ ensures (\result == 0) ==> (1 < (*content_len + *parsed) <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *parsed, *content_len;
   @*/
 static int parse_id_len(const u8 *buf, u16 len, tag_class exp_class,
@@ -591,17 +596,18 @@ out:
  * L2 provides the length of V
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(parsed);
   @ requires \valid(data_len);
   @ requires \separated(parsed, data_len, buf+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (*parsed <= len);
   @ ensures (\result == 0) ==> (*data_len <= len);
   @ ensures (\result == 0) ==> ((*data_len + *parsed) <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *parsed, *data_len;
   @*/
 static int parse_explicit_id_len(const u8 *buf, u16 len,
@@ -658,11 +664,11 @@ out:
 
 
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(arc_val);
   @ requires \valid(eaten);
   @ requires \separated(arc_val, eaten, buf+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (\result == 0) ==> (*eaten > 0);
@@ -670,6 +676,7 @@ out:
 	    \forall integer x ; 0 <= x < \min(len, 4) ==>
 	    ((buf[x] & 0x80) != 0);
   @ ensures (len == 0) ==> \result < 0;
+  @
   @ assigns *arc_val, *eaten;
   @*/
 static int _parse_arc(const u8 *buf, u16 len, u32 *arc_val, u16 *eaten)
@@ -749,13 +756,14 @@ static const u8 null_encoded_val[] = { 0x05, 0x00 };
  * -1 is returned on error.
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(parsed);
   @ requires \separated(parsed, buf+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> *parsed == 2;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *parsed;
   @*/
 static int parse_null(const u8 *buf, u16 len, u16 *parsed)
@@ -795,14 +803,15 @@ out:
  * (header and content bytes).
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(parsed);
   @ requires \separated(parsed,buf+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (2 < *parsed <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *parsed;
   @*/
 static int parse_OID(const u8 *buf, u16 len, u16 *parsed)
@@ -893,46 +902,54 @@ out:
 /*
  * Implements a function for parsing integers as described in section 8.3
  * of X.690. As integers may be used in a context specific way, we allow
- * passing the expected class and type values which are to be found.
+ * passing the expected class and type values which are to be found. The
+ * parameter pos_or_zero allows specifying if only non-negative integer
+ * (postive or zero) should be accepted. When set, the function returns
+ * a non zero value when the parsed integer is negative. The functions
+ * is not expected to be used directly but only as a helper in the
+ * two function that follows it.
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \valid(hdr_len);
+  @ requires \valid(data_len);
+  @ requires \separated(hdr_len, data_len, buf+(..));
+  @
   @ ensures \result < 0 || \result == 0;
-  @ ensures (\result == 0) ==> (2 < *eaten <= len);
+  @ ensures (\result == 0) ==> (2 < ((int)*hdr_len + (int)*data_len) <= (int)len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @
+  @ assigns *hdr_len, *data_len;
   @*/
-static int parse_integer(const u8 *buf, u16 len,
-			 tag_class exp_class, u32 exp_type,
-			 u16 *eaten)
+static int _parse_integer(const u8 *buf, u16 len,
+			  tag_class exp_class, u32 exp_type,
+			  u16 *hdr_len, u16 *data_len,
+			  int pos_or_zero)
 {
-	u16 hdr_len = 0;
-	u16 data_len = 0;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((buf == NULL) || (len == 0) || (hdr_len == NULL) || (data_len == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	ret = parse_id_len(buf, len, exp_class, exp_type, &hdr_len, &data_len);
+	*hdr_len = 0;
+	*data_len = 0;
+	ret = parse_id_len(buf, len, exp_class, exp_type, hdr_len, data_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	buf += hdr_len;
+	buf += *hdr_len;
 
 	/*
 	 * Regarding integer encoding, 8.3.1 of X.690 has "The contents octets
 	 * shall consist of one or more octets".
 	 */
-	if (data_len == 0) {
+	if (*data_len == 0) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -946,7 +963,7 @@ static int parse_integer(const u8 *buf, u16 len,
 	 *  a) shall not all be ones; and
 	 *  b) shall not all be zero.
 	 */
-	if (data_len > 1) {
+	if (*data_len > 1) {
 		if ((buf[0] == 0) && ((buf[1] & 0x80) == 0)) {
 			ret = -__LINE__;
 			ERROR_TRACE_APPEND(__LINE__);
@@ -960,12 +977,67 @@ static int parse_integer(const u8 *buf, u16 len,
 		}
 	}
 
-	*eaten = hdr_len + data_len;
+	if (pos_or_zero && (buf[0]) & 0x80) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+	}
 
 	ret = 0;
 
 out:
 	return ret;
+}
+
+/*
+ * Common version. Allow positive and negative integers.
+ */
+/*@
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(hdr_len);
+  @ requires \valid(data_len);
+  @ requires \separated(hdr_len, data_len, buf+(..));
+  @
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (\result == 0) ==> (2 < ((int)*hdr_len + (int)*data_len) <= (int)len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @
+  @ assigns *hdr_len, *data_len;
+  @*/
+static inline int parse_integer(const u8 *buf, u16 len,
+				tag_class exp_class, u32 exp_type,
+				u16 *hdr_len, u16 *data_len)
+{
+	return _parse_integer(buf, len, exp_class, exp_type,
+			      hdr_len, data_len, 0);
+}
+
+/*
+ * Same as previous but additionally enforce the value at hand is not negative,
+ * i.e. positive or 0. This is for instance useful for integer encoding value
+ * that are reduced modulo another value (e.g. ECDSA signature components).
+ * The function returns 0 when the integer is valid and positive.
+ */
+/*@
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(hdr_len);
+  @ requires \valid(data_len);
+  @ requires \separated(hdr_len, data_len, buf+(..));
+  @
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (\result == 0) ==> (2 < ((int)*hdr_len + (int)*data_len) <= (int)len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @
+  @ assigns *hdr_len, *data_len;
+  @*/
+static inline int parse_non_negative_integer(const u8 *buf, u16 len,
+					     tag_class exp_class, u32 exp_type,
+					     u16 *hdr_len, u16 *data_len)
+{
+	return _parse_integer(buf, len, exp_class, exp_type,
+			      hdr_len, data_len, 1);
 }
 
 /*
@@ -978,14 +1050,15 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \separated(eaten, buf+(..));
   @ requires \valid(eaten);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten;
   @*/
 static int parse_boolean(const u8 *buf, u16 len, u16 *eaten)
@@ -1040,19 +1113,21 @@ out:
  * version         [0]  EXPLICIT Version DEFAULT v1,
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
   @ requires \valid(ctx);
   @ requires \separated(eaten, cert+(..), ctx);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
-  @ assigns *eaten, *ctx;
+  @ ensures (\result == 0) ==> \initialized(&ctx->version);
+  @
+  @ assigns *eaten, ctx->version;
   @*/
 static int parse_x509_Version(cert_parsing_ctx *ctx,
 			      const u8 *cert, u16 off, u16 len, u16 *eaten)
@@ -1067,6 +1142,8 @@ static int parse_x509_Version(cert_parsing_ctx *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	ret = parse_explicit_id_len(buf, len, 0,
 				    CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
@@ -1114,16 +1191,17 @@ out:
  */
 #define MAX_SERIAL_NUM_LEN 22 /* w/ header */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
   @ requires \separated(eaten, cert+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (2 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
+  @
   @ assigns *eaten;
   @*/
 static int parse_SerialNumber(const u8 *cert, u16 off, u16 len,
@@ -1131,7 +1209,7 @@ static int parse_SerialNumber(const u8 *cert, u16 off, u16 len,
 			      u16 *eaten)
 {
 	const u8 *buf = cert + off;
-	u16 parsed = 0;
+	u16 parsed = 0, hdr_len = 0, data_len = 0;
 	int ret;
 
 	if ((cert == NULL) || (len == 0) || (eaten == NULL)) {
@@ -1140,17 +1218,24 @@ static int parse_SerialNumber(const u8 *cert, u16 off, u16 len,
 		goto out;
 	}
 
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
 	/* Verify the integer is DER-encoded as it should */
-	ret = parse_integer(buf, len, exp_class, exp_type, &parsed);
+	ret = parse_integer(buf, len, exp_class, exp_type,
+			    &hdr_len, &data_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+	parsed = hdr_len + data_len;
 	/*@ assert parsed > 2; */
+
+	*eaten = parsed;
+	/*@ assert *eaten > 2; */
 
 	/*
 	 * We now have the guarantee the integer has the following format:
-	 * [2 bytes for t/c and len][(parsed - 2) bytes for encoded value]
+	 * [2 bytes for t/c and len][data_len bytes for encoded value]
 	 */
 
 	/*
@@ -1159,7 +1244,7 @@ static int parse_SerialNumber(const u8 *cert, u16 off, u16 len,
 	 * on exactly 3 bytes (2 for header and 1 for the value), the last one
 	 * being 0.
 	 */
-	if ((parsed == 3) && (buf[2] == 0)) {
+	if ((data_len == 1) && (buf[2] == 0)) {
 #ifndef TEMPORARY_LAXIST_SERIAL_NULL
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
@@ -1201,9 +1286,7 @@ static int parse_SerialNumber(const u8 *cert, u16 off, u16 len,
 #endif
 	}
 
-	*eaten = parsed;
 	ret = 0;
-	/*@ assert *eaten > 2; */
 
 out:
 	return ret;
@@ -1211,19 +1294,21 @@ out:
 
 /* Specification version for main serial number field of certificate */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
   @ requires \valid(ctx);
   @ requires \separated(eaten, cert+(..), ctx);
+  @
   @ ensures \result < 0 || \result == 0;
-  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (\result == 0) ==> (2 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
-  @ assigns *eaten, *ctx;
+  @ ensures (\result == 0) ==> \initialized(&ctx->serial_start) && \initialized(&ctx->serial_len);
+  @
+  @ assigns *eaten, ctx->serial_start, ctx->serial_len;
   @*/
 static int parse_CertSerialNumber(cert_parsing_ctx *ctx,
 				  const u8 *cert, u16 off, u16 len,
@@ -1247,18 +1332,19 @@ out:
 
 /* Specification version for serial number field from AKI */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
   @ requires \valid(ctx);
   @ requires \separated(eaten, cert+(..), ctx);
+  @
   @ ensures \result < 0 || \result == 0;
-  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (\result == 0) ==> (2 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
+  @
   @ assigns *eaten;
   @*/
 static int parse_AKICertSerialNumber(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
@@ -1274,161 +1360,23 @@ static int parse_AKICertSerialNumber(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 	       goto out;
 	}
 
-	/* XXX At some point, update ctx with useful info */
-
 out:
 	return ret;
 }
 
-typedef struct {
-	const u8 *alg_name;
-	const u8 *alg_printable_oid;
-	const u8 *alg_der_oid;
-	const u8 alg_der_oid_len;
-} _hash;
-
-static const u8 _hash_alg_md2_name[] = "md2";
-static const u8 _hash_alg_md2_printable_oid[] = "1.2.840.113549.2.2";
-static const u8 _hash_alg_md2_der_oid[] = { 0x06, 0x09, 0x2a, 0x86,
-					    0x48, 0x86, 0xf7, 0x0d,
-					    0x02, 0x02 };
-
-static const _hash _md2_hash_alg = {
-	.alg_name = _hash_alg_md2_name,
-	.alg_printable_oid = _hash_alg_md2_printable_oid,
-	.alg_der_oid = _hash_alg_md2_der_oid,
-	.alg_der_oid_len = sizeof(_hash_alg_md2_der_oid),
-};
-
-static const u8 _hash_alg_md5_name[] = "md5";
-static const u8 _hash_alg_md5_printable_oid[] = "1.2.840.113549.2.5";
-static const u8 _hash_alg_md5_der_oid[] = { 0x06, 0x09, 0x2a, 0x86,
-					    0x48, 0x86, 0xf7, 0x0d,
-					    0x02, 0x05 };
-
-static const _hash _md5_hash_alg = {
-	.alg_name = _hash_alg_md5_name,
-	.alg_printable_oid = _hash_alg_md5_printable_oid,
-	.alg_der_oid = _hash_alg_md5_der_oid,
-	.alg_der_oid_len = sizeof(_hash_alg_md5_der_oid),
-};
-
-static const u8 _hash_alg_sha1_name[] = "sha1";
-static const u8 _hash_alg_sha1_printable_oid[] = "1.3.14.3.2.26";
-static const u8 _hash_alg_sha1_der_oid[] = { 0x06, 0x05, 0x2b, 0x0e,
-					     0x03, 0x02, 0x1a };
-
-static const _hash _sha1_hash_alg = {
-	.alg_name = _hash_alg_sha1_name,
-	.alg_printable_oid = _hash_alg_sha1_printable_oid,
-	.alg_der_oid = _hash_alg_sha1_der_oid,
-	.alg_der_oid_len = sizeof(_hash_alg_sha1_der_oid),
-};
-
-static const u8 _hash_alg_sha224_name[] = "sha224";
-static const u8 _hash_alg_sha224_printable_oid[] = "2.16.840.1.101.3.4.2.4";
-static const u8 _hash_alg_sha224_der_oid[] = { 0x06, 0x09, 0x60, 0x86,
-					       0x48, 0x01, 0x65, 0x03,
-					       0x04, 0x02, 0x04 };
-
-static const _hash _sha224_hash_alg = {
-	.alg_name = _hash_alg_sha224_name,
-	.alg_printable_oid = _hash_alg_sha224_printable_oid,
-	.alg_der_oid = _hash_alg_sha224_der_oid,
-	.alg_der_oid_len = sizeof(_hash_alg_sha224_der_oid),
-};
-
-static const u8 _hash_alg_sha256_name[] = "sha256";
-static const u8 _hash_alg_sha256_printable_oid[] = "2.16.840.1.101.3.4.2.1";
-static const u8 _hash_alg_sha256_der_oid[] = {  0x06, 0x09, 0x60, 0x86, 0x48,
-						0x01, 0x65, 0x03, 0x04, 0x02,
-						0x01 };
-
-static const _hash _sha256_hash_alg = {
-	.alg_name = _hash_alg_sha256_name,
-	.alg_printable_oid = _hash_alg_sha256_printable_oid,
-	.alg_der_oid = _hash_alg_sha256_der_oid,
-	.alg_der_oid_len = sizeof(_hash_alg_sha256_der_oid),
-};
-
-static const u8 _hash_alg_sha384_name[] = "sha384";
-static const u8 _hash_alg_sha384_printable_oid[] = "2.16.840.1.101.3.4.2.2";
-static const u8 _hash_alg_sha384_der_oid[] = { 0x06, 0x09, 0x60, 0x86,
-					       0x48, 0x01, 0x65, 0x03,
-					       0x04, 0x02, 0x02  };
-
-static const _hash _sha384_hash_alg = {
-	.alg_name = _hash_alg_sha384_name,
-	.alg_printable_oid = _hash_alg_sha384_printable_oid,
-	.alg_der_oid = _hash_alg_sha384_der_oid,
-	.alg_der_oid_len = sizeof(_hash_alg_sha384_der_oid),
-};
-
-static const u8 _hash_alg_sha512_name[] = "sha512";
-static const u8 _hash_alg_sha512_printable_oid[] = "2.16.840.1.101.3.4.2.3";
-static const u8 _hash_alg_sha512_der_oid[] = { 0x06, 0x09, 0x60, 0x86,
-					       0x48, 0x01, 0x65, 0x03,
-					       0x04, 0x02, 0x03  };
-
-static const _hash _sha512_hash_alg = {
-	.alg_name = _hash_alg_sha512_name,
-	.alg_printable_oid = _hash_alg_sha512_printable_oid,
-	.alg_der_oid = _hash_alg_sha512_der_oid,
-	.alg_der_oid_len = sizeof(_hash_alg_sha512_der_oid),
-};
-
-static const u8 _hash_alg_sha512_224_name[] = "sha512_224";
-static const u8 _hash_alg_sha512_224_printable_oid[] = "2.16.840.1.101.3.4.2.5";
-static const u8 _hash_alg_sha512_224_der_oid[] = { 0x06, 0x09, 0x60, 0x86,
-					       0x48, 0x01, 0x65, 0x03,
-					       0x04, 0x02, 0x05  };
-
-static const _hash _sha512_224_hash_alg = {
-	.alg_name = _hash_alg_sha512_224_name,
-	.alg_printable_oid = _hash_alg_sha512_224_printable_oid,
-	.alg_der_oid = _hash_alg_sha512_224_der_oid,
-	.alg_der_oid_len = sizeof(_hash_alg_sha512_224_der_oid),
-};
-
-static const u8 _hash_alg_sha512_256_name[] = "sha512_256";
-static const u8 _hash_alg_sha512_256_printable_oid[] = "2.16.840.1.101.3.4.2.6";
-static const u8 _hash_alg_sha512_256_der_oid[] = { 0x06, 0x09, 0x60, 0x86,
-					       0x48, 0x01, 0x65, 0x03,
-					       0x04, 0x02, 0x06  };
-
-static const _hash _sha512_256_hash_alg = {
-	.alg_name = _hash_alg_sha512_256_name,
-	.alg_printable_oid = _hash_alg_sha512_256_printable_oid,
-	.alg_der_oid = _hash_alg_sha512_256_der_oid,
-	.alg_der_oid_len = sizeof(_hash_alg_sha512_256_der_oid),
-};
-
-static const _hash *known_hashes[] = {
-	&_md2_hash_alg,
-	&_md5_hash_alg,
-	&_sha1_hash_alg,
-	&_sha224_hash_alg,
-	&_sha256_hash_alg,
-	&_sha384_hash_alg,
-	&_sha512_hash_alg,
-	&_sha512_224_hash_alg,
-	&_sha512_256_hash_alg,
-};
-
-#define NUM_KNOWN_HASHES (sizeof(known_hashes) / sizeof(known_hashes[0]))
-
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != NULL)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ ensures (\result != NULL) ==> \exists integer i ; 0 <= i < NUM_KNOWN_HASHES && \result == known_hashes[i];
+  @
+  @ ensures (\result != NULL) ==> \exists integer i ; 0 <= i < NUM_KNOWN_HASHES && \result == known_hashes[i] && \valid_read(\result);
   @ ensures (len == 0) ==> \result == NULL;
   @ ensures (buf == NULL) ==> \result == NULL;
+  @
   @ assigns \nothing;
   @*/
-static _hash const * find_hash_by_oid(const u8 *buf, u16 len)
+static _hash_alg const * find_hash_by_oid(const u8 *buf, u16 len)
 {
-	const _hash *found = NULL;
-	const _hash *cur = NULL;
+	const _hash_alg *found = NULL;
+	const _hash_alg *cur = NULL;
 	u8 k;
 
 	if ((buf == NULL) || (len == 0)) {
@@ -1438,6 +1386,7 @@ static _hash const * find_hash_by_oid(const u8 *buf, u16 len)
 	/*@
 	  @ loop invariant 0 <= k <= NUM_KNOWN_HASHES;
 	  @ loop invariant found == NULL;
+	  @ loop invariant (cur != NULL) ==> \valid_read(cur);
 	  @ loop assigns cur, found, k;
 	  @ loop variant (NUM_KNOWN_HASHES - k);
 	  @*/
@@ -1445,6 +1394,7 @@ static _hash const * find_hash_by_oid(const u8 *buf, u16 len)
 		int ret;
 
 		cur = known_hashes[k];
+		/*@ assert \valid_read(cur); */
 
 		/*@ assert cur == known_hashes[k];*/
 		if (cur->alg_der_oid_len != len) {
@@ -1464,380 +1414,6 @@ out:
 }
 
 
-typedef struct {
-	const u8 *alg_name;
-	const u8 *alg_printable_oid;
-	const u8 *alg_der_oid;
-	const u8 alg_der_oid_len;
-} _mgf;
-
-static const u8 _mgf_alg_mgf1_name[] = "MGF1";
-static const u8 _mgf_alg_mgf1_printable_oid[] = "1.2.840.113549.1.1.8";
-static const u8 _mgf_alg_mgf1_der_oid[] = { 0x06, 0x09, 0x2a, 0x86,
-					    0x48, 0x86, 0xf7, 0x0d,
-					    0x01, 0x01, 0x08 };
-
-static const _mgf _mgf1_alg = {
-	.alg_name = _mgf_alg_mgf1_name,
-	.alg_printable_oid = _mgf_alg_mgf1_printable_oid,
-	.alg_der_oid = _mgf_alg_mgf1_der_oid,
-	.alg_der_oid_len = sizeof(_mgf_alg_mgf1_der_oid),
-};
-
-typedef struct {
-	const _hash *hash;
-	const _mgf *mgf;
-	const _hash *mgf_hash;
-	u8 salt_len;
-	u8 trailer_field;
-} _rsassa_pss;
-
-
-
-
-typedef struct {
-	const u8 *crv_name;
-	const u8 *crv_printable_oid;
-	const u8 *crv_der_oid;
-	const u8 crv_der_oid_len;
-	const u16 crv_order_bit_len;
-} _curve;
-
-typedef struct {
-	const _curve *curve_param; /* pointer to specific curve structure */
-	const u8 *null_param;      /* pointer to null_encoded_val */
-	int ecdsa_no_param;  /* 1 when ECDSA has no param */
-	int unparsed_param;  /* 1 when generic param was left unparsed */
-	_rsassa_pss rsassa_pss_param;  /* For RSASSA-PSS */
-} alg_param;
-
-static int parse_sig_ed448(const u8 *buf, u16 len, u16 *eaten);
-static int parse_sig_ed25519(const u8 *buf, u16 len, u16 *eaten);
-static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten);
-static int parse_algoid_params_ecdsa_with(const u8 *buf, u16 len, alg_param *param);
-static int parse_algoid_params_ecPublicKey(const u8 *buf, u16 len, alg_param *param);
-static int parse_algoid_params_sm2(const u8 *buf, u16 len, alg_param *param);
-static int parse_algoid_params_eddsa(const u8 *buf, u16 len, alg_param *param);
-static int parse_subjectpubkey_ed448(const u8 *buf, u16 len, alg_param *param);
-static int parse_subjectpubkey_x448(const u8 *buf, u16 len, alg_param *param);
-static int parse_subjectpubkey_ed25519(const u8 *buf, u16 len, alg_param *param);
-static int parse_subjectpubkey_x25519(const u8 *buf, u16 len, alg_param *param);
-static int parse_subjectpubkey_ec(const u8 *buf, u16 len, alg_param *param);
-static int parse_subjectpubkey_rsa(const u8 *buf, u16 len, alg_param *param);
-static int parse_sig_generic(const u8 *buf, u16 len, u16 *eaten);
-static int parse_algoid_params_rsa(const u8 *buf, u16 len, alg_param *param);
-static int parse_sig_gost2012(const u8 *buf, u16 len, u16 *eaten);
-static int parse_algoid_params_pub_gost_r3410_2012_256(const u8 *buf, u16 len, alg_param *param);
-static int parse_algoid_params_pub_gost_r3410_2012_512(const u8 *buf, u16 len, alg_param *param);
-static int parse_subjectpubkey_gost256(const u8 *buf, u16 len, alg_param *param);
-static int parse_subjectpubkey_gost512(const u8 *buf, u16 len, alg_param *param);
-static int parse_algoid_params_sig_gost_none(const u8 *buf, u16 len, alg_param *param);
-
-#ifdef TEMPORARY_BADALGS
-static int parse_algoid_params_generic(const u8 *buf, u16 ATTRIBUTE_UNUSED len, alg_param *param);
-static int parse_subjectpubkey_generic(const u8 *buf, u16 len, alg_param *param);
-static int parse_sig_gost94(const u8 *buf, u16 len, u16 *eaten);
-static int parse_sig_gost2001(const u8 *buf, u16 len, u16 *eaten);
-static int parse_algoid_params_pub_gost_r3410_2001(const u8 *buf, u16 len, alg_param *param);
-#endif
-
-typedef struct {
-	const u8 *alg_name;
-	const u8 *alg_printable_oid;
-	const u8 *alg_der_oid;
-	const u8 alg_der_oid_len;
-	const u8 alg_type;
-	int (*parse_sig)(const u8 *buf, u16 len, u16 *eaten);
-	int (*parse_subjectpubkey)(const u8 *buf, u16 len, alg_param *param);
-	int (*parse_algoid_params)(const u8 *buf, u16 len, alg_param *param);
-} _alg_id;
-
-/*
- * The algorithmIdentifier structure is used at different location
- * in a certificate for different kind of algorithms:
- *
- *  - in signature and signatureAlgorithm fields, it describes a
- *    signature algorithm.
- *  - in subjectPublicKeyInfo, it describes a public key
- *    algorithm.
- *
- * For that reason, we need to be able to tell for a known algorithm
- * if it is either a signature or public key algorithm.
- */
-typedef enum {
-	ALG_INVALID = 0x00, /* neither sig nor pubkey */
-	ALG_SIG     = 0x01,
-	ALG_PUBKEY  = 0x02,
-} alg_types;
-
-static const u8 _ecdsa_sha1_name[] = "ecdsa-with-SHA1";
-static const u8 _ecdsa_sha1_printable_oid[] = "1.2.840.10045.4.1";
-static const u8 _ecdsa_sha1_der_oid[] = {0x06, 0x07, 0x2a, 0x86, 0x48,
-					 0xce, 0x3d, 0x04, 0x01 };
-
-static const _alg_id _ecdsa_sha1_alg = {
-	.alg_name = _ecdsa_sha1_name,
-	.alg_printable_oid = _ecdsa_sha1_printable_oid,
-	.alg_der_oid = _ecdsa_sha1_der_oid,
-	.alg_der_oid_len = sizeof(_ecdsa_sha1_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_ecdsa,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_ecdsa_with,
-};
-
-
-static const u8 _ecdsa_sha224_name[] = "ecdsa-with-SHA224";
-static const u8 _ecdsa_sha224_printable_oid[] = "1.2.840.10045.4.3.1";
-static const u8 _ecdsa_sha224_der_oid[] = {0x06, 0x08, 0x2a, 0x86, 0x48,
-					   0xce, 0x3d, 0x04, 0x03, 0x01 };
-
-static const _alg_id _ecdsa_sha224_alg = {
-	.alg_name = _ecdsa_sha224_name,
-	.alg_printable_oid = _ecdsa_sha224_printable_oid,
-	.alg_der_oid = _ecdsa_sha224_der_oid,
-	.alg_der_oid_len = sizeof(_ecdsa_sha224_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_ecdsa,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_ecdsa_with,
-};
-
-
-static const u8 _ecdsa_sha256_name[] = "ecdsa-with-SHA256";
-static const u8 _ecdsa_sha256_printable_oid[] = "1.2.840.10045.4.3.2";
-static const u8 _ecdsa_sha256_der_oid[] = {0x06, 0x08, 0x2a, 0x86, 0x48,
-					   0xce, 0x3d, 0x04, 0x03, 0x02 };
-
-static const _alg_id _ecdsa_sha256_alg = {
-	.alg_name = _ecdsa_sha256_name,
-	.alg_printable_oid = _ecdsa_sha256_printable_oid,
-	.alg_der_oid = _ecdsa_sha256_der_oid,
-	.alg_der_oid_len = sizeof(_ecdsa_sha256_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_ecdsa,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_ecdsa_with,
-};
-
-
-static const u8 _ecdsa_sha384_name[] = "ecdsa-with-SHA384";
-static const u8 _ecdsa_sha384_printable_oid[] = "1.2.840.10045.4.3.3";
-static const u8 _ecdsa_sha384_der_oid[] = {0x06, 0x08, 0x2a, 0x86, 0x48,
-					   0xce, 0x3d, 0x04, 0x03, 0x03 };
-
-static const _alg_id _ecdsa_sha384_alg = {
-	.alg_name = _ecdsa_sha384_name,
-	.alg_printable_oid = _ecdsa_sha384_printable_oid,
-	.alg_der_oid = _ecdsa_sha384_der_oid,
-	.alg_der_oid_len = sizeof(_ecdsa_sha384_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_ecdsa,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_ecdsa_with,
-};
-
-
-static const u8 _ecdsa_sha512_name[] = "ecdsa-with-SHA512";
-static const u8 _ecdsa_sha512_printable_oid[] = "1.2.840.10045.4.3.4";
-static const u8 _ecdsa_sha512_der_oid[] = {0x06, 0x08, 0x2a, 0x86, 0x48,
-					   0xce, 0x3d, 0x04, 0x03, 0x04 };
-
-static const _alg_id _ecdsa_sha512_alg = {
-	.alg_name = _ecdsa_sha512_name,
-	.alg_printable_oid = _ecdsa_sha512_printable_oid,
-	.alg_der_oid = _ecdsa_sha512_der_oid,
-	.alg_der_oid_len = sizeof(_ecdsa_sha512_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_ecdsa,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_ecdsa_with,
-};
-
-
-static const u8 _ecpublickey_name[] = "ecPublicKey";
-static const u8 _ecpublickey_printable_oid[] = "1.2.840.10045.2.1";
-static const u8 _ecpublickey_der_oid[] = { 0x06, 0x07, 0x2a, 0x86, 0x48,
-					   0xce, 0x3d,  0x02, 0x01 };
-
-static const _alg_id _ecpublickey_alg = {
-	.alg_name = _ecpublickey_name,
-	.alg_printable_oid = _ecpublickey_printable_oid,
-	.alg_der_oid = _ecpublickey_der_oid,
-	.alg_der_oid_len = sizeof(_ecpublickey_der_oid),
-	.alg_type = ALG_PUBKEY,
-	.parse_sig = NULL,
-	.parse_subjectpubkey = parse_subjectpubkey_ec,
-	.parse_algoid_params = parse_algoid_params_ecPublicKey,
-};
-
-
-static const u8 _ed25519_name[] = "Ed25519";
-static const u8 _ed25519_printable_oid[] = "1.3.101.112";
-static const u8 _ed25519_der_oid[] = { 0x06, 0x03, 0x2b, 0x65, 0x70 };
-
-static const _alg_id _ed25519_alg = {
-	.alg_name = _ed25519_name,
-	.alg_printable_oid = _ed25519_printable_oid,
-	.alg_der_oid = _ed25519_der_oid,
-	.alg_der_oid_len = sizeof(_ed25519_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_ed25519,
-	.parse_subjectpubkey = parse_subjectpubkey_ed25519,
-	.parse_algoid_params = parse_algoid_params_eddsa, /* for SIG and PUB */
-};
-
-
-static const u8 _x25519_name[] = "X25519";
-static const u8 _x25519_printable_oid[] = "1.3.101.110";
-static const u8 _x25519_der_oid[] = { 0x06, 0x03, 0x2b, 0x65, 0x6e };
-
-static const _alg_id _x25519_alg = {
-	.alg_name = _x25519_name,
-	.alg_printable_oid = _x25519_printable_oid,
-	.alg_der_oid = _x25519_der_oid,
-	.alg_der_oid_len = sizeof(_x25519_der_oid),
-	.alg_type = ALG_PUBKEY,
-	.parse_sig = NULL,
-	.parse_subjectpubkey = parse_subjectpubkey_x25519,
-	.parse_algoid_params = parse_algoid_params_eddsa,
-};
-
-
-static const u8 _ed448_name[] = "Ed448";
-static const u8 _ed448_printable_oid[] = "1.3.101.113";
-static const u8 _ed448_der_oid[] = { 0x06, 0x03, 0x2b, 0x65, 0x71 };
-
-static const _alg_id _ed448_alg = {
-	.alg_name = _ed448_name,
-	.alg_printable_oid = _ed448_printable_oid,
-	.alg_der_oid = _ed448_der_oid,
-	.alg_der_oid_len = sizeof(_ed448_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_ed448,
-	.parse_subjectpubkey = parse_subjectpubkey_ed448,
-	.parse_algoid_params = parse_algoid_params_eddsa, /* for SIG and PUB */
-};
-
-static const u8 _x448_name[] = "X448";
-static const u8 _x448_printable_oid[] = "1.3.101.111";
-static const u8 _x448_der_oid[] = { 0x06, 0x03, 0x2b, 0x65, 0x6f };
-
-static const _alg_id _x448_alg = {
-	.alg_name = _x448_name,
-	.alg_printable_oid = _x448_printable_oid,
-	.alg_der_oid = _x448_der_oid,
-	.alg_der_oid_len = sizeof(_x448_der_oid),
-	.alg_type = ALG_PUBKEY,
-	.parse_sig = NULL,
-	.parse_subjectpubkey = parse_subjectpubkey_x448,
-	.parse_algoid_params = parse_algoid_params_eddsa,
-};
-
-static const u8 _sm2_sm3_name[] = "SM2 w/ SM3";
-static const u8 _sm2_sm3_printable_oid[] = "1.2.156.10197.1.501";
-static const u8 _sm2_sm3_der_oid[] = { 0x06, 0x08, 0x2a, 0x81,
-				     0x1c, 0xcf, 0x55, 0x01,
-				     0x83, 0x75 };
-
-static const _alg_id _sm2_sm3_alg = {
-	.alg_name = _sm2_sm3_name,
-	.alg_printable_oid = _sm2_sm3_printable_oid,
-	.alg_der_oid = _sm2_sm3_der_oid,
-	.alg_der_oid_len = sizeof(_sm2_sm3_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_sm2,
-};
-
-
-static const u8 _rsa_sha256_name[] = "sha256WithRSAEncryption";
-static const u8 _rsa_sha256_printable_oid[] = "1.2.840.113549.1.1.11";
-static const u8 _rsa_sha256_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
-					 0xf7, 0x0d, 0x01, 0x01, 0x0b };
-
-static const _alg_id _rsa_sha256_alg = {
-	.alg_name = _rsa_sha256_name,
-	.alg_printable_oid = _rsa_sha256_printable_oid,
-	.alg_der_oid = _rsa_sha256_der_oid,
-	.alg_der_oid_len = sizeof(_rsa_sha256_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_rsa,
-};
-
-
-static const u8 _rsa_sha224_name[] = "sha224WithRSAEncryption";
-static const u8 _rsa_sha224_printable_oid[] = "1.2.840.113549.1.1.14";
-static const u8 _rsa_sha224_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
-					 0xf7, 0x0d, 0x01, 0x01, 0x0e };
-
-static const _alg_id _rsa_sha224_alg = {
-	.alg_name = _rsa_sha224_name,
-	.alg_printable_oid = _rsa_sha224_printable_oid,
-	.alg_der_oid = _rsa_sha224_der_oid,
-	.alg_der_oid_len = sizeof(_rsa_sha224_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_rsa,
-};
-
-
-static const u8 _rsa_sha384_name[] = "sha384WithRSAEncryption";
-static const u8 _rsa_sha384_printable_oid[] = "1.2.840.113549.1.1.12";
-static const u8 _rsa_sha384_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
-					 0xf7, 0x0d, 0x01, 0x01, 0x0c };
-
-static const _alg_id _rsa_sha384_alg = {
-	.alg_name = _rsa_sha384_name,
-	.alg_printable_oid = _rsa_sha384_printable_oid,
-	.alg_der_oid = _rsa_sha384_der_oid,
-	.alg_der_oid_len = sizeof(_rsa_sha384_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_rsa,
-};
-
-
-static const u8 _rsa_sha512_name[] = "sha512WithRSAEncryption";
-static const u8 _rsa_sha512_printable_oid[] = "1.2.840.113549.1.1.13";
-static const u8 _rsa_sha512_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
-					 0xf7, 0x0d, 0x01, 0x01, 0x0d };
-
-static const _alg_id _rsa_sha512_alg = {
-	.alg_name = _rsa_sha512_name,
-	.alg_printable_oid = _rsa_sha512_printable_oid,
-	.alg_der_oid = _rsa_sha512_der_oid,
-	.alg_der_oid_len = sizeof(_rsa_sha512_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_rsa,
-};
-
-
-static const u8 _pkcs1_rsaEncryption_name[] = "PKCS-1 rsaEncryption";
-static const u8 _pkcs1_rsaEncryption_printable_oid[] = "1.2.840.113549.1.1.1";
-static const u8 _pkcs1_rsaEncryption_der_oid[] = { 0x06, 0x09, 0x2a, 0x86,
-						   0x48, 0x86, 0xf7, 0x0d,
-						   0x01, 0x01, 0x01 };
-
-static const _alg_id _pkcs1_rsaEncryption_alg = {
-	.alg_name = _pkcs1_rsaEncryption_name,
-	.alg_printable_oid = _pkcs1_rsaEncryption_printable_oid,
-	.alg_der_oid = _pkcs1_rsaEncryption_der_oid,
-	.alg_der_oid_len = sizeof(_pkcs1_rsaEncryption_der_oid),
-	.alg_type = ALG_PUBKEY,
-	.parse_sig = NULL,
-	.parse_subjectpubkey = parse_subjectpubkey_rsa,
-	.parse_algoid_params = parse_algoid_params_rsa,
-};
-
-
 /*
  * HashAlgorithm is a sequence containing an OID and parameters which are
  * always NULL for all the hash functions defined in RFC 8017. For that
@@ -1847,20 +1423,22 @@ static const _alg_id _pkcs1_rsaEncryption_alg = {
  * HashAlgorithm structure is returned.
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \valid(hash_alg);
   @ requires \separated(eaten, buf+(..), hash_alg);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
   @ ensures (hash_alg == \null) ==> \result < 0;
+  @ ensures (\result == 0) ==> \exists integer i ; 0 <= i < NUM_KNOWN_HASHES && *hash_alg == known_hashes[i] && \valid_read(*hash_alg);
+  @
   @ assigns *eaten, *hash_alg;
   @*/
-static int parse_HashAlgorithm(const u8 *buf, u16 len, _hash const **hash_alg,
+static int parse_HashAlgorithm(const u8 *buf, u16 len, _hash_alg const **hash_alg,
 			       u16 *eaten)
 {
 	u16 hdr_len = 0, data_len = 0, oid_len = 0, remain = 0;
@@ -1897,6 +1475,8 @@ static int parse_HashAlgorithm(const u8 *buf, u16 len, _hash const **hash_alg,
 		goto out;
 	}
 
+	/*@ assert \exists integer i ; 0 <= i < NUM_KNOWN_HASHES && *hash_alg == known_hashes[i]; */
+
 	buf += oid_len;
 	remain -= oid_len;
 
@@ -1927,33 +1507,57 @@ out:
  *  }
  *
  */
-
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \valid(param);
-  @ requires \separated(param,buf+(..));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires ((ctx != \null)) ==> \valid(ctx);
+  @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns param->rsassa_pss_param;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @ ensures (\result == 0) ==> \initialized(&ctx->tbs_sig_alg_oid_params_start) &&
+	    \initialized(&ctx->tbs_sig_alg_oid_params_len) &&
+	    \initialized(&ctx->hash_alg) &&
+	    \initialized(&ctx->sig_alg_params.rsa_ssa_pss.mgf_alg) &&
+	    \initialized(&ctx->sig_alg_params.rsa_ssa_pss.mgf_hash_alg) &&
+	    \initialized(&ctx->sig_alg_params.rsa_ssa_pss.salt_len) &&
+	    \initialized(&ctx->sig_alg_params.rsa_ssa_pss.trailer_field);
+  @
+  @ assigns ctx->tbs_sig_alg_oid_params_start, ctx->tbs_sig_alg_oid_params_len,
+	    ctx->hash_alg, ctx->sig_alg_params.rsa_ssa_pss.mgf_alg,
+	    ctx->sig_alg_params.rsa_ssa_pss.mgf_hash_alg,
+	    ctx->sig_alg_params.rsa_ssa_pss.salt_len,
+	    ctx->sig_alg_params.rsa_ssa_pss.trailer_field;
   @*/
-static int parse_algoid_params_rsassa_pss(const u8 *buf, u16 len,
-					  alg_param *param)
+static int parse_algoid_sig_params_rsassa_pss(cert_parsing_ctx *ctx,
+					      const u8 *cert, u16 off, u16 len)
 {
 	u16 remain, hdr_len = 0, data_len = 0, oid_len = 0;
+	u16 int_hdr_len = 0, int_data_len = 0;
 	u16 attr_hdr_len = 0, attr_data_len = 0, eaten = 0, salt_len = 0;
-	_hash const *hash = NULL;
+	const u8 *buf = cert + off;
+	_hash_alg const *hash = NULL;
 	_mgf const *mgf = NULL;
-	_hash const *mgf_hash = NULL;
+	_hash_alg const *mgf_hash = NULL;
 	u8 trailer_field = 0;
 	int ret;
 
-	if ((buf == NULL) || (param == NULL) || (len == 0)) {
+	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	/*
+	 * If parsing goes ok, then we will have verified that nothing remains
+	 * behind, i.e. that 'len' is indeed the length of the parameters.
+	 */
+	ctx->tbs_sig_alg_oid_params_start = off;
+	ctx->tbs_sig_alg_oid_params_len = len;
 
 	/* Check we are dealing with a valid sequence */
 	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
@@ -1987,6 +1591,8 @@ static int parse_algoid_params_rsassa_pss(const u8 *buf, u16 len,
 			goto out;
 		}
 
+		/*@ assert \exists integer i ; 0 <= i < NUM_KNOWN_HASHES && hash == known_hashes[i]; */
+
 		/* Verify we have no trailing data */
 		if (eaten != attr_data_len) {
 			ret = -__LINE__;
@@ -1998,7 +1604,8 @@ static int parse_algoid_params_rsassa_pss(const u8 *buf, u16 len,
 		remain -= eaten;
 	}
 
-	param->rsassa_pss_param.hash = hash;
+	/* Record the hash algorithm we just learnt */
+	ctx->hash_alg = hash->hash_id;
 
 	/*****************************************************************
 	 * maskGenAlgorithm   [1] MaskGenAlgorithm   DEFAULT mgf1SHA1,   *
@@ -2068,6 +1675,8 @@ static int parse_algoid_params_rsassa_pss(const u8 *buf, u16 len,
 			goto out;
 		}
 
+		/*@ assert \exists integer i ; 0 <= i < NUM_KNOWN_HASHES && mgf_hash == known_hashes[i]; */
+
 		buf += eaten;
 		remain -= eaten;
 		data_len -= eaten;
@@ -2081,8 +1690,9 @@ static int parse_algoid_params_rsassa_pss(const u8 *buf, u16 len,
 
 	}
 
-	param->rsassa_pss_param.mgf = mgf;
-	param->rsassa_pss_param.mgf_hash = mgf_hash;
+	/* Record the MGF and associated MGF hash alg */
+	ctx->sig_alg_params.rsa_ssa_pss.mgf_alg = mgf->mgf_id;
+	ctx->sig_alg_params.rsa_ssa_pss.mgf_hash_alg = mgf_hash->hash_id;
 
 	/*****************************************************************
 	 * saltLength         [2] INTEGER            DEFAULT 20,         *
@@ -2099,14 +1709,16 @@ static int parse_algoid_params_rsassa_pss(const u8 *buf, u16 len,
 		buf += attr_hdr_len;
 		remain -= attr_hdr_len;
 
-		ret = parse_integer(buf, attr_data_len, CLASS_UNIVERSAL,
-				    ASN1_TYPE_INTEGER, &eaten);
+		ret = parse_non_negative_integer(buf, attr_data_len, CLASS_UNIVERSAL,
+				ASN1_TYPE_INTEGER, &int_hdr_len,
+				&int_data_len);
 		if (ret) {
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
 		}
 
 		/* We expect no trailing data */
+		eaten = int_hdr_len + int_data_len;
 		if (eaten != attr_data_len) {
 			ret = -__LINE__;
 			ERROR_TRACE_APPEND(__LINE__);
@@ -2115,11 +1727,11 @@ static int parse_algoid_params_rsassa_pss(const u8 *buf, u16 len,
 
 		/*
 		 * The spec has no limit on salt length value. As it does not
-		 * make sense for salt length to be more than 255 bytes, we
-		 * limit integer value to 255, i.e. we expect its value to be
+		 * make sense for salt length to be more than 127 bytes, we
+		 * limit integer value to 127, i.e. we expect its value to be
 		 * encoded on one byte.
 		 */
-		if (eaten != 3) {
+		if (int_data_len != 1) {
 			ret = -__LINE__;
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
@@ -2130,7 +1742,8 @@ static int parse_algoid_params_rsassa_pss(const u8 *buf, u16 len,
 		remain -= eaten;
 	}
 
-	param->rsassa_pss_param.salt_len = salt_len;
+	/* Record the salt_len */
+	ctx->sig_alg_params.rsa_ssa_pss.salt_len = salt_len;
 
 	/*****************************************************************
 	 * trailerField       [3] TrailerField    DEFAULT trailerFieldBC *
@@ -2156,13 +1769,15 @@ static int parse_algoid_params_rsassa_pss(const u8 *buf, u16 len,
 		remain -= attr_hdr_len;
 
 		ret = parse_integer(buf, attr_data_len, CLASS_UNIVERSAL,
-				    ASN1_TYPE_INTEGER, &eaten);
+				    ASN1_TYPE_INTEGER,
+				    &int_hdr_len, &int_data_len);
 		if (ret) {
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
 		}
 
 		/* We expect no trailing data */
+		eaten = int_hdr_len + int_data_len;
 		if (eaten != attr_data_len) {
 			ret = -__LINE__;
 			ERROR_TRACE_APPEND(__LINE__);
@@ -2194,7 +1809,8 @@ static int parse_algoid_params_rsassa_pss(const u8 *buf, u16 len,
 		goto out;
 	}
 
-	param->rsassa_pss_param.trailer_field = trailer_field;
+	/* Record trailer field */
+	ctx->sig_alg_params.rsa_ssa_pss.trailer_field = trailer_field;
 
 	if (remain) {
 		ret = -__LINE__;
@@ -2209,756 +1825,22 @@ out:
 }
 
 
-static const u8 _gost4_name[] = "sig_gost3410-2012-256";
-static const u8 _gost4_printable_oid[] = "1.2.643.7.1.1.3.2";
-static const u8 _gost4_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
-				     0x03, 0x07, 0x01, 0x01,
-				     0x03, 0x02 };
-
-static const _alg_id _gost4_alg = {
-	.alg_name = _gost4_name,
-	.alg_printable_oid = _gost4_printable_oid,
-	.alg_der_oid = _gost4_der_oid,
-	.alg_der_oid_len = sizeof(_gost4_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_gost2012,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_sig_gost_none,
-};
-
-
-static const u8 _gost5_name[] = "sig_gost3410-2012-512";
-static const u8 _gost5_printable_oid[] = "1.2.643.7.1.1.3.3";
-static const u8 _gost5_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
-				     0x03, 0x07, 0x01, 0x01,
-				     0x03, 0x03 };
-
-static const _alg_id _gost5_alg = {
-	.alg_name = _gost5_name,
-	.alg_printable_oid = _gost5_printable_oid,
-	.alg_der_oid = _gost5_der_oid,
-	.alg_der_oid_len = sizeof(_gost5_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_gost2012,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_sig_gost_none,
-};
-
-static const u8 _gost6_name[] = "pub_gost3410-2012-256";
-static const u8 _gost6_printable_oid[] = "1.2.643.7.1.1.1.1";
-static const u8 _gost6_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
-				     0x03, 0x07, 0x01, 0x01,
-				     0x01, 0x01 };
-
-static const _alg_id _gost6_alg = {
-	.alg_name = _gost6_name,
-	.alg_printable_oid = _gost6_printable_oid,
-	.alg_der_oid = _gost6_der_oid,
-	.alg_der_oid_len = sizeof(_gost6_der_oid),
-	.alg_type = ALG_PUBKEY,
-	.parse_sig = NULL,
-	.parse_subjectpubkey = parse_subjectpubkey_gost256,
-	.parse_algoid_params = parse_algoid_params_pub_gost_r3410_2012_256,
-};
-
-
-static const u8 _gost7_name[] = "pub_gost3410-2012-512";
-static const u8 _gost7_printable_oid[] = "1.2.643.7.1.1.1.2";
-static const u8 _gost7_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
-				     0x03, 0x07, 0x01, 0x01,
-				     0x01, 0x02 };
-
-static const _alg_id _gost7_alg = {
-	.alg_name = _gost7_name,
-	.alg_printable_oid = _gost7_printable_oid,
-	.alg_der_oid = _gost7_der_oid,
-	.alg_der_oid_len = sizeof(_gost7_der_oid),
-	.alg_type = ALG_PUBKEY,
-	.parse_sig = NULL,
-	.parse_subjectpubkey = parse_subjectpubkey_gost512,
-	.parse_algoid_params = parse_algoid_params_pub_gost_r3410_2012_512,
-};
-
-static const u8 _rsassapss_name[] = "RSASSA-PSS";
-static const u8 _rsassapss_printable_oid[] = "1.2.840.113549.1.1.10";
-static const u8 _rsassapss_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
-					 0xf7, 0x0d, 0x01, 0x01, 0x0a };
-
-static const _alg_id _rsassapss_alg = {
-	.alg_name = _rsassapss_name,
-	.alg_printable_oid = _rsassapss_printable_oid,
-	.alg_der_oid = _rsassapss_der_oid,
-	.alg_der_oid_len = sizeof(_rsassapss_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_rsassa_pss,
-};
-
-#ifdef TEMPORARY_BADALGS
-static const u8 _dsa_sha1_name[] = "dsaWithSHA1";
-static const u8 _dsa_sha1_printable_oid[] = "1.3.14.3.2.27";
-static const u8 _dsa_sha1_der_oid[] = { 0x06, 0x05, 0x2b, 0x0e,
-					0x03, 0x02, 0x1b };
-
-static const _alg_id _dsa_sha1_alg = {
-	.alg_name = _dsa_sha1_name,
-	.alg_printable_oid = _dsa_sha1_printable_oid,
-	.alg_der_oid = _dsa_sha1_der_oid,
-	.alg_der_oid_len = sizeof(_dsa_sha1_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-
-static const u8 _rsa_md2_name[] = "md2WithRSAEncryption";
-static const u8 _rsa_md2_printable_oid[] = "1.2.840.113549.1.1.2";
-static const u8 _rsa_md2_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
-				      0xf7, 0x0d, 0x01, 0x01, 0x02 };
-
-static const _alg_id _rsa_md2_alg = {
-	.alg_name = _rsa_md2_name,
-	.alg_printable_oid = _rsa_md2_printable_oid,
-	.alg_der_oid = _rsa_md2_der_oid,
-	.alg_der_oid_len = sizeof(_rsa_md2_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-
-static const u8 _rsa_md4_name[] = "md4WithRSAEncryption";
-static const u8 _rsa_md4_printable_oid[] = "1.2.840.113549.1.1.3";
-static const u8 _rsa_md4_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
-				      0xf7, 0x0d, 0x01, 0x01, 0x03 };
-
-static const _alg_id _rsa_md4_alg = {
-	.alg_name = _rsa_md4_name,
-	.alg_printable_oid = _rsa_md4_printable_oid,
-	.alg_der_oid = _rsa_md4_der_oid,
-	.alg_der_oid_len = sizeof(_rsa_md4_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-
-static const u8 _rsa_md5_name[] = "md5WithRSAEncryption";
-static const u8 _rsa_md5_printable_oid[] = "1.2.840.113549.1.1.4";
-static const u8 _rsa_md5_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
-				      0xf7, 0x0d, 0x01, 0x01, 0x04 };
-
-static const _alg_id _rsa_md5_alg = {
-	.alg_name = _rsa_md5_name,
-	.alg_printable_oid = _rsa_md5_printable_oid,
-	.alg_der_oid = _rsa_md5_der_oid,
-	.alg_der_oid_len = sizeof(_rsa_md5_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_rsa,
-};
-
-
-static const u8 _rsa_sha1_name[] = "sha1WithRSAEncryption";
-static const u8 _rsa_sha1_printable_oid[] = "1.2.840.113549.1.1.5";
-static const u8 _rsa_sha1_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
-				       0xf7, 0x0d, 0x01, 0x01, 0x05 };
-
-static const _alg_id _rsa_sha1_alg = {
-	.alg_name = _rsa_sha1_name,
-	.alg_printable_oid = _rsa_sha1_printable_oid,
-	.alg_der_oid = _rsa_sha1_der_oid,
-	.alg_der_oid_len = sizeof(_rsa_sha1_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_rsa,
-};
-
-static const u8 _odd1_name[] = "oiw-sha-1WithRSAEncryption";
-static const u8 _odd1_printable_oid[] = "1.3.14.3.2.29";
-static const u8 _odd1_der_oid[] = { 0x06, 0x05, 0x2b, 0x0e,
-				    0x03, 0x02, 0x1d };
-
-static const _alg_id _odd1_alg = {
-	.alg_name = _odd1_name,
-	.alg_printable_oid = _odd1_printable_oid,
-	.alg_der_oid = _odd1_der_oid,
-	.alg_der_oid_len = sizeof(_odd1_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic, /* FIXME */
-};
-
-
-static const u8 _odd2_name[] = "oiw-shaWithRSASignature";
-static const u8 _odd2_printable_oid[] = "1.3.14.3.2.15";
-static const u8 _odd2_der_oid[] = { 0x06, 0x05, 0x2b, 0x0e,
-				    0x03, 0x02, 0x0f };
-
-static const _alg_id _odd2_alg = {
-	.alg_name = _odd2_name,
-	.alg_printable_oid = _odd2_printable_oid,
-	.alg_der_oid = _odd2_der_oid,
-	.alg_der_oid_len = sizeof(_odd2_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic, /* FIXME */
-};
-
-
-static const u8 _odd3_name[] = "oiw-SHA-1";
-static const u8 _odd3_printable_oid[] = "1.3.14.3.2.26";
-static const u8 _odd3_der_oid[] = { 0x06, 0x05, 0x2b, 0x0e,
-				    0x03, 0x02, 0x1a };
-
-static const _alg_id _odd3_alg = {
-	.alg_name = _odd3_name,
-	.alg_printable_oid = _odd3_printable_oid,
-	.alg_der_oid = _odd3_der_oid,
-	.alg_der_oid_len = sizeof(_odd3_der_oid),
-	.alg_type = ALG_INVALID,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic, /* FIXME */
-};
-
-
-static const u8 _gost1_name[] = "gostR3411-94-with-gostR3410-2001";
-static const u8 _gost1_printable_oid[] = "1.2.643.2.2.3";
-static const u8 _gost1_der_oid[] = { 0x06, 0x06, 0x2a, 0x85,
-				     0x03, 0x02, 0x02, 0x03 };
-
-static const _alg_id _gost1_alg = {
-	.alg_name = _gost1_name,
-	.alg_printable_oid = _gost1_printable_oid,
-	.alg_der_oid = _gost1_der_oid,
-	.alg_der_oid_len = sizeof(_gost1_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_gost2001,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _gost2_name[] = "gostR3411-94-with-gostR3410-94";
-static const u8 _gost2_printable_oid[] = "1.2.643.2.2.4";
-static const u8 _gost2_der_oid[] = { 0x06, 0x06, 0x2a, 0x85,
-				     0x03, 0x02, 0x02, 0x04 };
-
-static const _alg_id _gost2_alg = {
-	.alg_name = _gost2_name,
-	.alg_printable_oid = _gost2_printable_oid,
-	.alg_der_oid = _gost2_der_oid,
-	.alg_der_oid_len = sizeof(_gost2_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_gost94,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-/* XXX Unsure what to do with that one. Check what we have in certs */
-static const u8 _gost3_name[] = "gostR3410-2001";
-static const u8 _gost3_printable_oid[] = "1.2.643.2.2.19";
-static const u8 _gost3_der_oid[] = { 0x06, 0x06, 0x2a, 0x85,
-				     0x03, 0x02, 0x02, 0x13 };
-
-static const _alg_id _gost3_alg = {
-	.alg_name = _gost3_name,
-	.alg_printable_oid = _gost3_printable_oid,
-	.alg_der_oid = _gost3_der_oid,
-	.alg_der_oid_len = sizeof(_gost3_der_oid),
-	.alg_type = ALG_PUBKEY,
-	.parse_sig = NULL,
-	.parse_subjectpubkey = parse_subjectpubkey_gost256,
-	.parse_algoid_params = parse_algoid_params_pub_gost_r3410_2001,
-};
-
-
-static const u8 _rsa_ripemd160_name[] = "rsaSignatureWithripemd160";
-static const u8 _rsa_ripemd160_printable_oid[] = "1.3.36.3.3.1.2";
-static const u8 _rsa_ripemd160_der_oid[] = { 0x06, 0x06, 0x2b, 0x24,
-					     0x03, 0x03, 0x01, 0x02 };
-
-static const _alg_id _rsa_ripemd160_alg = {
-	.alg_name = _rsa_ripemd160_name,
-	.alg_printable_oid = _rsa_ripemd160_printable_oid,
-	.alg_der_oid = _rsa_ripemd160_der_oid,
-	.alg_der_oid_len = sizeof(_rsa_ripemd160_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-
-static const u8 _weird1_name[] = "weird1-avest-plc";
-static const u8 _weird1_printable_oid[] = "1.3.6.1.4.1.12656.1.36";
-static const u8 _weird1_der_oid[] = { 0x06, 0x09, 0x2b, 0x06, 0x01, 0x04,
-				      0x01, 0xe2, 0x70, 0x01, 0x24 };
-
-static const _alg_id _weird1_alg = {
-	.alg_name = _weird1_name,
-	.alg_printable_oid = _weird1_printable_oid,
-	.alg_der_oid = _weird1_der_oid,
-	.alg_der_oid_len = sizeof(_weird1_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-
-static const u8 _weird2_name[] = "weird2-avest-plc";
-static const u8 _weird2_printable_oid[] = "1.3.6.1.4.1.12656.1.40";
-static const u8 _weird2_der_oid[] = { 0x06, 0x09, 0x2b, 0x06, 0x01, 0x04,
-				      0x01, 0xe2, 0x70, 0x01, 0x28 };
-
-static const _alg_id _weird2_alg = {
-	.alg_name = _weird2_name,
-	.alg_printable_oid = _weird2_printable_oid,
-	.alg_der_oid = _weird2_der_oid,
-	.alg_der_oid_len = sizeof(_weird2_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-
-static const u8 _weird3_name[] = "weird3-avest-plc";
-static const u8 _weird3_printable_oid[] = "1.3.6.1.4.1.12656.1.43";
-static const u8 _weird3_der_oid[] = { 0x06, 0x09, 0x2b, 0x06, 0x01, 0x04,
-				      0x01, 0xe2, 0x70, 0x01, 0x2b };
-
-static const _alg_id _weird3_alg = {
-	.alg_name = _weird3_name,
-	.alg_printable_oid = _weird3_printable_oid,
-	.alg_der_oid = _weird3_der_oid,
-	.alg_der_oid_len = sizeof(_weird3_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_060100_name[] = "ITU-T Recommendations";
-static const u8 _weird_060100_printable_oid[] = "0.0";
-static const u8 _weird_060100_der_oid[] = { 0x06, 0x01, 0x00,  };
-
-static const _alg_id _weird_060100_alg = {
-	.alg_name = _weird_060100_name,
-	.alg_printable_oid = _weird_060100_printable_oid,
-	.alg_der_oid = _weird_060100_der_oid,
-	.alg_der_oid_len = sizeof(_weird_060100_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_060455080101_name[] = "Enveloped digital signature algorithm applied to Rivest, Shamir and Adleman (RSA) encrypted or signed content";
-static const u8 _weird_060455080101_printable_oid[] = "2.5.8.1.1";
-static const u8 _weird_060455080101_der_oid[] = { 0x06, 0x04, 0x55, 0x08, 0x01, 0x01,  };
-
-static const _alg_id _weird_060455080101_alg = {
-	.alg_name = _weird_060455080101_name,
-	.alg_printable_oid = _weird_060455080101_printable_oid,
-	.alg_der_oid = _weird_060455080101_der_oid,
-	.alg_der_oid_len = sizeof(_weird_060455080101_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_060455080364_name[] = "Unknown sig alg under ISO ITU";
-static const u8 _weird_060455080364_printable_oid[] = "2.5.8.3.100";
-static const u8 _weird_060455080364_der_oid[] = { 0x06, 0x04, 0x55, 0x08, 0x03, 0x64,  };
-
-static const _alg_id _weird_060455080364_alg = {
-	.alg_name = _weird_060455080364_name,
-	.alg_printable_oid = _weird_060455080364_printable_oid,
-	.alg_der_oid = _weird_060455080364_der_oid,
-	.alg_der_oid_len = sizeof(_weird_060455080364_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06062a8503020214_name[] = "gostR3410-94";
-static const u8 _weird_06062a8503020214_printable_oid[] = "1.2.643.2.2.20";
-static const u8 _weird_06062a8503020214_der_oid[] = { 0x06, 0x06, 0x2a, 0x85, 0x03, 0x02, 0x02, 0x14,  };
-
-static const _alg_id _weird_06062a8503020214_alg = {
-	.alg_name = _weird_06062a8503020214_name,
-	.alg_printable_oid = _weird_06062a8503020214_printable_oid,
-	.alg_der_oid = _weird_06062a8503020214_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06062a8503020214_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06072a8648ce380401_name[] = "DSA subject public key";
-static const u8 _weird_06072a8648ce380401_printable_oid[] = "1.2.840.10040.4.1";
-static const u8 _weird_06072a8648ce380401_der_oid[] = { 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x38, 0x04, 0x01, };
-
-static const _alg_id _weird_06072a8648ce380401_alg = {
-	.alg_name = _weird_06072a8648ce380401_name,
-	.alg_printable_oid = _weird_06072a8648ce380401_printable_oid,
-	.alg_der_oid = _weird_06072a8648ce380401_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06072a8648ce380401_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06072a8648ce380403_name[] = "dsa-with-sha1";
-static const u8 _weird_06072a8648ce380403_printable_oid[] = "1.2.840.10040.4.3";
-static const u8 _weird_06072a8648ce380403_der_oid[] = { 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x38, 0x04, 0x03,  };
-
-static const _alg_id _weird_06072a8648ce380403_alg = {
-	.alg_name = _weird_06072a8648ce380403_name,
-	.alg_printable_oid = _weird_06072a8648ce380403_printable_oid,
-	.alg_der_oid = _weird_06072a8648ce380403_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06072a8648ce380403_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06072a8648ce3d0403_name[] = "ecdsa-with-SHA2";
-static const u8 _weird_06072a8648ce3d0403_printable_oid[] = "1.2.840.10045.4.3";
-static const u8 _weird_06072a8648ce3d0403_der_oid[] = { 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03,  };
-
-static const _alg_id _weird_06072a8648ce3d0403_alg = {
-	.alg_name = _weird_06072a8648ce3d0403_name,
-	.alg_printable_oid = _weird_06072a8648ce3d0403_printable_oid,
-	.alg_der_oid = _weird_06072a8648ce3d0403_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06072a8648ce3d0403_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06082a817a0147020601_name[] = "OID under GIP-CPS (responsible for the distribution all healthcare professional cards in France)";
-static const u8 _weird_06082a817a0147020601_printable_oid[] = "1.2.250.1.71.2.6.1";
-static const u8 _weird_06082a817a0147020601_der_oid[] = { 0x06, 0x08, 0x2a, 0x81, 0x7a, 0x01, 0x47, 0x02, 0x06, 0x01,  };
-
-static const _alg_id _weird_06082a817a0147020601_alg = {
-	.alg_name = _weird_06082a817a0147020601_name,
-	.alg_printable_oid = _weird_06082a817a0147020601_printable_oid,
-	.alg_der_oid = _weird_06082a817a0147020601_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06082a817a0147020601_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06092a7000020022652d0c_name[] = "Belarus Signature standard TB 34.101.45-2013";
-static const u8 _weird_06092a7000020022652d0c_printable_oid[] = "1.2.112.0.2.0.34.101.45.12";
-static const u8 _weird_06092a7000020022652d0c_der_oid[] = { 0x06, 0x09, 0x2a, 0x70, 0x00, 0x02, 0x00, 0x22, 0x65, 0x2d, 0x0c,  };
-
-static const _alg_id _weird_06092a7000020022652d0c_alg = {
-	.alg_name = _weird_06092a7000020022652d0c_name,
-	.alg_printable_oid = _weird_06092a7000020022652d0c_printable_oid,
-	.alg_der_oid = _weird_06092a7000020022652d0c_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06092a7000020022652d0c_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06092a864486f70d010105_name[] = "unknown oid";
-static const u8 _weird_06092a864486f70d010105_printable_oid[] = "1.2.836.113549.1.1.5";
-static const u8 _weird_06092a864486f70d010105_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x44, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05,  };
-
-static const _alg_id _weird_06092a864486f70d010105_alg = {
-	.alg_name = _weird_06092a864486f70d010105_name,
-	.alg_printable_oid = _weird_06092a864486f70d010105_printable_oid,
-	.alg_der_oid = _weird_06092a864486f70d010105_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06092a864486f70d010105_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06092a864886770d010101_name[] = "unknown oid";
-static const u8 _weird_06092a864886770d010101_printable_oid[] = "1.2.840.887.13.1.1.1";
-static const u8 _weird_06092a864886770d010101_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0x77, 0x0d, 0x01, 0x01, 0x01,  };
-
-static const _alg_id _weird_06092a864886770d010101_alg = {
-	.alg_name = _weird_06092a864886770d010101_name,
-	.alg_printable_oid = _weird_06092a864886770d010101_printable_oid,
-	.alg_der_oid = _weird_06092a864886770d010101_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06092a864886770d010101_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06092a864886f70d000105_name[] = "PKCS#5";
-static const u8 _weird_06092a864886f70d000105_printable_oid[] = "1.2.840.113549.0.1.5";
-static const u8 _weird_06092a864886f70d000105_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x00, 0x01, 0x05,  };
-
-static const _alg_id _weird_06092a864886f70d000105_alg = {
-	.alg_name = _weird_06092a864886f70d000105_name,
-	.alg_printable_oid = _weird_06092a864886f70d000105_printable_oid,
-	.alg_der_oid = _weird_06092a864886f70d000105_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06092a864886f70d000105_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06092a864886f70d010163_name[] = "Unknown RSA Labs OID";
-static const u8 _weird_06092a864886f70d010163_printable_oid[] = "1.2.840.113549.1.1.99";
-static const u8 _weird_06092a864886f70d010163_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x63,  };
-
-static const _alg_id _weird_06092a864886f70d010163_alg = {
-	.alg_name = _weird_06092a864886f70d010163_name,
-	.alg_printable_oid = _weird_06092a864886f70d010163_printable_oid,
-	.alg_der_oid = _weird_06092a864886f70d010163_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06092a864886f70d010163_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06092a864886f74501010b_name[] = "uknown oid";
-static const u8 _weird_06092a864886f74501010b_printable_oid[] = "1.2.840.113605.1.1.11";
-static const u8 _weird_06092a864886f74501010b_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x45, 0x01, 0x01, 0x0b, };
-
-static const _alg_id _weird_06092a864886f74501010b_alg = {
-	.alg_name = _weird_06092a864886f74501010b_name,
-	.alg_printable_oid = _weird_06092a864886f74501010b_printable_oid,
-	.alg_der_oid = _weird_06092a864886f74501010b_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06092a864886f74501010b_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06092a865886f70d010105_name[] = "unknown oid";
-static const u8 _weird_06092a865886f70d010105_printable_oid[] = "1.2.856.113549.1.1.5";
-static const u8 _weird_06092a865886f70d010105_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x58, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05,  };
-
-static const _alg_id _weird_06092a865886f70d010105_alg = {
-	.alg_name = _weird_06092a865886f70d010105_name,
-	.alg_printable_oid = _weird_06092a865886f70d010105_printable_oid,
-	.alg_der_oid = _weird_06092a865886f70d010105_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06092a865886f70d010105_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06092a866886f70d010105_name[] = "sha1-with-rsa-signature";
-static const u8 _weird_06092a866886f70d010105_printable_oid[] = "1.2.872.113549.1.1.5";
-static const u8 _weird_06092a866886f70d010105_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x68, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05,  };
-
-static const _alg_id _weird_06092a866886f70d010105_alg = {
-	.alg_name = _weird_06092a866886f70d010105_name,
-	.alg_printable_oid = _weird_06092a866886f70d010105_printable_oid,
-	.alg_der_oid = _weird_06092a866886f70d010105_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06092a866886f70d010105_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06092b06010401e2700125_name[] = "unknown OID 1.37 from Avest Plc.";
-static const u8 _weird_06092b06010401e2700125_printable_oid[] = "1.3.6.1.4.1.12656.1.37";
-static const u8 _weird_06092b06010401e2700125_der_oid[] = { 0x06, 0x09, 0x2b, 0x06, 0x01, 0x04, 0x01, 0xe2, 0x70, 0x01, 0x25,  };
-
-static const _alg_id _weird_06092b06010401e2700125_alg = {
-	.alg_name = _weird_06092b06010401e2700125_name,
-	.alg_printable_oid = _weird_06092b06010401e2700125_printable_oid,
-	.alg_der_oid = _weird_06092b06010401e2700125_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06092b06010401e2700125_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_06093a864886f70d010101_name[] = "rsaEncryption";
-static const u8 _weird_06093a864886f70d010101_printable_oid[] = "1.18.840.113549.1.1.1";
-static const u8 _weird_06093a864886f70d010101_der_oid[] = { 0x06, 0x09, 0x3a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01,  };
-
-static const _alg_id _weird_06093a864886f70d010101_alg = {
-	.alg_name = _weird_06093a864886f70d010101_name,
-	.alg_printable_oid = _weird_06093a864886f70d010101_printable_oid,
-	.alg_der_oid = _weird_06093a864886f70d010101_der_oid,
-	.alg_der_oid_len = sizeof(_weird_06093a864886f70d010101_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_0609608648016503040201_name[] = "sha256";
-static const u8 _weird_0609608648016503040201_printable_oid[] = "2.16.840.1.101.3.4.2.1";
-static const u8 _weird_0609608648016503040201_der_oid[] = { 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01,  };
-
-static const _alg_id _weird_0609608648016503040201_alg = {
-	.alg_name = _weird_0609608648016503040201_name,
-	.alg_printable_oid = _weird_0609608648016503040201_printable_oid,
-	.alg_der_oid = _weird_0609608648016503040201_der_oid,
-	.alg_der_oid_len = sizeof(_weird_0609608648016503040201_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_0609608648016503040302_name[] = "id-dsa-with-sha256";
-static const u8 _weird_0609608648016503040302_printable_oid[] = "2.16.840.1.101.3.4.3.2";
-static const u8 _weird_0609608648016503040302_der_oid[] = { 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x03, 0x02,  };
-
-static const _alg_id _weird_0609608648016503040302_alg = {
-	.alg_name = _weird_0609608648016503040302_name,
-	.alg_printable_oid = _weird_0609608648016503040302_printable_oid,
-	.alg_der_oid = _weird_0609608648016503040302_der_oid,
-	.alg_der_oid_len = sizeof(_weird_0609608648016503040302_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_0609608648016503040310_name[] = "id-rsassa-pkcs1-v1-5-with-sha3-512";
-static const u8 _weird_0609608648016503040310_printable_oid[] = "2.16.840.1.101.3.4.3.16";
-static const u8 _weird_0609608648016503040310_der_oid[] = { 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x03, 0x10,  };
-
-static const _alg_id _weird_0609608648016503040310_alg = {
-	.alg_name = _weird_0609608648016503040310_name,
-	.alg_printable_oid = _weird_0609608648016503040310_printable_oid,
-	.alg_der_oid = _weird_0609608648016503040310_der_oid,
-	.alg_der_oid_len = sizeof(_weird_0609608648016503040310_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-static const u8 _weird_060a2b0601040182a25a0101_name[] = "unknown OID from The Monkeysphere Project";
-static const u8 _weird_060a2b0601040182a25a0101_printable_oid[] = "1.3.6.1.4.1.37210.1.1";
-static const u8 _weird_060a2b0601040182a25a0101_der_oid[] = { 0x06, 0x0a, 0x2b, 0x06, 0x01, 0x04, 0x01, 0x82, 0xa2, 0x5a, 0x01, 0x01,  };
-
-static const _alg_id _weird_060a2b0601040182a25a0101_alg = {
-	.alg_name = _weird_060a2b0601040182a25a0101_name,
-	.alg_printable_oid = _weird_060a2b0601040182a25a0101_printable_oid,
-	.alg_der_oid = _weird_060a2b0601040182a25a0101_der_oid,
-	.alg_der_oid_len = sizeof(_weird_060a2b0601040182a25a0101_der_oid),
-	.alg_type = ALG_SIG | ALG_PUBKEY,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = parse_subjectpubkey_generic,
-	.parse_algoid_params = parse_algoid_params_generic,
-};
-
-#endif
-
-static const _alg_id *known_algs[] = {
-	&_ecdsa_sha1_alg,
-	&_ecdsa_sha224_alg,
-	&_ecdsa_sha256_alg,
-	&_ecdsa_sha384_alg,
-	&_ecdsa_sha512_alg,
-	&_ecpublickey_alg,
-	&_ed25519_alg,
-	&_x25519_alg,
-	&_ed448_alg,
-	&_x448_alg,
-	&_sm2_sm3_alg,
-	&_rsa_sha224_alg,
-	&_rsa_sha256_alg,
-	&_rsa_sha384_alg,
-	&_rsa_sha512_alg,
-	&_pkcs1_rsaEncryption_alg,
-	&_rsassapss_alg,
-	&_gost4_alg,
-	&_gost5_alg,
-	&_gost6_alg,
-	&_gost7_alg,
-#ifdef TEMPORARY_BADALGS
-	&_rsa_md2_alg,
-	&_rsa_md4_alg,
-	&_rsa_md5_alg,
-	&_rsa_sha1_alg,
-	&_rsa_ripemd160_alg,
-	&_dsa_sha1_alg,
-	&_odd1_alg,
-	&_odd2_alg,
-	&_odd3_alg,
-	&_gost1_alg,
-	&_gost2_alg,
-	&_gost3_alg,
-	&_weird1_alg,
-	&_weird2_alg,
-	&_weird3_alg,
-	&_weird_060100_alg,
-	&_weird_060455080101_alg,
-	&_weird_060455080364_alg,
-	&_weird_06062a8503020214_alg,
-	&_weird_06072a8648ce380401_alg,
-	&_weird_06072a8648ce380403_alg,
-	&_weird_06072a8648ce3d0403_alg,
-	&_weird_06082a817a0147020601_alg,
-	&_weird_06092a7000020022652d0c_alg,
-	&_weird_06092a864486f70d010105_alg,
-	&_weird_06092a864886770d010101_alg,
-	&_weird_06092a864886f70d000105_alg,
-	&_weird_06092a864886f70d010163_alg,
-	&_weird_06092a864886f74501010b_alg,
-	&_weird_06092a865886f70d010105_alg,
-	&_weird_06092a866886f70d010105_alg,
-	&_weird_06092b06010401e2700125_alg,
-	&_weird_06093a864886f70d010101_alg,
-	&_weird_0609608648016503040201_alg,
-	&_weird_0609608648016503040302_alg,
-	&_weird_0609608648016503040310_alg,
-	&_weird_060a2b0601040182a25a0101_alg,
-#endif
-};
-
-#define NUM_KNOWN_ALGS (sizeof(known_algs) / sizeof(known_algs[0]))
-
 
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \valid(param);
-  @ requires \separated(param,buf+(..));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires ((ctx != \null)) ==> \valid(ctx);
+  @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result < 0 || \result == 0;
-  @ ensures ((buf != \null) && (len == 0)) ==> \result == 0;
-  @ ensures (len != 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ ensures \result == 0 ==> param->ecdsa_no_param == 1;
-  @ assigns param->ecdsa_no_param;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @
+  @ assigns ctx->tbs_sig_alg_oid_params_start,
+	    ctx->tbs_sig_alg_oid_params_len;
   @*/
-static int parse_algoid_params_ecdsa_with(const u8 *buf, u16 len, alg_param *param)
+static int parse_algoid_sig_params_ecdsa_with(cert_parsing_ctx *ctx,
+					      const u8 *cert, u16 off, u16 len)
 {
 	int ret;
 
@@ -2976,204 +1858,191 @@ static int parse_algoid_params_ecdsa_with(const u8 *buf, u16 len, alg_param *par
 	 *   parameters field.  That is, the AlgorithmIdentifier SHALL be a
 	 *   SEQUENCE of one component, the OID ecdsa-with-SHA224,
 	 *   ecdsa-with-SHA256, ecdsa-with-SHA384, or ecdsa-with-SHA512.
+	 *
+	 * Section 3 of RFC 8692 defining ECDSA with SHAKE128/256 has the same
+	 * requirement.
 	 */
 
-	if ((buf == NULL) || (len != 0)) {
+	if ((ctx == NULL) || (cert == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	if (len != 0) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 	} else {
-		param->ecdsa_no_param = 1;
 		ret = 0;
 	}
 
+	ctx->tbs_sig_alg_oid_params_start = off;
+	ctx->tbs_sig_alg_oid_params_len = len;
+
+out:
 	return ret;
 }
 
-static const u8 _curve_prime192v1_name[] = "prime192v1";
-static const u8 _curve_prime192v1_printable_oid[] = "1.2.840.10045.3.0.1";
-static const u8 _curve_prime192v1_der_oid[] = { 0x06, 0x08, 0x2a, 0x86,
-						0x48, 0xce, 0x3d, 0x03,
-						0x01, 0x01,  };
 
-static const _curve _curve_prime192v1 = {
-	.crv_name = _curve_prime192v1_name,
-	.crv_printable_oid = _curve_prime192v1_printable_oid,
-	.crv_der_oid = _curve_prime192v1_der_oid,
-	.crv_der_oid_len = sizeof(_curve_prime192v1_der_oid),
-	.crv_order_bit_len = 192,
-};
+/*
+ * When Alg OID is 1.2.840.10045.4.3 (ecdsa-with-SHA2), the parameters contains
+ * the OID of the hash function to be used with ECDSA for the signature.
+ */
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires ((ctx != \null)) ==> \valid(ctx);
+  @ requires \separated(ctx, cert+(..));
+  @
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @
+  @ assigns ctx->tbs_sig_alg_oid_params_start,
+	    ctx->tbs_sig_alg_oid_params_len,
+	    ctx->hash_alg;
+  @*/
+static int parse_algoid_sig_params_ecdsa_with_specified(cert_parsing_ctx *ctx,
+					      const u8 *cert, u16 off, u16 len)
+{
+	const u8 *buf = cert + off;
+	const _hash_alg *hash = NULL;
+	u16 parsed = 0;
+	int ret;
 
-static const u8 _curve_c2pnb163v1_name[] = "c2pnb163v1";
-static const u8 _curve_c2pnb163v1_printable_oid[] = "1.2.840.10045.3.0.1";
-static const u8 _curve_c2pnb163v1_der_oid[] = { 0x06, 0x08, 0x2a, 0x86,
-						0x48, 0xce, 0x3d, 0x03,
-						0x00, 0x01 };
+	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
-static const _curve _curve_c2pnb163v1 = {
-	.crv_name = _curve_c2pnb163v1_name,
-	.crv_printable_oid = _curve_c2pnb163v1_printable_oid,
-	.crv_der_oid = _curve_c2pnb163v1_der_oid,
-	.crv_der_oid_len = sizeof(_curve_c2pnb163v1_der_oid),
-	.crv_order_bit_len = 163,
-};
+	ctx->tbs_sig_alg_oid_params_start = off;
+	ctx->tbs_sig_alg_oid_params_len = len;
 
-static const u8 _curve_sect571k1_name[] = "sect571k1";
-static const u8 _curve_sect571k1_printable_oid[] = "1.3.132.0.38";
-static const u8 _curve_sect571k1_der_oid[] = { 0x06, 0x05, 0x2b, 0x81,
-					       0x04, 0x00, 0x26 };
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
-static const _curve _curve_sect571k1 = {
-	.crv_name = _curve_sect571k1_name,
-	.crv_printable_oid = _curve_sect571k1_printable_oid,
-	.crv_der_oid = _curve_sect571k1_der_oid,
-	.crv_der_oid_len = sizeof(_curve_sect571k1_der_oid),
-	.crv_order_bit_len = 571,
-};
+	/*
+	 * If parsing goes ok, then we will have verified that nothing remains
+	 * behind, i.e. that 'len' is indeed the length of the parameters.
+	 */
+	ret = parse_HashAlgorithm(buf, len, &hash, &parsed);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
-static const u8 _curve_sect163k1_name[] = "sect163k1";
-static const u8 _curve_sect163k1_printable_oid[] = "1.3.132.0.1";
-static const u8 _curve_sect163k1_der_oid[] = { 0x06, 0x05, 0x2b, 0x81,
-					       0x04, 0x00, 0x01 };
+	/*@ assert \exists integer i ; 0 <= i < NUM_KNOWN_HASHES && hash == known_hashes[i]; */
 
-static const _curve _curve_sect163k1 = {
-	.crv_name = _curve_sect163k1_name,
-	.crv_printable_oid = _curve_sect163k1_printable_oid,
-	.crv_der_oid = _curve_sect163k1_der_oid,
-	.crv_der_oid_len = sizeof(_curve_sect163k1_der_oid),
-	.crv_order_bit_len = 163,
-};
+	if (parsed != len) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
-static const u8 _curve_secp256k1_name[] = "secp256k1";
-static const u8 _curve_secp256k1_printable_oid[] = "1.3.132.0.10";
-static const u8 _curve_secp256k1_der_oid[] = { 0x06, 0x05, 0x2b, 0x81,
-					       0x04, 0x00, 0x0a	 };
+	/* Record the hash algorithm we just learnt */
+	ctx->hash_alg = hash->hash_id;
 
-static const _curve _curve_secp256k1 = {
-	.crv_name = _curve_secp256k1_name,
-	.crv_printable_oid = _curve_secp256k1_printable_oid,
-	.crv_der_oid = _curve_secp256k1_der_oid,
-	.crv_der_oid_len = sizeof(_curve_secp256k1_der_oid),
-	.crv_order_bit_len = 256,
-};
+out:
+	return ret;
+}
 
-static const u8 _curve_secp256r1_name[] = "secp256r1";
-static const u8 _curve_secp256r1_printable_oid[] = "1.2.840.10045.3.1.7";
-static const u8 _curve_secp256r1_der_oid[] = { 0x06, 0x08, 0x2a, 0x86, 0x48,
-					       0xce, 0x3d, 0x03, 0x01, 0x07 };
 
-static const _curve _curve_secp256r1 = {
-	.crv_name = _curve_secp256r1_name,
-	.crv_printable_oid = _curve_secp256r1_printable_oid,
-	.crv_der_oid = _curve_secp256r1_der_oid,
-	.crv_der_oid_len = sizeof(_curve_secp256r1_der_oid),
-	.crv_order_bit_len = 256,
-};
+/*
+ * When Alg OID is bign-with-hspec (1.2.112.0.2.0.34.101.45.11), we expect the
+ * the parameters to contain the OID of the hash function. Note that we do not
+ * have any certificate at that point to test that code (and validate that
+ * the hash OID is not followed by a NULL for instance)
+ */
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires ((ctx != \null)) ==> \valid(ctx);
+  @ requires \separated(ctx, cert+(..));
+  @
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @
+  @ assigns ctx->tbs_sig_alg_oid_params_start,
+	    ctx->tbs_sig_alg_oid_params_len,
+	    ctx->hash_alg;
+  @*/
+static int parse_algoid_sig_params_bign_with_hspec(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+					      const u8 *cert, u16 off, u16 len)
+{
+	u16 remain, hdr_len = 0, data_len = 0;
+	const u8 *buf = cert + off;
+	const _hash_alg *hash;
+	u16 oid_len = 0;
+	int ret;
 
-static const u8 _curve_secp384r1_name[] = "secp384r1";
-static const u8 _curve_secp384r1_printable_oid[] = "1.3.132.0.34";
-static const u8 _curve_secp384r1_der_oid[] = { 0x06, 0x05, 0x2b, 0x81,
-					       0x04, 0x00, 0x22 };
+	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
-static const _curve _curve_secp384r1 = {
-	.crv_name = _curve_secp384r1_name,
-	.crv_printable_oid = _curve_secp384r1_printable_oid,
-	.crv_der_oid = _curve_secp384r1_der_oid,
-	.crv_der_oid_len = sizeof(_curve_secp384r1_der_oid),
-	.crv_order_bit_len = 384,
-};
+	/*
+	 * If parsing goes ok, then we will have verified that nothing remains
+	 * behind, i.e. that 'len' is indeed the length of the parameters.
+	 */
+	ctx->tbs_sig_alg_oid_params_start = off;
+	ctx->tbs_sig_alg_oid_params_len = len;
 
-static const u8 _curve_secp521r1_name[] = "secp521r1";
-static const u8 _curve_secp521r1_printable_oid[] = "1.3.132.0.35";
-static const u8 _curve_secp521r1_der_oid[] = { 0x06, 0x05, 0x2b, 0x81,
-					       0x04, 0x00, 0x23 };
+	/* Check we are dealing with a valid sequence */
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
-static const _curve _curve_secp521r1 = {
-	.crv_name = _curve_secp521r1_name,
-	.crv_printable_oid = _curve_secp521r1_printable_oid,
-	.crv_der_oid = _curve_secp521r1_der_oid,
-	.crv_der_oid_len = sizeof(_curve_secp521r1_der_oid),
-	.crv_order_bit_len = 521,
-};
+	buf += hdr_len;
+	remain = data_len;
 
-static const u8 _curve_brainpoolP256R1_name[] = "brainpoolP256R1";
-static const u8 _curve_brainpoolP256R1_printable_oid[] = "1.3.36.3.3.2.8.1.1.7";
-static const u8 _curve_brainpoolP256R1_der_oid[] = { 0x06, 0x05, 0x2b, 0x24,
-						     0x03, 0x03, 0x02, 0x08,
-						     0x01, 0x01, 0x07 };
+	/*
+	 * In the sequence, we should find an OID for a known hash
+	 * function ...
+	 */
+	ret = parse_OID(buf, remain, &oid_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
-static const _curve _curve_brainpoolP256R1 = {
-	.crv_name = _curve_brainpoolP256R1_name,
-	.crv_printable_oid = _curve_brainpoolP256R1_printable_oid,
-	.crv_der_oid = _curve_brainpoolP256R1_der_oid,
-	.crv_der_oid_len = sizeof(_curve_brainpoolP256R1_der_oid),
-	.crv_order_bit_len = 256,
-};
+	hash = find_hash_by_oid(buf, oid_len);
+	if (hash == NULL) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
-static const u8 _curve_brainpoolP384R1_name[] = "brainpoolP384R1";
-static const u8 _curve_brainpoolP384R1_printable_oid[] = "1.3.36.3.3.2.8.1.1.11";
-static const u8 _curve_brainpoolP384R1_der_oid[] = { 0x06, 0x05, 0x2b, 0x24,
-						     0x03, 0x03, 0x02, 0x08,
-						     0x01, 0x01, 0x0b };
+	buf += oid_len;
+	remain -= oid_len;
 
-static const _curve _curve_brainpoolP384R1 = {
-	.crv_name = _curve_brainpoolP384R1_name,
-	.crv_printable_oid = _curve_brainpoolP384R1_printable_oid,
-	.crv_der_oid = _curve_brainpoolP384R1_der_oid,
-	.crv_der_oid_len = sizeof(_curve_brainpoolP384R1_der_oid),
-	.crv_order_bit_len = 384,
-};
+	if (remain) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
-static const u8 _curve_brainpoolP512R1_name[] = "brainpoolP512R1";
-static const u8 _curve_brainpoolP512R1_printable_oid[] = "1.3.36.3.3.2.8.1.1.13";
-static const u8 _curve_brainpoolP512R1_der_oid[] = { 0x06, 0x05, 0x2b, 0x24,
-						     0x03, 0x03, 0x02, 0x08,
-						     0x01, 0x01, 0x0d };
+	/* Record the hash algorithm we just learnt */
+	ctx->hash_alg = hash->hash_id;
+	ret = 0;
 
-static const _curve _curve_brainpoolP512R1 = {
-	.crv_name = _curve_brainpoolP512R1_name,
-	.crv_printable_oid = _curve_brainpoolP512R1_printable_oid,
-	.crv_der_oid = _curve_brainpoolP512R1_der_oid,
-	.crv_der_oid_len = sizeof(_curve_brainpoolP512R1_der_oid),
-	.crv_order_bit_len = 512,
-};
-
-static const u8 _curve_sm2p256v1_name[] = "sm2p256v1";
-static const u8 _curve_sm2p256v1_printable_oid[] = "1.2.156.10197.1.301";
-static const u8 _curve_sm2p256v1_der_oid[] = { 0x06, 0x08, 0x2a, 0x81,
-					       0x1c, 0xcf, 0x55, 0x01,
-					       0x82, 0x2d };
-
-static const _curve _curve_sm2p256v1 = {
-	.crv_name = _curve_sm2p256v1_name,
-	.crv_printable_oid = _curve_sm2p256v1_printable_oid,
-	.crv_der_oid = _curve_sm2p256v1_der_oid,
-	.crv_der_oid_len = sizeof(_curve_sm2p256v1_der_oid),
-	.crv_order_bit_len = 256,
-};
-
-static const _curve *known_curves[] = {
-	&_curve_secp256r1,
-	&_curve_secp384r1,
-	&_curve_secp521r1,
-	&_curve_brainpoolP256R1,
-	&_curve_brainpoolP384R1,
-	&_curve_brainpoolP512R1,
-	&_curve_sm2p256v1,
-	&_curve_prime192v1,
-	&_curve_c2pnb163v1,
-	&_curve_sect571k1,
-	&_curve_sect163k1,
-	&_curve_secp256k1,
-};
-
-#define NUM_KNOWN_CURVES (sizeof(known_curves) / sizeof(known_curves[0]))
+out:
+	return ret;
+}
 
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != NULL)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures (\result != NULL) ==> \exists integer i ; 0 <= i < NUM_KNOWN_CURVES && \result == known_curves[i];
   @ ensures (len == 0) ==> \result == NULL;
   @ ensures (buf == NULL) ==> \result == NULL;
+  @
   @ assigns \nothing;
   @*/
 static _curve const * find_curve_by_oid(const u8 *buf, u16 len)
@@ -3214,28 +2083,37 @@ out:
 	return found;
 }
 
-
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \valid(param);
-  @ requires \separated(param,buf+(..));
-  @ ensures (len == 0) ==> \result < 0;
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires ((ctx != \null)) ==> \valid(ctx);
+  @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result < 0 || \result == 0;
-  @ ensures (\result == 0) ==> \exists integer i ; 0 <= i < NUM_KNOWN_CURVES && param->curve_param == known_curves[i];
-  @ assigns param->curve_param;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @ ensures (\result == 0) ==> \initialized(&(ctx->spki_alg_params.ecpubkey.curve_order_bit_len));
+  @ ensures (\result == 0) ==> \initialized(&(ctx->spki_alg_params.ecpubkey.curve));
+  @
+  @ assigns ctx->spki_alg_params.ecpubkey.curve_order_bit_len,
+	    ctx->spki_alg_params.ecpubkey.curve;
   @*/
-static int parse_algoid_params_ecPublicKey(const u8 *buf, u16 len, alg_param *param)
+static int parse_algoid_pubkey_params_ecPublicKey(cert_parsing_ctx *ctx,
+						  const u8 *cert, u16 off, u16 len)
 {
+	const u8 *buf = cert + off;
 	const _curve *curve = NULL;
 	u16 oid_len = 0;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/*
 	 * Section 2.3.5 of RFC 3279 specifically describe the expected
@@ -3297,7 +2175,8 @@ static int parse_algoid_params_ecPublicKey(const u8 *buf, u16 len, alg_param *pa
 		goto out;
 	}
 
-	param->curve_param = curve;
+	ctx->spki_alg_params.ecpubkey.curve_order_bit_len = curve->crv_order_bit_len;
+	ctx->spki_alg_params.ecpubkey.curve = curve->crv_id;
 
 	ret = 0;
 
@@ -3328,24 +2207,33 @@ out:
  * OID are 1.3.101.112 for Ed25519 and 1.3.101.113 for Ed448.
  */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \initialized(&param->curve_param);
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(raw_pub_off);
+  @ requires \valid(raw_pub_len);
+  @ requires \separated(cert+(..),raw_pub_off, raw_pub_len);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *raw_pub_off, *raw_pub_len;
   @*/
-static int parse_subjectpubkey_eddsa(const u8 *buf, u16 len, u16 exp_pub_len, alg_param ATTRIBUTE_UNUSED *param)
+static int parse_pubkey_eddsa(const u8 *cert, u16 off, u16 len,
+			      u16 exp_pub_len, u16 *raw_pub_off, u16 *raw_pub_len)
 {
 	u16 remain, hdr_len = 0, data_len = 0;
+	const u8 *buf = cert + off;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) ||
+	    (raw_pub_off == NULL) || (raw_pub_len == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/* subjectPublicKey field of SubjectPublicKeyInfo is a BIT STRING */
 	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
@@ -3388,69 +2276,94 @@ static int parse_subjectpubkey_eddsa(const u8 *buf, u16 len, u16 exp_pub_len, al
 	}
 
 	ret = 0;
-
+	*raw_pub_off = off + hdr_len + 1;
+	*raw_pub_len = exp_pub_len;
 out:
 	return ret;
 }
 
 #define ED25519_PUB_LEN 32
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \initialized(&param->curve_param);
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..),ctx);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns ctx->spki_alg_params.ed25519.ed25519_raw_pub_off,
+	    ctx->spki_alg_params.ed25519.ed25519_raw_pub_len;
   @*/
-static int parse_subjectpubkey_ed25519(const u8 *buf, u16 len, alg_param *param)
+static int parse_pubkey_ed25519(cert_parsing_ctx *ctx,
+				     const u8 *cert, u16 off, u16 len)
 {
-	return parse_subjectpubkey_eddsa(buf, len, ED25519_PUB_LEN, param);
+	return parse_pubkey_eddsa(cert, off, len, ED25519_PUB_LEN,
+				  &ctx->spki_alg_params.ed25519.ed25519_raw_pub_off,
+				  &ctx->spki_alg_params.ed25519.ed25519_raw_pub_len);
 }
 
 #define X25519_PUB_LEN ED25519_PUB_LEN
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \initialized(&param->curve_param);
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..),ctx);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns ctx->spki_alg_params.x25519.x25519_raw_pub_off,
+	    ctx->spki_alg_params.x25519.x25519_raw_pub_len;
   @*/
-static int parse_subjectpubkey_x25519(const u8 *buf, u16 len, alg_param *param)
+static int parse_pubkey_x25519(cert_parsing_ctx *ctx,
+				     const u8 *cert, u16 off, u16 len)
 {
-	return parse_subjectpubkey_eddsa(buf, len, X25519_PUB_LEN, param);
+	return parse_pubkey_eddsa(cert, off, len, X25519_PUB_LEN,
+				  &ctx->spki_alg_params.x25519.x25519_raw_pub_off,
+				  &ctx->spki_alg_params.x25519.x25519_raw_pub_len);
 }
 
 #define ED448_PUB_LEN  57
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \initialized(&param->curve_param);
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..),ctx);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns ctx->spki_alg_params.ed448.ed448_raw_pub_off,
+	    ctx->spki_alg_params.ed448.ed448_raw_pub_len;
   @*/
-static int parse_subjectpubkey_ed448(const u8 *buf, u16 len, alg_param *param)
+static int parse_pubkey_ed448(cert_parsing_ctx *ctx,
+				     const u8 *cert, u16 off, u16 len)
 {
-	return parse_subjectpubkey_eddsa(buf, len, ED448_PUB_LEN, param);
+	return parse_pubkey_eddsa(cert, off, len, ED448_PUB_LEN,
+				  &ctx->spki_alg_params.ed448.ed448_raw_pub_off,
+				  &ctx->spki_alg_params.ed448.ed448_raw_pub_len);
 }
 
 #define X448_PUB_LEN ED448_PUB_LEN
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \initialized(&param->curve_param);
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..),ctx);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns ctx->spki_alg_params.x448.x448_raw_pub_off,
+	    ctx->spki_alg_params.x448.x448_raw_pub_len;
   @*/
-static int parse_subjectpubkey_x448(const u8 *buf, u16 len, alg_param *param)
+static int parse_pubkey_x448(cert_parsing_ctx *ctx,
+				     const u8 *cert, u16 off, u16 len)
 {
-	return parse_subjectpubkey_eddsa(buf, len, X448_PUB_LEN, param);
+	return parse_pubkey_eddsa(cert, off, len, X448_PUB_LEN,
+				  &ctx->spki_alg_params.x448.x448_raw_pub_off,
+				  &ctx->spki_alg_params.x448.x448_raw_pub_len);
 }
 
 /*
@@ -3475,18 +2388,29 @@ static int parse_subjectpubkey_x448(const u8 *buf, u16 len, alg_param *param)
  *  Note that this octet string may represent an elliptic
  *  curve point in compressed or uncompressed form.
  *
+ *
  */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \initialized(&param->curve_param);
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..),ctx);
+  @ requires \initialized(&(ctx->spki_alg_params.ecpubkey.curve_order_bit_len));
+  @ requires \initialized(&(ctx->spki_alg_params.ecpubkey.curve));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns ctx->spki_alg_params.ecpubkey.compression,
+	    ctx->spki_alg_params.ecpubkey.ecc_raw_x_off,
+	    ctx->spki_alg_params.ecpubkey.ecc_raw_x_len,
+	    ctx->spki_alg_params.ecpubkey.ecc_raw_y_off,
+	    ctx->spki_alg_params.ecpubkey.ecc_raw_y_len;
   @*/
-static int parse_subjectpubkey_ec(const u8 *buf, u16 len, alg_param *param)
+static int parse_pubkey_ec(cert_parsing_ctx *ctx,
+			   const u8 *cert, u16 off, u16 len)
 {
+	const u8 *buf = cert + off;
 	u16 remain;
 	u16 hdr_len = 0;
 	u16 data_len = 0;
@@ -3494,11 +2418,13 @@ static int parse_subjectpubkey_ec(const u8 *buf, u16 len, alg_param *param)
 	int ret;
 	u8 pc;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/* subjectPublicKey field of SubjectPublicKeyInfo is a BIT STRING */
 	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
@@ -3520,6 +2446,7 @@ static int parse_subjectpubkey_ec(const u8 *buf, u16 len, alg_param *param)
 	}
 
 	buf += hdr_len;
+	off += hdr_len;
 
 	/*
 	 * We expect the initial octet to encode a value of 0
@@ -3532,6 +2459,7 @@ static int parse_subjectpubkey_ec(const u8 *buf, u16 len, alg_param *param)
 		goto out;
 	}
 	buf += 1;
+	off += 1;
 	remain = data_len - 1;
 
 	/*
@@ -3552,23 +2480,13 @@ static int parse_subjectpubkey_ec(const u8 *buf, u16 len, alg_param *param)
 
 	remain -= 1;
 	buf += 1;
-
-	/*
-	 * At that point, Frama-C knows param->curve_param is either
-	 * NULL or point to a static curve structure. That test is currently
-	 * here to help Frama-C when using Typed memory model.
-	 */
-	if (param->curve_param == NULL) {
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
+	off += 1;
 
 	/*
 	 * We expect a specific length for the remaining data based on
 	 * pc byte value.
 	 */
-	order_ceil_len = (param->curve_param->crv_order_bit_len + 7) / 8;
+	order_ceil_len = (ctx->spki_alg_params.ecpubkey.curve_order_bit_len + 7) / 8;
 
 	switch (pc) {
 	case 0x04: /* uncompressed */
@@ -3577,14 +2495,26 @@ static int parse_subjectpubkey_ec(const u8 *buf, u16 len, alg_param *param)
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
 		}
+
+		ctx->spki_alg_params.ecpubkey.compression = pc;
+		ctx->spki_alg_params.ecpubkey.ecc_raw_x_off = off;
+		ctx->spki_alg_params.ecpubkey.ecc_raw_x_len = order_ceil_len;
+		ctx->spki_alg_params.ecpubkey.ecc_raw_y_off = off + order_ceil_len;
+		ctx->spki_alg_params.ecpubkey.ecc_raw_y_len = order_ceil_len;
 		break;
-	case 0x02: /* compressed */
-	case 0x03: /* compressed */
+	case 0x02: /* compressed point with even y */
+	case 0x03: /* compressed point with odd y */
 		if (remain != order_ceil_len) {
 			ret = -__LINE__;
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
 		}
+
+		ctx->spki_alg_params.ecpubkey.compression = pc;
+		ctx->spki_alg_params.ecpubkey.ecc_raw_x_off = off;
+		ctx->spki_alg_params.ecpubkey.ecc_raw_x_len = order_ceil_len;
+		ctx->spki_alg_params.ecpubkey.ecc_raw_y_off = 0;
+		ctx->spki_alg_params.ecpubkey.ecc_raw_y_len = 0;
 		break;
 	default: /* hybrid or other forms: no support */
 		ret = -__LINE__;
@@ -3620,29 +2550,45 @@ out:
  * first 64 octets contain the little-endian representation of "x" and
  * the second 64 octets contains the little-endian representation of "y"
  * coordinates of the public key.
+ *
+ * Note: The format is the same for GOST R 34.10-2001 which has public keys
+ * on 256 bit curve, i.e. with a exp_pub_len = 32 * 2 = 64.
  */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \initialized(&param->curve_param);
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(raw_x_off);
+  @ requires \valid(raw_x_len);
+  @ requires \valid(raw_y_off);
+  @ requires \valid(raw_y_len);
+  @ requires \separated(cert+(..), raw_x_off, raw_x_len, raw_y_off, raw_y_len);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *raw_x_off, *raw_x_len, *raw_y_off, *raw_y_len;
   @*/
-static int parse_subjectpubkey_gost(const u8 *buf, u16 len, u16 exp_pub_len,
-				    alg_param ATTRIBUTE_UNUSED *param)
+static int _parse_pubkey_gost_on_curves(const u8 *cert, u16 off, u16 len,
+					u16 exp_pub_len,
+					u16 *raw_x_off, u16 *raw_x_len,
+					u16 *raw_y_off, u16 *raw_y_len)
 {
+	const u8 *buf = cert + off;
 	u16 remain;
 	u16 hdr_len = 0;
 	u16 data_len = 0;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) ||
+	    (raw_x_off == NULL) || (raw_x_len == NULL) ||
+	    (raw_y_off == NULL) || (raw_y_len == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
 			   &hdr_len, &data_len);
@@ -3662,6 +2608,7 @@ static int parse_subjectpubkey_gost(const u8 *buf, u16 len, u16 exp_pub_len,
 		goto out;
 	}
 
+	off += hdr_len;
 	buf += hdr_len;
 
 	/*
@@ -3675,6 +2622,7 @@ static int parse_subjectpubkey_gost(const u8 *buf, u16 len, u16 exp_pub_len,
 		goto out;
 	}
 	buf += 1;
+	off += 1;
 	remain = data_len - 1;
 
 	/*
@@ -3696,7 +2644,13 @@ static int parse_subjectpubkey_gost(const u8 *buf, u16 len, u16 exp_pub_len,
 	}
 
 	buf += hdr_len;
+	off += hdr_len;
 	remain -= hdr_len;
+
+	*raw_x_off = off;
+	*raw_x_len = exp_pub_len / 2;
+	*raw_y_off = off + *raw_x_len;
+	*raw_y_len = exp_pub_len / 2;
 
 	if (remain != data_len) {
 		ret = -__LINE__;
@@ -3710,34 +2664,364 @@ out:
 	return ret;
 }
 
-
+/*
+ * RFC 4491 section 2.3.5 has:
+ *
+ *    The GOST R 34.10-94 public key MUST be ASN.1 DER encoded as an OCTET
+ *    STRING; this encoding shall be used as the contents (i.e., the value)
+ *    of the subjectPublicKey component (a BIT STRING) of the
+ *    SubjectPublicKeyInfo data element.
+ *
+ *    GostR3410-94-PublicKey ::= OCTET STRING -- public key, Y
+ *
+ *    GostR3410-94-PublicKey MUST contain 128 octets of the little-endian
+ *    representation of the public key Y = a^x (mod p), where a and p are
+ *    public key parameters, and x is a private key.
+ *
+ */
+#define GOST94_PUB_LEN 128 /* bytes */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \initialized(&param->curve_param);
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns ctx->spki_alg_params.gost94.gost94_raw_pub_off,
+	    ctx->spki_alg_params.gost94.gost94_raw_pub_len;
   @*/
-static int parse_subjectpubkey_gost256(const u8 *buf, u16 len, alg_param *param)
+static int parse_pubkey_gostr3410_94(cert_parsing_ctx *ctx,
+				     const u8 *cert, u16 off, u16 len)
 {
-	return parse_subjectpubkey_gost(buf, len, 64, param);
+	const u8 *buf = cert + off;
+	u16 remain;
+	u16 hdr_len = 0;
+	u16 data_len = 0;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * We expect the bitstring data to contain at least the initial
+	 * octet encoding the number of unused bits in the final
+	 * subsequent octet of the bistring.
+	 * */
+	if (data_len == 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	off += hdr_len;
+	buf += hdr_len;
+
+	/*
+	 * We expect the initial octet to encode a value of 0
+	 * indicating that there are no unused bits in the final
+	 * subsequent octet of the bitstring.
+	 */
+	if (buf[0] != 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	buf += 1;
+	off += 1;
+	remain = data_len - 1;
+
+	/*
+	 * We can now consider the content of the bitstring as an ASN.1 octet
+	 * string.
+	 */
+	ret = parse_id_len(buf, remain, CLASS_UNIVERSAL, ASN1_TYPE_OCTET_STRING,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	if (data_len != GOST94_PUB_LEN) {
+		ret = -1;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+
+	}
+
+	buf += hdr_len;
+	off += hdr_len;
+	remain -= hdr_len;
+
+	if (remain != data_len) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->spki_alg_params.gost94.gost94_raw_pub_off = off;
+	ctx->spki_alg_params.gost94.gost94_raw_pub_len = GOST94_PUB_LEN;
+
+	ret = 0;
+
+out:
+	return ret;
 }
 
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \initialized(&param->curve_param);
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns ctx->spki_alg_params.gost2001.gost2001_raw_x_pub_off,
+	    ctx->spki_alg_params.gost2001.gost2001_raw_x_pub_len,
+	    ctx->spki_alg_params.gost2001.gost2001_raw_y_pub_off,
+	    ctx->spki_alg_params.gost2001.gost2001_raw_y_pub_len;
   @*/
-static int parse_subjectpubkey_gost512(const u8 *buf, u16 len, alg_param *param)
+static inline int parse_pubkey_gostr3410_2001(cert_parsing_ctx *ctx,
+				       const u8 *cert, u16 off, u16 len)
 {
-	return parse_subjectpubkey_gost(buf, len, 128, param);
+	return _parse_pubkey_gost_on_curves(cert, off, len, 64,
+				 &ctx->spki_alg_params.gost2001.gost2001_raw_x_pub_off,
+				 &ctx->spki_alg_params.gost2001.gost2001_raw_x_pub_len,
+				 &ctx->spki_alg_params.gost2001.gost2001_raw_y_pub_off,
+				 &ctx->spki_alg_params.gost2001.gost2001_raw_y_pub_len);
 }
+
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns ctx->spki_alg_params.gost2012_256.gost2012_256_raw_x_pub_off,
+	    ctx->spki_alg_params.gost2012_256.gost2012_256_raw_x_pub_len,
+	    ctx->spki_alg_params.gost2012_256.gost2012_256_raw_y_pub_off,
+	    ctx->spki_alg_params.gost2012_256.gost2012_256_raw_y_pub_len;
+  @*/
+static inline int parse_pubkey_gostr3410_2012_256(cert_parsing_ctx *ctx,
+					   const u8 *cert, u16 off, u16 len)
+{
+	return _parse_pubkey_gost_on_curves(cert, off, len, 64,
+				 &ctx->spki_alg_params.gost2012_256.gost2012_256_raw_x_pub_off,
+				 &ctx->spki_alg_params.gost2012_256.gost2012_256_raw_x_pub_len,
+				 &ctx->spki_alg_params.gost2012_256.gost2012_256_raw_y_pub_off,
+				 &ctx->spki_alg_params.gost2012_256.gost2012_256_raw_y_pub_len);
+}
+
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns ctx->spki_alg_params.gost2012_512.gost2012_512_raw_x_pub_off,
+	    ctx->spki_alg_params.gost2012_512.gost2012_512_raw_x_pub_len,
+	    ctx->spki_alg_params.gost2012_512.gost2012_512_raw_y_pub_off,
+	    ctx->spki_alg_params.gost2012_512.gost2012_512_raw_y_pub_len;
+  @*/
+static inline int parse_pubkey_gostr3410_2012_512(cert_parsing_ctx *ctx,
+				    const u8 *cert, u16 off, u16 len)
+{
+	return _parse_pubkey_gost_on_curves(cert, off, len, 128,
+				 &ctx->spki_alg_params.gost2012_512.gost2012_512_raw_x_pub_off,
+				 &ctx->spki_alg_params.gost2012_512.gost2012_512_raw_x_pub_len,
+				 &ctx->spki_alg_params.gost2012_512.gost2012_512_raw_y_pub_off,
+				 &ctx->spki_alg_params.gost2012_512.gost2012_512_raw_y_pub_len);
+}
+
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \initialized(&(ctx->spki_alg_params.bign.curve_order_bit_len));
+  @ requires \initialized(&(ctx->spki_alg_params.bign.curve));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns ctx->spki_alg_params.bign.bign_raw_x_pub_off,
+	    ctx->spki_alg_params.bign.bign_raw_x_pub_len,
+	    ctx->spki_alg_params.bign.bign_raw_y_pub_off,
+	    ctx->spki_alg_params.bign.bign_raw_y_pub_len;
+  @*/
+static int parse_pubkey_bign(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+			const u8 *cert, u16 off, u16 len)
+{
+	u16 order_ceil_len, remain, hdr_len = 0, data_len = 0;
+	const u8 *buf = cert + off;
+	int ret;
+
+	if ((cert == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	/* subjectPublicKey field of SubjectPublicKeyInfo is a BIT STRING */
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * We expect the bitstring data to contain at least the initial
+	 * octet encoding the number of unused bits in the final
+	 * subsequent octet of the bistring.
+	 * */
+	if (data_len == 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * We expect the bitstring data to contain at least the initial
+	 * octet encoding the number of unused bits in the final
+	 * subsequent octet of the bistring.
+	 * */
+	if (data_len == 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+	off += hdr_len;
+
+	/*
+	 * We expect the initial octet to encode a value of 0
+	 * indicating that there are no unused bits in the final
+	 * subsequent octet of the bitstring.
+	 */
+	if (buf[0] != 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	buf += 1;
+	off += 1;
+	remain = data_len - 1;
+
+	/*
+	 * We expect a specific length for the remaining data based on
+	 * pc byte value.
+	 */
+	order_ceil_len = (ctx->spki_alg_params.bign.curve_order_bit_len + 7) / 8;
+	if (remain != (2 * order_ceil_len)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->spki_alg_params.bign.bign_raw_x_pub_off = off;
+	ctx->spki_alg_params.bign.bign_raw_x_pub_len = order_ceil_len;
+	ctx->spki_alg_params.bign.bign_raw_y_pub_off = off + order_ceil_len;
+	ctx->spki_alg_params.bign.bign_raw_y_pub_len = order_ceil_len;
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*
+ * When Alg OID is 1.2.112.0.2.0.34.101.45.2.1 (bign-pubkey), the parameters
+ * contains an OID for the curve for the public key.
+ */
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(ctx);
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (cert == \null) ==> \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (\result == 0) ==> \initialized(&(ctx->spki_alg_params.bign.curve_order_bit_len));
+  @ ensures (\result == 0) ==> \initialized(&(ctx->spki_alg_params.bign.curve));
+  @
+  @ assigns ctx->spki_alg_params.bign.curve_order_bit_len,
+	    ctx->spki_alg_params.bign.curve;
+  @*/
+static int parse_algoid_pubkey_params_bign(cert_parsing_ctx *ctx,
+					   const u8 *cert, u16 off, u16 len)
+{
+	const u8 *buf = cert + off;
+	const _curve *curve;
+	u16 oid_len = 0;
+	u16 remain;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	remain = len;
+	ret = parse_OID(buf, remain, &oid_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	curve = find_curve_by_oid(buf, oid_len);
+	if (curve == NULL) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += oid_len;
+	remain -= oid_len;
+
+	if (remain) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->spki_alg_params.bign.curve_order_bit_len = curve->crv_order_bit_len;
+	ctx->spki_alg_params.bign.curve = curve->crv_id;
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
 
 /*
  * When parsing SM2 signature algorithm identifier, we may either find no
@@ -3745,24 +3029,37 @@ static int parse_subjectpubkey_gost512(const u8 *buf, u16 len, alg_param *param)
  * We support those 2 cases we found in real world certs.
  */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires (param != \null) ==> \valid_read(param);
-  @ ensures (buf == \null) ==> \result < 0;
-  @ ensures (param == \null) ==> \result < 0;
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
-  @ assigns *param;
+  @
+  @ assigns ctx->tbs_sig_alg_oid_params_start,
+	    ctx->tbs_sig_alg_oid_params_len;
   @*/
-static int parse_algoid_params_sm2(const u8 *buf, u16 len, alg_param *param)
+static int parse_algoid_sig_params_sm2(cert_parsing_ctx *ctx,
+				       const u8 *cert, u16 off, u16 len)
 {
+	const u8 *buf = cert + off;
 	u16 parsed = 0;
 	int ret;
 
-	if ((buf == NULL) || (param == NULL)) {
+	if ((ctx == NULL) || (cert == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	/*
+	 * If parsing goes ok, then we will have verified that nothing remains
+	 * behind, i.e. that 'len' is indeed the length of the parameters.
+	 */
+	ctx->tbs_sig_alg_oid_params_start = off;
+	ctx->tbs_sig_alg_oid_params_len = len;
 
 	switch (len) {
 	case 0:
@@ -3785,27 +3082,178 @@ out:
 
 /*
  * RFC 8410 has: "For all of the OIDs, the parameters MUST be absent."
- * This is what the function enforces.
+ * This is what the function enforces. This applies to both signature
+ * parameters and SPKI parameters. We have a specific helper for each
+ * case.
  */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires (param != \null) ==> \valid_read(param);
-  @ ensures (buf == \null) ==> \result < 0;
-  @ ensures (param == \null) ==> \result < 0;
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
   @ ensures (len != 0) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
-  @ assigns \nothing;
+  @
+  @ assigns ctx->tbs_sig_alg_oid_params_start,
+	    ctx->tbs_sig_alg_oid_params_len;
   @*/
-static int parse_algoid_params_eddsa(const u8 *buf, u16 len, alg_param *param)
+static int parse_algoid_sig_params_eddsa(cert_parsing_ctx *ctx,
+					      const u8 *cert, u16 off, u16 len)
 {
 	int ret;
 
-	if ((buf == NULL) || (param == NULL) || (len != 0)) {
+	if ((ctx == NULL) || (cert == NULL) || (len != 0)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	ctx->tbs_sig_alg_oid_params_start = off;
+	ctx->tbs_sig_alg_oid_params_len = len;
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (len != 0) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @
+  @ assigns ctx->spki_alg_oid_params_start,
+	    ctx->spki_alg_oid_params_len,
+	    ctx->spki_alg_params.ed448.curve,
+	    ctx->spki_alg_params.ed448.curve_order_bit_len;
+  @*/
+static int parse_algoid_pubkey_params_ed448(cert_parsing_ctx *ctx,
+					      const u8 *cert, u16 off, u16 len)
+{
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (len != 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->spki_alg_oid_params_start = off;
+	ctx->spki_alg_oid_params_len = len;
+	ctx->spki_alg_params.ed448.curve = CURVE_WEI448;
+	ctx->spki_alg_params.ed448.curve_order_bit_len = 448;
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (len != 0) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @
+  @ assigns ctx->spki_alg_oid_params_start,
+	    ctx->spki_alg_oid_params_len,
+	    ctx->spki_alg_params.x448.curve,
+	    ctx->spki_alg_params.x448.curve_order_bit_len;
+  @*/
+static int parse_algoid_pubkey_params_x448(cert_parsing_ctx *ctx,
+					      const u8 *cert, u16 off, u16 len)
+{
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (len != 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->spki_alg_oid_params_start = off;
+	ctx->spki_alg_oid_params_len = len;
+	ctx->spki_alg_params.x448.curve = CURVE_WEI448;
+	ctx->spki_alg_params.x448.curve_order_bit_len = 448;
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (len != 0) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @
+  @ assigns ctx->spki_alg_oid_params_start,
+	    ctx->spki_alg_oid_params_len,
+	    ctx->spki_alg_params.ed25519.curve,
+	    ctx->spki_alg_params.ed25519.curve_order_bit_len;
+  @*/
+static int parse_algoid_pubkey_params_ed25519(cert_parsing_ctx *ctx,
+					      const u8 *cert, u16 off, u16 len)
+{
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (len != 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->spki_alg_oid_params_start = off;
+	ctx->spki_alg_oid_params_len = len;
+	ctx->spki_alg_params.ed25519.curve = CURVE_WEI25519;
+	ctx->spki_alg_params.ed25519.curve_order_bit_len = 256;
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (len != 0) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @
+  @ assigns ctx->spki_alg_oid_params_start,
+	    ctx->spki_alg_oid_params_len,
+	    ctx->spki_alg_params.x25519.curve,
+	    ctx->spki_alg_params.x25519.curve_order_bit_len;
+  @*/
+static int parse_algoid_pubkey_params_x25519(cert_parsing_ctx *ctx,
+					      const u8 *cert, u16 off, u16 len)
+{
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (len != 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->spki_alg_oid_params_start = off;
+	ctx->spki_alg_oid_params_len = len;
+	ctx->spki_alg_params.x25519.curve = CURVE_WEI25519;
+	ctx->spki_alg_params.x25519.curve_order_bit_len = 256;
 
 	ret = 0;
 
@@ -3846,25 +3294,35 @@ out:
  * The function below parses the GostR3410-2012-PublicKeyParameters sequence.
  */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(curve);
+  @ requires \valid(hash);
+  @ requires \separated(curve, hash, cert+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (hash == \null) ==> \result < 0;
+  @ ensures (curve == \null) ==> \result < 0;
+  @
+  @ assigns *curve, *hash;
   @*/
-static int parse_algoid_params_gost2012PublicKey(const u8 *buf, u16 len,
-					     alg_param ATTRIBUTE_UNUSED *param)
+static int parse_algoid_params_gost2012PublicKey(const u8 *cert, u16 off, u16 len,
+						 const _curve **curve, const _hash_alg **hash)
 {
 	u16 remain, hdr_len = 0, data_len = 0;
+	const u8 *buf = cert + off;
 	u16 oid_len = 0;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((cert == NULL) || (len == 0) || (curve == NULL) || (hash == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/* Check we are dealing with a valid sequence */
 	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
@@ -3893,6 +3351,13 @@ static int parse_algoid_params_gost2012PublicKey(const u8 *buf, u16 len,
 	 */
 	ret = parse_OID(buf, remain, &oid_len);
 	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	*curve = find_curve_by_oid(buf, oid_len);
+	if (*curve == NULL) {
+		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
@@ -3932,25 +3397,29 @@ static int parse_algoid_params_gost2012PublicKey(const u8 *buf, u16 len,
 	 * XXX At the moment, we just verify we either have nothing following
 	 * or a valid OID.
 	 */
-	if (remain == 0)  {
-		ret = 0;
-		goto out;
-	}
+	if (remain)  {
+		/* If something follows, it must be and OID defining digestParamSet. */
+		ret = parse_OID(buf, remain, &oid_len);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
 
-	/* If something follows, it must be and OID defining digestParamSet. */
-	ret = parse_OID(buf, remain, &oid_len);
-	if (ret) {
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
+		*hash = find_hash_by_oid(buf, oid_len);
+		if (*hash == NULL) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
 
-	buf += oid_len;
-	remain -= oid_len;
+		buf += oid_len;
+		remain -= oid_len;
 
-	if (remain) {
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
+		if (remain) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
 	}
 
 	/*
@@ -3963,74 +3432,266 @@ out:
 	return ret;
 }
 
-#ifdef TEMPORARY_BADALGS
-/*
- * The function below just skips the parameters it should parse.
- * It s just here as a helper for bad algs we do not intend to
- * support and should not be used for real purposes.
+
+/* EA-RSA SPKI algoid optionally contains an integer giving the key size:
+ *
+ *  See https://www.alvestrand.no/objectid/2.5.8.1.1.html
+ *
+ * From one cert:
+ *
+ * 219 156:     SEQUENCE {
+ * 222  10:       SEQUENCE {
+ * 224   4:         OBJECT IDENTIFIER rsa (2 5 8 1 1)
+ * 230   2:         INTEGER 1024
+ *        :         }
+ * 234 141:       BIT STRING, encapsulates {
+ * 238 137:         SEQUENCE {
+ * 241 129:           INTEGER
+ *        :             00 84 89 E4 7C 35 C5 E4 51 6D 5F D0 6E 9A 0B AB
+ *
  */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires (param != \null) ==> \valid_read(param);
-  @ ensures (buf == \null) ==> \result < 0;
-  @ ensures (param == \null) ==> \result < 0;
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
-  @ ensures \result == 0 ==> param->unparsed_param == 1;
-  @ assigns param->unparsed_param;
+  @
+  @ assigns ctx->spki_alg_params.rsa.rsa_advertised_bit_len;
   @*/
-static int parse_algoid_params_generic(const u8 *buf, u16 ATTRIBUTE_UNUSED len, alg_param *param)
+static int parse_algoid_pubkey_params_ea_rsa(cert_parsing_ctx *ctx,
+					     const u8 *cert, u16 off, u16 len)
 {
+	u16 hdr_len = 0, data_len = 0;
+	const u8 *buf = cert + off;
+	u16 bit_len = 0, parsed = 0;
 	int ret;
 
-	if ((buf == NULL) || (param == NULL)) {
+	if ((ctx == NULL) || (cert == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	param->unparsed_param = 1;
-	ret = 0;
+	/*@ assert (len > 0) ==> \valid_read(buf + (0 .. len - 1)); */
+
+	/*
+	 * We can either find nothing, a NULL or an integer with the bit size
+	 * of the key.
+	 */
+	switch (len) {
+	case 0: /* nothing */
+		ret = 0;
+		break;
+
+	case 2: /* NULL */
+		ret = parse_null(buf, len, &parsed);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+		break;
+
+	case 4: /* Integer */
+		/*
+		 * Having a RSA key with a bit length value below 127 and above
+		 * 32768 does not make sense. For that reason, we expected the
+		 * integer to be encoded on 4 bytes: 1 for class/id, 1 for
+		 * length, 2 for integer value
+		 */
+
+		/* Verify the integer is DER-encoded as it should */
+		ret = parse_non_negative_integer(buf, len, CLASS_UNIVERSAL,
+					     ASN1_TYPE_INTEGER,
+					     &hdr_len, &data_len);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+		bit_len = (buf[2] << 8) + buf[3];
+
+		break;
+
+	default:
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		break;
+	}
+
+	ctx->spki_alg_params.rsa.rsa_advertised_bit_len = bit_len;
 
 out:
 	return ret;
 }
 
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ ensures \result < 0 || \result == 0;
-  @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ requires ((len > 0) && (buf != NULL)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
+  @ ensures (\result != NULL) ==> \exists integer i ; 0 <= i < NUM_KNOWN_GOST94_PARAMS && \result == known_gost_94_params[i];
+  @ ensures (len == 0) ==> \result == NULL;
+  @ ensures (buf == NULL) ==> \result == NULL;
+  @
   @ assigns \nothing;
   @*/
-static int parse_subjectpubkey_generic(const u8 *buf, u16 len, alg_param ATTRIBUTE_UNUSED *param)
+static const _gost94_pub_params * find_gost94_params_by_oid(const u8 *buf, u16 len)
 {
-	u16 bs_hdr_len = 0, bs_data_len = 0;
+	const _gost94_pub_params *found = NULL;
+	const _gost94_pub_params *cur = NULL;
+	u8 k;
+
+	if ((buf == NULL) || (len == 0)) {
+		goto out;
+	}
+
+	/*@
+	  @ loop invariant 0 <= k <= NUM_KNOWN_GOST94_PARAMS;
+	  @ loop invariant found == NULL;
+	  @ loop assigns cur, found, k;
+	  @ loop variant (NUM_KNOWN_GOST94_PARAMS - k);
+	  @*/
+	for (k = 0; k < NUM_KNOWN_GOST94_PARAMS; k++) {
+		int ret;
+
+		cur = known_gost_94_params[k];
+
+		/*@ assert cur == known_gost_94_params[k];*/
+		if (cur->params_der_oid_len != len) {
+			continue;
+		}
+
+		/*@ assert \valid_read(buf + (0 .. (len - 1))); @*/
+		ret = !bufs_differ(cur->params_der_oid, buf, cur->params_der_oid_len);
+		if (ret) {
+			found = cur;
+			break;
+		}
+	}
+
+out:
+	return found;
+}
+
+
+/*
+ * RFC 4491, RFC 4357
+ *
+ * Section 2.3.1 of RFC 4491 has:
+ *
+ *  GostR3410-94-PublicKeyParameters ::=
+ *         SEQUENCE {
+ *             publicKeyParamSet
+ *                 OBJECT IDENTIFIER,
+ *             digestParamSet
+ *                 OBJECT IDENTIFIER,
+ *             encryptionParamSet
+ *                 OBJECT IDENTIFIER DEFAULT
+ *                     id-Gost28147-89-CryptoPro-A-ParamSet
+ *         }
+ *
+ * In the certificate we have at hand, we only have the first 2 OIDs and the
+ * optional is not there e.g.
+ *
+ * 3012 06072a850302022002 06072a850302021e01
+ *
+ * i.e. a sequence of 2 OIDs:
+ *
+ * 06072a850302022002  1.2.643.2.2.32.2   id-GostR3410-94-CryptoPro-A-ParamSet
+ * 06072a850302021e01  1.2.643.2.2.30.1   GOST R 3411-94 CryptoProParamSet
+ *
+ */
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @
+  @ assigns ctx->spki_alg_params.gost94.gost94_params_id;
+  @*/
+static int parse_algoid_pubkey_params_gost_r3410_94(cert_parsing_ctx *ctx,
+						   const u8 *cert, u16 off, u16 len)
+{
+	u16 remain, hdr_len = 0, data_len = 0, oid_len = 0;
+	const _gost94_pub_params *params;
+	const u8 *buf = cert + off;
 	int ret;
 
-	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
-			   &bs_hdr_len, &bs_data_len);
+	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	/* We expect a sequence ...  */
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+	remain = data_len;
+
+	/* ... starting with a first OID for GOST R 34.10-94 paramset */
+	ret = parse_OID(buf, remain, &oid_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	params = find_gost94_params_by_oid(buf, oid_len);
+	if (params == NULL) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	ctx->spki_alg_params.gost94.gost94_params_id = params->params_id;
+
+	buf += oid_len;
+	remain -= oid_len;
+
+	/* ... followed by a second OID for GOST R 34.11-94 paramset */
+	ret = parse_OID(buf, remain, &oid_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
 	/*
-	 * We expect the bitstring data to contain at least the initial
-	 * octet encoding the number of unused bits in the final
-	 * subsequent octet of the bistring.
-	 * */
-	if (bs_data_len == 0) {
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
+	 * XXX at some point we could create a list of known paramset
+	 * and associated OID as defined in section 8.3. of RFC 4357
+	 */
+
+	buf += oid_len;
+	remain -= oid_len;
+
+	/* Let's verify we have nothing left behind */
+	if (remain) {
+		/* We may have an optional encryptionParamset */
+		ret = parse_OID(buf, remain, &oid_len);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+		if (remain) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
 	}
 
 	ret = 0;
 
 out:
 	return ret;
+
 }
 
 /*
@@ -4053,20 +3714,28 @@ out:
  *         }
  */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @
+  @ assigns ctx->spki_alg_params.gost2001.curve_order_bit_len,
+	    ctx->spki_alg_params.gost2001.curve;
   @*/
-static int parse_algoid_params_pub_gost_r3410_2001(const u8 *buf, u16 len, alg_param ATTRIBUTE_UNUSED *param)
+static int parse_algoid_pubkey_params_gost_r3410_2001(cert_parsing_ctx *ctx,
+						      const u8 *cert, u16 off, u16 len)
 {
+	const u8 *buf = cert + off;
 	u16 remain, hdr_len = 0, data_len = 0;
+	const _curve *curve;
+	const _hash_alg *h;
 	u16 parsed = 0;
 	u16 oid_len = 0;
 	int ret;
 
-	if (buf == NULL) {
+	if ((ctx == NULL) || (cert == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -4083,7 +3752,7 @@ static int parse_algoid_params_pub_gost_r3410_2001(const u8 *buf, u16 len, alg_p
 	}
 
 	/*
-	 * From now on, we expect a ostR3410-2001-PublicKeyParameters as
+	 * From now on, we expect a gostR3410-2001-PublicKeyParameters as
 	 * defined above. It must start with a valid sequence.
 	 */
 	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
@@ -4106,6 +3775,13 @@ static int parse_algoid_params_pub_gost_r3410_2001(const u8 *buf, u16 len, alg_p
 		goto out;
 	}
 
+	curve = find_curve_by_oid(buf, oid_len);
+	if (curve == NULL) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
 	buf += oid_len;
 	remain -= oid_len;
 
@@ -4117,53 +3793,93 @@ static int parse_algoid_params_pub_gost_r3410_2001(const u8 *buf, u16 len, alg_p
 		goto out;
 	}
 
-	buf += oid_len;
-	remain -= oid_len;
-
-	if (remain == 0)  {
-		ret = 0;
-		goto out;
-	}
-
-	/* Something follows. This must be the OID for encryptionParamSet. */
-	ret = parse_OID(buf, remain, &oid_len);
-	if (ret) {
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
-
-	buf += oid_len;
-	remain -= oid_len;
-
-	/* Nothings should remain behind */
-	if (remain) {
+	h = find_hash_by_oid(buf, oid_len);
+	if (h == NULL) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	buf += oid_len;
+	remain -= oid_len;
+
+	if (remain)  {
+		/* Something follows. This must be the OID for encryptionParamSet. */
+		ret = parse_OID(buf, remain, &oid_len);
+		if (ret) {
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+
+		buf += oid_len;
+		remain -= oid_len;
+
+		/* Nothings should remain behind */
+		if (remain) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+	}
+
+	ctx->spki_alg_params.gost2001.curve_order_bit_len = curve->crv_order_bit_len;
+	ctx->spki_alg_params.gost2001.curve = curve->crv_id;
+	// XXX investigate hash hash->hash_id purpose for pubkey
 
 	ret = 0;
 
 out:
 	return ret;
 }
-#endif
 
 /*
  * Used for parsing AlgorithmIdentifiter parameters for GOST R3410-2001 with 256
  * bits public key
  */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ ensures \result < 0 || \result == 0;
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @ ensures \result < 0 || \result == 0;
+  @
+  @ assigns ctx->spki_alg_params.gost2012_256.curve_order_bit_len,
+	    ctx->spki_alg_params.gost2012_256.curve;
   @*/
-static int parse_algoid_params_pub_gost_r3410_2012_256(const u8 *buf, u16 len, alg_param *param)
+static int parse_algoid_pubkey_params_gost_r3410_2012_256(cert_parsing_ctx *ctx,
+							const u8 *cert, u16 off, u16 len)
 {
-	return parse_algoid_params_gost2012PublicKey(buf, len, param);
+	const _hash_alg *hash = NULL;
+	const _curve *curve = NULL;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = parse_algoid_params_gost2012PublicKey(cert, off, len, &curve, &hash);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	if (curve == NULL) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->spki_alg_params.gost2012_256.curve_order_bit_len = curve->crv_order_bit_len;
+	ctx->spki_alg_params.gost2012_256.curve = curve->crv_id;
+	// investiage hash hash->hash_id purpose for pubkey
+
+out:
+
+	return ret;
 }
 
 /*
@@ -4171,51 +3887,80 @@ static int parse_algoid_params_pub_gost_r3410_2012_256(const u8 *buf, u16 len, a
  * bit public key.
  */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ ensures \result < 0 || \result == 0;
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
-  @*/
-static int parse_algoid_params_pub_gost_r3410_2012_512(const u8 *buf, u16 len, alg_param *param)
-{
-	return parse_algoid_params_gost2012PublicKey(buf, len, param);
-}
-
-/*
- * As specified in draft-deremin-rfc4491-bis-06:
- *
- * "When either of these OID [NDLR: 1.2.643.7.1.1.3.2, 1.2.643.7.1.1.3.3] is
- *  used as the algorithm field in an AlgorithmIdentifier structure, the
- *  encoding MUST omit the parameters field."
- *
- * This function is used as a parser for GOST signature algorithms for
- * which the parameter field must be omitted.
- *
- * For some people omit was understood as: add a NULL ASN.1 object. We support
- * that case too.
- */
-/*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires (param != \null) ==> \valid_read(param);
-  @ ensures (buf == \null) ==> \result < 0;
-  @ ensures (param == \null) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
-  @ assigns \nothing;
+  @
+  @ assigns ctx->spki_alg_params.gost2012_512.curve_order_bit_len,
+	    ctx->spki_alg_params.gost2012_256.curve;
   @*/
-static int parse_algoid_params_sig_gost_none(const u8 *buf, u16 len,
-					     alg_param *param)
+static int parse_algoid_pubkey_params_gost_r3410_2012_512(cert_parsing_ctx *ctx,
+							const u8 *cert, u16 off, u16 len)
 {
-	u16 parsed = 0;
+	const _hash_alg *hash = NULL;
+	const _curve *curve = NULL;
 	int ret;
 
-	if ((buf == NULL) || (param == NULL)) {
+	if (ctx == NULL) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	ret = parse_algoid_params_gost2012PublicKey(cert, off, len, &curve, &hash);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	if (curve == NULL) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->spki_alg_params.gost2012_512.curve_order_bit_len = curve->crv_order_bit_len;
+	ctx->spki_alg_params.gost2012_256.curve = curve->crv_id;
+	// XXX investigate hash hash->hash_id purpose for pubkey
+
+out:
+	return ret;
+}
+
+/*
+ * Handles expected lack of optinal parameters associated with sig and pubkey
+ * OID. The function also support the case where lack of parames has been
+ * implemented by some software by a adding a NULL instead of nothing.
+ * We define specific sig and pubky function from that one below.
+ */
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns \nothing;
+  @*/
+static int _parse_algoid_params_none(cert_parsing_ctx *ctx,
+				const u8 *cert, u16 off, u16 len)
+{
+	const u8 *buf = cert + off;
+	u16 parsed = 0;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert (len > 0) ==> \valid_read(buf + (0 .. len - 1)); */
 
 	switch (len) {
 	case 0: /* Nice ! */
@@ -4237,33 +3982,108 @@ out:
 	return ret;
 }
 
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @
+  @ assigns ctx->tbs_sig_alg_oid_params_start,
+	    ctx->tbs_sig_alg_oid_params_len;
+  @*/
+static int parse_algoid_sig_params_none(cert_parsing_ctx *ctx,
+					const u8 *cert, u16 off, u16 len)
+{
+	int ret;
+
+	ret = _parse_algoid_params_none(ctx, cert, off, len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->tbs_sig_alg_oid_params_start = off;
+	ctx->tbs_sig_alg_oid_params_len = len;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @
+  @ assigns ctx->spki_alg_oid_params_start,
+	    ctx->spki_alg_oid_params_len;
+  @*/
+static int parse_algoid_pubkey_params_none(cert_parsing_ctx *ctx,
+					const u8 *cert, u16 off, u16 len)
+{
+	int ret;
+
+	ret = _parse_algoid_params_none(ctx, cert, off, len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->spki_alg_oid_params_start = off;
+	ctx->spki_alg_oid_params_len = len;
+
+out:
+	return ret;
+}
+
+
 /*
  * Parser for parameters associated with the OID for RSA public key
- * (rsaEncryption) and common PKCS#1 v1.5 signature OID (sha*WithRSAEncryption,
- * md5WithRSAEncryption). Those expect a NULL parameter.
+ * (rsaEncryption, GIP-CPS, ) and common PKCS#1 v1.5 signature OID
+ * (sha*WithRSAEncryption, md5WithRSAEncryption).
+ * Those all expect a NULL parameter. From this function,
+ * we define specific instances for signature and pubkey parameters
+ * below.
  */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires (param != \null) ==> \valid_read(param);
-  @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ ensures (param == \null) ==> \result < 0;
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
-  @ ensures \result == 0 ==> (param->null_param == null_encoded_val);
-  @ assigns param->null_param;
+  @
+  @ assigns \nothing;
   @*/
-static int parse_algoid_params_rsa(const u8 *buf, u16 len, alg_param *param)
+static int _parse_algoid_params_rsa(cert_parsing_ctx *ctx,
+				    const u8 *cert, u16 off, u16 len)
 {
+	const u8 *buf = cert + off;
 	u16 parsed = 0;
 	int ret;
 
-	if ((len == 0) || (buf == NULL) || (param == NULL)) {
+	if ((ctx == NULL) || (cert == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
+	/*@ assert (len > 0) ==> \valid_read(buf + (0 .. len - 1)); */
+
+#ifdef TEMPORARY_LAXIST_RSA_PUBKEY_AND_SIG_NO_PARAMS_INSTEAD_OF_NULL
+	/*
+	 * We expect a null but will allow empty params
+	 * in that case.
+	 */
+	if (len == 0) {
+		ret = 0;
+		goto out;
+	}
+#endif
 	/*
 	 * Section 3.2 of RFC 3370 explicitly states that
 	 * "When the rsaEncryption, sha1WithRSAEncryption, or
@@ -4278,9 +4098,65 @@ static int parse_algoid_params_rsa(const u8 *buf, u16 len, alg_param *param)
 		goto out;
 	}
 
-	param->null_param = null_encoded_val;
-
 	ret = 0;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @
+  @ assigns ctx->tbs_sig_alg_oid_params_start,
+	    ctx->tbs_sig_alg_oid_params_len;
+  @*/
+static int parse_algoid_sig_params_rsa(cert_parsing_ctx *ctx,
+				const u8 *cert, u16 off, u16 len)
+{
+	int ret;
+
+	ret = _parse_algoid_params_rsa(ctx, cert, off, len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->tbs_sig_alg_oid_params_start = off;
+	ctx->tbs_sig_alg_oid_params_len = len;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @
+  @ assigns ctx->spki_alg_oid_params_start,
+	    ctx->spki_alg_oid_params_len;
+  @*/
+static int parse_algoid_pubkey_params_rsa(cert_parsing_ctx *ctx,
+					const u8 *cert, u16 off, u16 len)
+{
+	int ret;
+
+	ret = _parse_algoid_params_rsa(ctx, cert, off, len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->spki_alg_oid_params_start = off;
+	ctx->spki_alg_oid_params_len = len;
 
 out:
 	return ret;
@@ -4302,29 +4178,35 @@ out:
  * subjectPublicKey.
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \initialized(&param->null_param);
+  @ requires \valid(n_start_off);
+  @ requires \valid(n_len);
+  @ requires \valid(e_start_off);
+  @ requires \valid(e_len);
+  @ requires \separated(buf+(..), n_start_off, n_len, e_start_off, e_len);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @ ensures (\result == 0) ==> (int)*n_start_off + (int)*n_len <= (int)len;
+  @ ensures (\result == 0) ==> (int)*e_start_off + (int)*e_len <= (int)len;
+  @
+  @ assigns *n_start_off, *n_len, *e_start_off, *e_len;
   @*/
-static int parse_subjectpubkey_rsa(const u8 *buf, u16 len, alg_param *param)
+static int spki_rsa_export_n_e(const u8 *buf, u16 len,
+			       u16 *n_start_off, u16 *n_len,
+			       u16 *e_start_off, u16 *e_len)
 {
 	u16 remain;
 	u16 hdr_len = 0;
 	u16 data_len = 0;
-	u16 eaten = 0;
+	u16 parsed = 0;
+	u16 off;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
-
-	if (param->null_param != null_encoded_val) {
+	if ((buf == NULL) || (len == 0) ||
+	    (n_start_off == NULL) || (n_len == NULL) ||
+	    (e_start_off == NULL) || (e_len == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -4350,6 +4232,7 @@ static int parse_subjectpubkey_rsa(const u8 *buf, u16 len, alg_param *param)
 	}
 
 	buf += hdr_len;
+	off = hdr_len;
 
 	/*
 	 * We expect the initial octet to encode a value of 0
@@ -4363,6 +4246,7 @@ static int parse_subjectpubkey_rsa(const u8 *buf, u16 len, alg_param *param)
 	}
 	buf += 1;
 	remain = data_len - 1;
+	off += 1;
 
 	/*
 	 * Now, in the case of a RSA public key, we expect the content of
@@ -4377,27 +4261,57 @@ static int parse_subjectpubkey_rsa(const u8 *buf, u16 len, alg_param *param)
 
 	buf += hdr_len;
 	remain = data_len;
+	off += hdr_len;
 
-	/* Now, we should find the first integer, n (modulus) */
-	ret = parse_integer(buf, remain, CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
-			    &eaten);
+	/*
+	 * Now, we should find the first integer, n (modulus). We first parse
+	 * it to validate it. Then, we skip over the header to move to get up
+	 * to the position of the modulus
+	 */
+	ret = parse_non_negative_integer(buf, remain, CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
+				     &hdr_len, &data_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+	parsed = hdr_len + data_len;
 
-	remain -= eaten;
-	buf += eaten;
+	/*@ assert ((int)hdr_len + (int)data_len) <= (int)remain; */
+	/*@ assert remain <= len; */
+	/*@ assert (int)off + (int)hdr_len + (int)data_len <= (int)len; */
+	*n_start_off = off + hdr_len;
+	*n_len = data_len;
+	/*@ assert (int)*n_start_off + (int)*n_len <= (int)len; */
+
+	/* if MSB of modulus is 0, remove it */
+	if ((data_len != 0) && (buf[hdr_len] == 0)) {
+		*n_start_off += 1;
+		*n_len -= 1;
+	}
+
+	buf += parsed;
+	off += parsed;
+	remain -= parsed;
 
 	/* An then, the second one, e (publicExponent) */
-	ret = parse_integer(buf, remain, CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
-			    &eaten);
+	ret = parse_non_negative_integer(buf, remain, CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
+				     &hdr_len, &data_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+	parsed = hdr_len + data_len;
 
-	remain -= eaten;
+	/*@ assert ((int)hdr_len + (int)data_len) <= (int)remain; */
+	/*@ assert remain <= len; */
+	/*@ assert (int)off + (int)hdr_len + (int)data_len <= (int)len; */
+	*e_start_off = off + hdr_len;
+	*e_len = data_len;
+	/*@ assert (int)*e_start_off + (int)*e_len <= (int)len; */
+
+	buf += parsed;
+	off += parsed;
+	remain -= parsed;
 
 	if (remain != 0) {
 		ret = -__LINE__;
@@ -4412,17 +4326,431 @@ out:
 }
 
 /*@
-  @ requires len >= 0;
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns ctx->spki_alg_params.rsa.rsa_raw_modulus_off,
+	    ctx->spki_alg_params.rsa.rsa_raw_modulus_len,
+	    ctx->spki_alg_params.rsa.rsa_raw_pub_exp_off,
+	    ctx->spki_alg_params.rsa.rsa_raw_pub_exp_len;
+  @*/
+static int parse_pubkey_rsa(cert_parsing_ctx *ctx,
+			    const u8 *cert, u16 off, u16 len)
+{
+	u16 n_start_off = 0, n_len = 0, e_start_off= 0, e_len = 0;
+	const u8 *buf = cert + off;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = spki_rsa_export_n_e(buf, len, &n_start_off, &n_len, &e_start_off, &e_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->spki_alg_params.rsa.rsa_raw_modulus_off = off + n_start_off;
+	ctx->spki_alg_params.rsa.rsa_raw_modulus_len = n_len;
+	ctx->spki_alg_params.rsa.rsa_raw_pub_exp_off = off + e_start_off;
+	ctx->spki_alg_params.rsa.rsa_raw_pub_exp_len = e_len;
+
+out:
+	return ret;
+}
+
+/*
+ * Section 7.3.3 of RFC 2459 has:
+ *
+ *   If the DSA algorithm parameters are present in the
+ *   subjectPublicKeyInfo AlgorithmIdentifier, the parameters are included
+ *   using the following ASN.1 structure:
+ *
+ *        Dss-Parms  ::=  SEQUENCE  {
+ *            p             INTEGER,
+ *            q             INTEGER,
+ *            g             INTEGER  }
+ *
+ *
+ *   If the DSA algorithm parameters are absent from the
+ *   subjectPublicKeyInfo AlgorithmIdentifier and the CA signed the
+ *   subject certificate using DSA, then the certificate issuer's DSA
+ *   parameters apply to the subject's DSA key.  If the DSA algorithm
+ *   parameters are absent from the subjectPublicKeyInfo
+ *   AlgorithmIdentifier and the CA signed the subject certificate using a
+ *   signature algorithm other than DSA, then the subject's DSA parameters
+ *   are distributed by other means.  If the subjectPublicKeyInfo
+ *   AlgorithmIdentifier field omits the parameters component and the CA
+ *   signed the subject with a signature algorithm other than DSA, then
+ *   clients shall reject the certificate.
+ *
+ */
+/*@
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(p_start_off);
+  @ requires \valid(p_len);
+  @ requires \valid(q_start_off);
+  @ requires \valid(q_len);
+  @ requires \valid(g_start_off);
+  @ requires \valid(g_len);
+  @ requires \separated(buf+(..), p_start_off, p_len, q_start_off, q_len, g_start_off, g_len);
+  @
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (p_start_off == \null) ==> \result < 0;
+  @ ensures (p_len == \null) ==> \result < 0;
+  @ ensures (q_start_off == \null) ==> \result < 0;
+  @ ensures (q_len == \null) ==> \result < 0;
+  @ ensures (g_start_off == \null) ==> \result < 0;
+  @ ensures (g_len == \null) ==> \result < 0;
+  @ ensures (\result == 0) ==> *p_start_off <= len;
+  @ ensures (\result == 0) ==> *q_start_off <= len;
+  @ ensures (\result == 0) ==> *g_start_off <= len;
+  @ ensures (\result == 0) ==> (int)*p_start_off + (int)*p_len <= 65535;
+  @ ensures (\result == 0) ==> (int)*q_start_off + (int)*q_len <= 65535;
+  @ ensures (\result == 0) ==> (int)*g_start_off + (int)*g_len <= 65535;
+  @
+  @ assigns *p_start_off, *p_len, *q_start_off, *q_len, *g_start_off, *g_len;
+  @*/
+int parse_algoid_dsa_export_params(const u8 *buf, u16 len,
+				   u16 *p_start_off, u16 *p_len,
+				   u16 *q_start_off, u16 *q_len,
+				   u16 *g_start_off, u16 *g_len)
+{
+	u16 remain = 0;
+	u16 hdr_len = 0;
+	u16 data_len = 0;
+	u16 eaten = 0;
+	u16 parsed = 0;
+	u16 off = 0;
+	int ret;
+
+	if ((buf == NULL) ||
+	    (p_start_off == NULL) || (p_len == NULL) ||
+	    (q_start_off == NULL) || (q_len == NULL) ||
+	    (g_start_off == NULL) || (g_len == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	*p_start_off = 0;
+	*p_len = 0;
+	*q_start_off = 0;
+	*q_len = 0;
+	*g_start_off = 0;
+	*g_len = 0;
+
+	/*
+	 * It is acceptable for DSA params to be absent (i.e. null or nothing
+	 * at all aka zero length), as explained in RFC description
+	 */
+	if (len == 0) {
+		ret = 0;
+		goto out;
+	}
+
+	ret = parse_null(buf, len, &parsed);
+	if (!ret) {
+		ret = 0;
+		goto out;
+	}
+
+	/*
+	 * If not absent, params are expected to contain a sequence of
+	 * 3 integers p, q and s.
+	 *
+	 *         Dss-Parms  ::=  SEQUENCE  {
+	 *            p             INTEGER,      -- DSA prime
+	 *            q             INTEGER,      -- DSA group order
+	 *            g             INTEGER  }    -- DSA group generator
+	 */
+	remain = len;
+	ret = parse_id_len(buf, remain, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+	off += hdr_len;
+	remain = data_len;
+
+	/* Now, we should find the first integer, p, the DSA prime */
+	ret = parse_non_negative_integer(buf, remain, CLASS_UNIVERSAL,
+					 ASN1_TYPE_INTEGER,
+					 &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	eaten = hdr_len + data_len;
+
+	/*@ assert (int)hdr_len + (int)data_len <= 65535; */
+	/*@ assert (int)off + (int)hdr_len + (int)data_len <= 65535; */
+	*p_start_off = off + hdr_len;
+	*p_len = data_len;
+	/*@ assert (int)*p_start_off + (int)*p_len <= 65535; */
+
+	remain -= eaten;
+	buf += eaten;
+	off += eaten;
+
+	/* An then, the second one, q, the DSA group order */
+	ret = parse_non_negative_integer(buf, remain, CLASS_UNIVERSAL,
+					 ASN1_TYPE_INTEGER,
+					 &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	eaten = hdr_len + data_len;
+
+	*q_start_off = off + hdr_len;
+	*q_len = data_len;
+
+	remain -= eaten;
+	buf += eaten;
+	off += eaten;
+
+	/* An in the end, the third one, g, the group genrator */
+	ret = parse_non_negative_integer(buf, remain, CLASS_UNIVERSAL,
+					 ASN1_TYPE_INTEGER,
+					 &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	eaten = hdr_len + data_len;
+
+	*g_start_off = off + hdr_len;
+	*g_len = data_len;
+	remain -= eaten;
+
+	/* Let's check that nothing remains behind */
+	if (remain) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+
+
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(ctx, cert+(..));
+  @
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @
+  @ assigns ctx->spki_alg_params.dsa.dsa_raw_p_off,
+	    ctx->spki_alg_params.dsa.dsa_raw_p_len,
+	    ctx->spki_alg_params.dsa.dsa_raw_q_off,
+	    ctx->spki_alg_params.dsa.dsa_raw_q_len,
+	    ctx->spki_alg_params.dsa.dsa_raw_g_off,
+	    ctx->spki_alg_params.dsa.dsa_raw_g_len;
+  @*/
+static int parse_algoid_pubkey_params_dsa(cert_parsing_ctx *ctx,
+					  const u8 *cert, u16 off, u16 len)
+{
+	const u8 *buf = cert + off;
+	u16 p_start_off, p_len;
+	u16 q_start_off, q_len;
+	u16 g_start_off, g_len;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = parse_algoid_dsa_export_params(buf, len,
+					     &p_start_off, &p_len,
+					     &q_start_off, &q_len,
+					     &g_start_off, &g_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->spki_alg_params.dsa.dsa_raw_p_off = off + p_start_off;
+	ctx->spki_alg_params.dsa.dsa_raw_p_len = p_len;
+	ctx->spki_alg_params.dsa.dsa_raw_q_off = off + q_start_off;
+	ctx->spki_alg_params.dsa.dsa_raw_q_len = q_len;
+	ctx->spki_alg_params.dsa.dsa_raw_g_off = off + g_start_off;
+	ctx->spki_alg_params.dsa.dsa_raw_g_len = g_len;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(pub_start_off);
+  @ requires \valid(pub_len);
+  @ requires \separated(buf+(..), pub_start_off, pub_len);
+  @
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (\result == 0) ==> *pub_start_off <= len;
+  @ ensures (\result == 0) ==> (int)*pub_start_off + (int)*pub_len <= 65535;
+  @
+  @ assigns *pub_start_off, *pub_len;
+  @*/
+int parse_pubkey_dsa_export_pub(const u8 *buf, u16 len,
+				u16 *pub_start_off, u16 *pub_len)
+{
+	u16 remain;
+	u16 hdr_len = 0;
+	u16 data_len = 0;
+	u16 off;
+	int ret;
+
+	if ((buf == NULL) || (len == 0) ||
+	    (pub_start_off == NULL) || (pub_len == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/* subjectPublicKey field of SubjectPublicKeyInfo is a BIT STRING */
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * We expect the bitstring data to contain at least the initial
+	 * octet encoding the number of unused bits in the final
+	 * subsequent octet of the bistring.
+	 * */
+	if (data_len == 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+	off = hdr_len;
+
+	/*
+	 * We expect the initial octet to encode a value of 0
+	 * indicating that there are no unused bits in the final
+	 * subsequent octet of the bitstring.
+	 */
+	if (buf[0] != 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	buf += 1;
+	remain = data_len - 1;
+	off += 1;
+
+	/*
+	 * Now, in the case of a DSA public key, we expect the content of
+	 * the BIT STRING to hold an INTEGER
+	 */
+	ret = parse_non_negative_integer(buf, remain, CLASS_UNIVERSAL,
+					 ASN1_TYPE_INTEGER,
+					 &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+	remain = data_len;
+	off += hdr_len;
+	*pub_start_off = off;
+	*pub_len = data_len;
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \separated(cert+(..), ctx);
+  @
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *ctx;
+  @*/
+static int parse_pubkey_dsa(cert_parsing_ctx *ctx,
+			    const u8 *cert, u16 off, u16 len)
+{
+	const u8 *buf = cert + off;
+	u16 pub_start_off = 0, pub_len = 0;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert (len >= 0) ==> \valid_read(buf + (0 .. len - 1)); */
+
+	ret = parse_pubkey_dsa_export_pub(buf, len, &pub_start_off, &pub_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ctx->spki_alg_params.dsa.dsa_raw_pub_off = off + pub_start_off;
+	ctx->spki_alg_params.dsa.dsa_raw_pub_len = pub_len;
+
+out:
+	return ret;
+}
+
+
+/*@
   @ requires ((len > 0) && (buf != NULL)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ ensures (\result != NULL) ==> \exists integer i ; 0 <= i < NUM_KNOWN_ALGS && \result == known_algs[i];
+  @
+  @ ensures (\result != NULL) ==> \exists integer i ; 0 <= i < NUM_KNOWN_SIG_ALGS && \result == known_sig_algs[i];
   @ ensures (len == 0) ==> \result == NULL;
   @ ensures (buf == NULL) ==> \result == NULL;
+  @
   @ assigns \nothing;
   @*/
-static const _alg_id * find_alg_by_oid(const u8 *buf, u16 len)
+static const _sig_alg * find_sig_alg_by_oid(const u8 *buf, u16 len)
 {
-	const _alg_id *found = NULL;
-	const _alg_id *cur = NULL;
+	const _sig_alg *found = NULL;
+	const _sig_alg *cur = NULL;
 	u8 k;
 
 	if ((buf == NULL) || (len == 0)) {
@@ -4430,17 +4758,17 @@ static const _alg_id * find_alg_by_oid(const u8 *buf, u16 len)
 	}
 
 	/*@
-	  @ loop invariant 0 <= k <= NUM_KNOWN_ALGS;
+	  @ loop invariant 0 <= k <= NUM_KNOWN_SIG_ALGS;
 	  @ loop invariant found == NULL;
 	  @ loop assigns cur, found, k;
-	  @ loop variant (NUM_KNOWN_ALGS - k);
+	  @ loop variant (NUM_KNOWN_SIG_ALGS - k);
 	  @*/
-	for (k = 0; k < NUM_KNOWN_ALGS; k++) {
+	for (k = 0; k < NUM_KNOWN_SIG_ALGS; k++) {
 		int ret;
 
-		cur = known_algs[k];
+		cur = known_sig_algs[k];
 
-		/*@ assert cur == known_algs[k]; */
+		/*@ assert cur == known_sig_algs[k]; */
 		if (cur->alg_der_oid_len != len) {
 			continue;
 		}
@@ -4457,40 +4785,126 @@ out:
 	return found;
 }
 
+
+/*@
+  @ requires ((len > 0) && (buf != NULL)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
+  @ ensures (\result != NULL) ==> \exists integer i ; 0 <= i < NUM_KNOWN_PUBKEY_ALGS && \result == known_pubkey_algs[i];
+  @ ensures (len == 0) ==> \result == NULL;
+  @ ensures (buf == NULL) ==> \result == NULL;
+  @
+  @ assigns \nothing;
+  @*/
+static const _pubkey_alg * find_pubkey_alg_by_oid(const u8 *buf, u16 len)
+{
+	const _pubkey_alg *found = NULL;
+	const _pubkey_alg *cur = NULL;
+	u8 k;
+
+	if ((buf == NULL) || (len == 0)) {
+		goto out;
+	}
+
+	/*@
+	  @ loop invariant 0 <= k <= NUM_KNOWN_PUBKEY_ALGS;
+	  @ loop invariant found == NULL;
+	  @ loop assigns cur, found, k;
+	  @ loop variant (NUM_KNOWN_PUBKEY_ALGS - k);
+	  @*/
+	for (k = 0; k < NUM_KNOWN_PUBKEY_ALGS; k++) {
+		int ret;
+
+		cur = known_pubkey_algs[k];
+
+		/*@ assert cur == known_pubkey_algs[k]; */
+		if (cur->alg_der_oid_len != len) {
+			continue;
+		}
+
+		/*@ assert \valid_read(buf + (0 .. (len - 1))); @*/
+		ret = !bufs_differ(cur->alg_der_oid, buf, cur->alg_der_oid_len);
+		if (ret) {
+			found = cur;
+			break;
+		}
+	}
+
+out:
+	return found;
+}
+
+
 /*
+ * The algorithmIdentifier structure is used at different location
+ * in a certificate for different kind of algorithms:
+ *
+ *  - in signature and signatureAlgorithm fields, it describes a
+ *    signature algorithm.
+ *  - in subjectPublicKeyInfo, it describes a public key
+ *    algorithm.
+ *
+ * It has the following structure:
+ *
  * AlgorithmIdentifier. Used for signature field.
  *
  *    AlgorithmIdentifier  ::=  SEQUENCE  {
  *       algorithm               OBJECT IDENTIFIER,
  *       parameters              ANY DEFINED BY algorithm OPTIONAL  }
  *
+ * In the parser, we define currently define two functions:
+ *
+ *  - one for parsing tbsCertificate.signature algoid field
+ *  - one for parsing spki algoid field
+ *
+ * Parsing of certificate signatureAlgorithm field is not performed.
+ * as it must exactly match the content of tbsCertificate.signature
+ * field. A simple comparison is performed for that purpose.
+ */
+
+/*
+ * This function parses tbsCertificate.signature field and populate ctx with useful
+ * information on success.
  */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \valid(param);
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(ctx);
   @ requires \valid(alg);
-  @ requires \separated(buf,alg,param,eaten);
+  @ requires \valid(eaten);
+  @ requires \separated(cert+(..),alg,ctx,eaten);
+  @
   @ ensures \result < 0 || \result == 0;
-  @ ensures (\result == 0) ==> \exists u8 x; *alg == known_algs[x];
+  @ ensures (\result == 0) ==> \exists integer x; 0 <= x < NUM_KNOWN_SIG_ALGS && *alg == known_sig_algs[x];
   @ ensures (\result == 0) ==> (1 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
   @ ensures (\result == 0) ==> \valid_read(*alg);
-  @ assigns *alg, *eaten, *param;
+  @ ensures (\result == 0) ==> \initialized(&(ctx->tbs_sig_alg_oid_start));
+  @ ensures (\result == 0) ==> \initialized(&(ctx->tbs_sig_alg_oid_len));
+  @ ensures (\result == 0) ==> \initialized(&(ctx->sig_alg));
+  @ ensures (\result == 0) ==> \initialized(&(ctx->hash_alg));
+  @ ensures (\result == 0) ==> \initialized(&(ctx->tbs_sig_alg_start));
+  @ ensures (\result == 0) ==> ctx->tbs_sig_alg_start == off;
+  @ ensures (\result == 0) ==> \initialized(&(ctx->tbs_sig_alg_len));
+  @
+  @ assigns *alg, *eaten, *ctx;
   @*/
-static int parse_x509_AlgorithmIdentifier(const u8 *buf, u16 len,
-					  const _alg_id **alg, alg_param *param,
-					  u16 *eaten)
+static int parse_x509_tbsCert_sig_AlgorithmIdentifier(cert_parsing_ctx *ctx,
+						      const u8 *cert, u16 off, u16 len,
+						      const _sig_alg **alg,
+						      u16 *eaten)
 {
-	const _alg_id *talg = NULL;
+	const _sig_alg *talg = NULL;
+	const u8 *buf = cert + off;
+	u16 saved_off = off;
+	u16 parsed = 0;
 	u16 hdr_len = 0;
 	u16 data_len = 0;
 	u16 param_len;
 	u16 oid_len = 0;
 	int ret;
 
-	if ((buf == NULL) || (len == 0)) {
+	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -4504,7 +4918,11 @@ static int parse_x509_AlgorithmIdentifier(const u8 *buf, u16 len,
 		goto out;
 	}
 
+	parsed = hdr_len + data_len;
+	/*@ assert (1 < parsed <= len); */
+
 	buf += hdr_len;
+	off += hdr_len;
 
 	/* The first thing we should find in the sequence is an OID */
 	ret = parse_OID(buf, data_len, &oid_len);
@@ -4514,7 +4932,137 @@ static int parse_x509_AlgorithmIdentifier(const u8 *buf, u16 len,
 	}
 
 	/* Let's now see if that OID is one associated w/ an alg we support */
-	talg = find_alg_by_oid(buf, oid_len);
+	talg = find_sig_alg_by_oid(buf, oid_len);
+	if (talg == NULL) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	/*@ assert \valid_read(talg); */
+	/*@ assert \exists integer i ; 0 <= i < NUM_KNOWN_SIG_ALGS && talg == known_sig_algs[i]; */
+
+	/*
+	 * Record position of spki alg oid. Also keep track of
+	 * the signature mechanism alg identifier and possibly
+	 * the associated hash identifier if it was explicit in
+	 * the mechanism. Otherwise, we will temporarily inherit
+	 * from HASH_ALG_UNKNOWN and possibly get the hash during
+	 * the parsing of alg oid sig parameters just below.
+	 */
+	ctx->tbs_sig_alg_oid_start = off;
+	ctx->tbs_sig_alg_oid_len = oid_len;
+	ctx->sig_alg = talg->sig_id;
+	ctx->hash_alg = talg->hash_id;
+
+	buf += oid_len;
+	off += oid_len;
+	param_len = data_len - oid_len;
+
+	/*@ assert talg->parse_algoid_sig_params \in {
+		  parse_algoid_sig_params_ecdsa_with,
+		  parse_algoid_sig_params_ecdsa_with_specified,
+		  parse_algoid_sig_params_sm2,
+		  parse_algoid_sig_params_eddsa,
+		  parse_algoid_sig_params_rsa,
+		  parse_algoid_sig_params_rsassa_pss,
+		  parse_algoid_sig_params_none,
+		  parse_algoid_sig_params_bign_with_hspec }; @*/
+	/*@ calls parse_algoid_sig_params_ecdsa_with,
+		  parse_algoid_sig_params_ecdsa_with_specified,
+		  parse_algoid_sig_params_sm2,
+		  parse_algoid_sig_params_eddsa,
+		  parse_algoid_sig_params_rsa,
+		  parse_algoid_sig_params_rsassa_pss,
+		  parse_algoid_sig_params_none,
+		  parse_algoid_sig_params_bign_with_hspec; @*/
+	ret = talg->parse_algoid_sig_params(ctx, cert, off, param_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \exists integer i ; 0 <= i < NUM_KNOWN_SIG_ALGS && talg == known_sig_algs[i]; */
+	*alg = talg;
+	*eaten = parsed;
+	ctx->tbs_sig_alg_start = saved_off;
+	ctx->tbs_sig_alg_len = parsed;
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(eaten);
+  @ requires \valid(alg);
+  @ requires \separated(cert+(..),alg,eaten,ctx);
+  @
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (\result == 0) ==> \exists u8 x; *alg == known_pubkey_algs[x];
+  @ ensures (\result == 0) ==> (1 < *eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (\result == 0) ==> \valid_read(*alg);
+  @ ensures (\result == 0) ==> \initialized(&(ctx->spki_alg));
+  @ ensures (\result == 0) ==> \initialized(&(ctx->spki_alg_oid_start));
+  @ ensures (\result == 0) ==> \initialized(&(ctx->spki_alg_oid_len));
+  @ ensures (\result == 0) && (*alg)->parse_pubkey == parse_pubkey_bign ==> \initialized(&(ctx->spki_alg_params.bign.curve_order_bit_len));
+  @ ensures (\result == 0) && (*alg)->parse_pubkey == parse_pubkey_bign ==> \initialized(&(ctx->spki_alg_params.bign.curve));
+  @ ensures (\result == 0) && (*alg)->parse_pubkey == parse_pubkey_ec ==> \initialized(&(ctx->spki_alg_params.ecpubkey.curve_order_bit_len));
+  @ ensures (\result == 0) && (*alg)->parse_pubkey == parse_pubkey_ec ==> \initialized(&(ctx->spki_alg_params.ecpubkey.curve));
+  @
+  @ assigns *alg, *eaten, *ctx;
+  @*/
+static int parse_x509_pubkey_AlgorithmIdentifier(cert_parsing_ctx *ctx,
+						 const u8 *cert, u16 off, u16 len,
+						 const _pubkey_alg **alg,
+						 u16 *eaten)
+{
+	const _pubkey_alg *talg = NULL;
+	const u8 *buf = cert + off;
+	u16 saved_off = off;
+	u16 parsed = 0;
+	u16 hdr_len = 0;
+	u16 data_len = 0;
+	u16 param_len;
+	u16 oid_len = 0;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	/* Check we are dealing with a valid sequence */
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+	off += hdr_len;
+
+	/* The first thing we should find in the sequence is an OID */
+	ret = parse_OID(buf, data_len, &oid_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/* record position of spki alg oid */
+	ctx->spki_alg_oid_start = off;
+	ctx->spki_alg_oid_len = oid_len;
+
+	/* Let's see if that OID is one associated w/ a pubkey alg we support */
+	talg = find_pubkey_alg_by_oid(buf, oid_len);
 	if (talg == NULL) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
@@ -4523,49 +5071,63 @@ static int parse_x509_AlgorithmIdentifier(const u8 *buf, u16 len,
 	/*@ assert \valid_read(talg); */
 
 	buf += oid_len;
+	off += oid_len;
 	param_len = data_len - oid_len;
 
-#ifdef TEMPORARY_BADALGS
-	/*@ assert talg->parse_algoid_params \in {
-		  parse_algoid_params_generic, parse_algoid_params_ecdsa_with,
-		  parse_algoid_params_ecPublicKey, parse_algoid_params_rsa,
-		  parse_algoid_params_sm2, parse_algoid_params_eddsa,
-		  parse_algoid_params_pub_gost_r3410_2001,
-		  parse_algoid_params_pub_gost_r3410_2012_256,
-		  parse_algoid_params_pub_gost_r3410_2012_512,
-		  parse_algoid_params_sig_gost_none,
-		  parse_algoid_params_rsassa_pss }; @*/
-	/*@ calls parse_algoid_params_generic, parse_algoid_params_ecdsa_with,
-		  parse_algoid_params_ecPublicKey, parse_algoid_params_rsa,
-		  parse_algoid_params_sm2, parse_algoid_params_eddsa,
-		  parse_algoid_params_pub_gost_r3410_2001,
-		  parse_algoid_params_pub_gost_r3410_2012_256,
-		  parse_algoid_params_pub_gost_r3410_2012_512,
-		  parse_algoid_params_sig_gost_none,
-		  parse_algoid_params_rsassa_pss; @*/
-#else
-	/*@ assert talg->parse_algoid_params \in {
-		  parse_algoid_params_generic, parse_algoid_params_ecdsa_with,
-		  parse_algoid_params_ecPublicKey, parse_algoid_params_rsa,
-		  parse_algoid_params_sm2, parse_algoid_params_eddsa,
-		  parse_algoid_params_pub_gost_r3410_2012_256,
-		  parse_algoid_params_pub_gost_r3410_2012_512,
-		  parse_algoid_params_sig_gost_none }; @*/
-	/*@ calls parse_algoid_params_generic, parse_algoid_params_ecdsa_with,
-		  parse_algoid_params_ecPublicKey, parse_algoid_params_rsa,
-		  parse_algoid_params_sm2, parse_algoid_params_eddsa,
-		  parse_algoid_params_pub_gost_r3410_2012_256,
-		  parse_algoid_params_pub_gost_r3410_2012_512,
-		  parse_algoid_params_sig_gost_none; @*/
-#endif
-	ret = talg->parse_algoid_params(buf, param_len, param);
+	/*@ assert talg->parse_algoid_pubkey_params \in {
+		   parse_algoid_pubkey_params_ecPublicKey,
+		   parse_algoid_pubkey_params_ed25519,
+		   parse_algoid_pubkey_params_ed448,
+		   parse_algoid_pubkey_params_x25519,
+		   parse_algoid_pubkey_params_x448,
+		   parse_algoid_pubkey_params_rsa,
+		   parse_algoid_pubkey_params_gost_r3410_2012_256,
+		   parse_algoid_pubkey_params_gost_r3410_2012_512,
+		   parse_algoid_pubkey_params_gost_r3410_2001,
+		   parse_algoid_pubkey_params_gost_r3410_94,
+		   parse_algoid_pubkey_params_dsa,
+		   parse_algoid_pubkey_params_ea_rsa,
+		   parse_algoid_pubkey_params_none,
+		   parse_algoid_pubkey_params_bign}; @*/
+	/*@ calls parse_algoid_pubkey_params_ecPublicKey,
+		   parse_algoid_pubkey_params_ed25519,
+		   parse_algoid_pubkey_params_ed448,
+		   parse_algoid_pubkey_params_x25519,
+		   parse_algoid_pubkey_params_x448,
+		   parse_algoid_pubkey_params_rsa,
+		   parse_algoid_pubkey_params_gost_r3410_2012_256,
+		   parse_algoid_pubkey_params_gost_r3410_2012_512,
+		   parse_algoid_pubkey_params_gost_r3410_2001,
+		   parse_algoid_pubkey_params_gost_r3410_94,
+		   parse_algoid_pubkey_params_dsa,
+		   parse_algoid_pubkey_params_ea_rsa,
+		   parse_algoid_pubkey_params_none,
+		   parse_algoid_pubkey_params_bign; @*/
+	ret = talg->parse_algoid_pubkey_params(ctx, cert, off, param_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+	/*@ assert talg->parse_algoid_pubkey_params == parse_algoid_pubkey_params_bign ==> \initialized(&(ctx->spki_alg_params.bign.curve_order_bit_len)); */
+	/*@ assert talg->parse_algoid_pubkey_params == parse_algoid_pubkey_params_bign ==> \initialized(&(ctx->spki_alg_params.bign.curve)); */
+	/*@ assert talg->parse_algoid_pubkey_params == parse_algoid_pubkey_params_ecPublicKey ==> \initialized(&(ctx->spki_alg_params.ecpubkey.curve_order_bit_len)); */
+	/*@ assert talg->parse_algoid_pubkey_params == parse_algoid_pubkey_params_ecPublicKey ==> \initialized(&(ctx->spki_alg_params.ecpubkey.curve)); */
 
+	/*@ assert talg->parse_pubkey == parse_pubkey_bign ==> \initialized(&(ctx->spki_alg_params.bign.curve_order_bit_len)); */
+	/*@ assert talg->parse_pubkey == parse_pubkey_bign ==> \initialized(&(ctx->spki_alg_params.bign.curve)); */
+	/*@ assert talg->parse_pubkey == parse_pubkey_ec ==> \initialized(&(ctx->spki_alg_params.ecpubkey.curve_order_bit_len)); */
+	/*@ assert talg->parse_pubkey == parse_pubkey_ec ==> \initialized(&(ctx->spki_alg_params.ecpubkey.curve)); */
+
+	parsed = hdr_len + data_len;
 	*alg = talg;
-	*eaten = hdr_len + data_len;
+	/*@ assert (*alg)->parse_pubkey == parse_pubkey_bign ==> \initialized(&(ctx->spki_alg_params.bign.curve_order_bit_len)); */
+	/*@ assert (*alg)->parse_pubkey == parse_pubkey_bign ==> \initialized(&(ctx->spki_alg_params.bign.curve)); */
+	/*@ assert (*alg)->parse_pubkey == parse_pubkey_ec ==> \initialized(&(ctx->spki_alg_params.ecpubkey.curve_order_bit_len)); */
+	/*@ assert (*alg)->parse_pubkey == parse_pubkey_ec ==> \initialized(&(ctx->spki_alg_params.ecpubkey.curve)); */
+	*eaten = parsed;
+	ctx->spki_alg = talg->pubkey_id;
+	ctx->spki_alg_oid_start = saved_off;
+	ctx->spki_alg_oid_len = parsed;
 
 	ret = 0;
 
@@ -4609,11 +5171,12 @@ static const u8 _dn_oid_street_address[] = { 0x06, 0x03, 0x55, 0x04, 0x09 };
  * -1 is returned on error, 0 on success.
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int check_utf8_string(const u8 *buf, u16 len)
@@ -4775,11 +5338,12 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int check_printable_string(const u8 *buf, u16 len)
@@ -4842,11 +5406,12 @@ out:
  * returned on error, 0 on success.
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int check_numeric_string(const u8 *buf, u16 len)
@@ -4886,11 +5451,12 @@ out:
  * VisibleString == ISO646String == ASCII
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int check_visible_string(const u8 *buf, u16 len)
@@ -4976,11 +5542,12 @@ out:
  * using printable string charset
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int check_teletex_string(const u8 *buf, u16 len)
@@ -4989,11 +5556,12 @@ static int check_teletex_string(const u8 *buf, u16 len)
 }
 
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int check_universal_string(const u8 ATTRIBUTE_UNUSED *buf,
@@ -5004,11 +5572,12 @@ static int check_universal_string(const u8 ATTRIBUTE_UNUSED *buf,
 #endif
 
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int check_bmp_string(const u8 ATTRIBUTE_UNUSED *buf,
@@ -5019,11 +5588,12 @@ static int check_bmp_string(const u8 ATTRIBUTE_UNUSED *buf,
 }
 
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int check_ia5_string(const u8 *buf, u16 len)
@@ -5078,6 +5648,15 @@ out:
  * 'len' is the size of given buffer, including string type
  * and string length. 'lb' and 'ub' are respectively lower and
  * upper bounds for the effective string.
+ *
+ * Note that RFC 5280 has the following: "upper bounds on string types,
+ * such as TeletexString, are measured in characters.  Excepting
+ * PrintableString or IA5String, a significantly greater number of
+ * octets will be required to hold  such a value.  As a minimum, 16
+ * octets, or twice the specified  upper bound, whichever is the larger,
+ * should be allowed for TeletexString.  For UTF8String or UniversalString
+ * at least four times the upper bound should be allowed.
+ *
  */
 #define STR_TYPE_UTF8_STRING      12
 #define STR_TYPE_NUMERIC_STRING   18
@@ -5088,12 +5667,13 @@ out:
 #define STR_TYPE_UNIVERSAL_STRING 28
 #define STR_TYPE_BMP_STRING       30
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures \result == 0 ==> ((len >= 2) && (lb <= len - 2 <= ub));
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_directory_string(const u8 *buf, u16 len, u16 lb, u16 ub)
@@ -5201,12 +5781,13 @@ out:
  * on success.
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures \result == 0 ==> ((len >= 2) && (lb <= len - 2 <= ub));
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_printable_string(const u8 *buf, u16 len, u16 lb, u16 ub)
@@ -5264,12 +5845,13 @@ out:
  * verifies that. It returns -1 on error, 0 on success.
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures \result == 0 ==> ((len >= 2) && (lb <= len - 2 <= ub));
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_numeric_string(const u8 *buf, u16 len, u16 lb, u16 ub)
@@ -5327,12 +5909,13 @@ out:
  * is defined in ABNF form as *(%x00-7F).
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures \result == 0 ==> ((len >= 2) && (lb <= len - 2 <= ub));
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_ia5_string(const u8 *buf, u16 len, u16 lb, u16 ub)
@@ -5387,12 +5970,13 @@ out:
 
 #ifdef TEMPORARY_LAXIST_EMAILADDRESS_WITH_UTF8_ENCODING
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures \result == 0 ==> ((len >= 2) && (lb <= len - 2 <= ub));
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_utf8_string(const u8 *buf, u16 len, u16 lb, u16 ub)
@@ -5460,16 +6044,17 @@ out:
  *       bmpString         BMPString       (SIZE (1..ub-common-name)) }
  */
 #ifdef TEMPORARY_LAXIST_RDN_UPPER_BOUND
-#define UB_COMMON_NAME 128
+#define UB_COMMON_NAME 192
 #else
 #define UB_COMMON_NAME 64
 #endif
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_cn(const u8 *buf, u16 len)
@@ -5479,11 +6064,12 @@ static int parse_rdn_val_cn(const u8 *buf, u16 len)
 
 #define UB_NAME 32768
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_x520name(const u8 *buf, u16 len)
@@ -5493,11 +6079,12 @@ static int parse_rdn_val_x520name(const u8 *buf, u16 len)
 
 #define UB_EMAILADDRESS 255
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_emailaddress(const u8 *buf, u16 len)
@@ -5540,11 +6127,12 @@ static int parse_rdn_val_emailaddress(const u8 *buf, u16 len)
 
 #define UB_SERIAL_NUMBER 64
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_serial(const u8 *buf, u16 len)
@@ -5563,11 +6151,12 @@ static int parse_rdn_val_serial(const u8 *buf, u16 len)
 
 #define UB_COUNTRY 2
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_country(const u8 *buf, u16 len)
@@ -5577,11 +6166,12 @@ static int parse_rdn_val_country(const u8 *buf, u16 len)
 
 #define UB_LOCALITY_NAME 128
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_locality(const u8 *buf, u16 len)
@@ -5591,11 +6181,12 @@ static int parse_rdn_val_locality(const u8 *buf, u16 len)
 
 #define UB_STATE_NAME 128
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_state(const u8 *buf, u16 len)
@@ -5609,11 +6200,12 @@ static int parse_rdn_val_state(const u8 *buf, u16 len)
 #define UB_ORGANIZATION_NAME 128
 #endif
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_org(const u8 *buf, u16 len)
@@ -5627,11 +6219,12 @@ static int parse_rdn_val_org(const u8 *buf, u16 len)
 #define UB_ORGANIZATION_UNIT_NAME 64
 #endif
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_org_unit(const u8 *buf, u16 len)
@@ -5641,11 +6234,12 @@ static int parse_rdn_val_org_unit(const u8 *buf, u16 len)
 
 #define UB_TITLE_NAME 64
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_title(const u8 *buf, u16 len)
@@ -5654,11 +6248,12 @@ static int parse_rdn_val_title(const u8 *buf, u16 len)
 }
 
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_dn_qual(const u8 *buf, u16 len)
@@ -5709,11 +6304,12 @@ static inline int _is_alpha(u8 c)
  */
 #define UB_DC 63
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_dc(const u8 *buf, u16 len)
@@ -5791,11 +6387,12 @@ out:
 
 #define UB_PSEUDONYM 128
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_pseudo(const u8 *buf, u16 len)
@@ -5809,11 +6406,12 @@ static int parse_rdn_val_pseudo(const u8 *buf, u16 len)
 /* OGRN is the main state registration number of juridical entities */
 #define UB_OGRN 13
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_ogrn(const u8 *buf, u16 len)
@@ -5824,11 +6422,12 @@ static int parse_rdn_val_ogrn(const u8 *buf, u16 len)
 /* SNILS is the individual insurance account number */
 #define UB_SNILS 11
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_snils(const u8 *buf, u16 len)
@@ -5842,11 +6441,12 @@ static int parse_rdn_val_snils(const u8 *buf, u16 len)
  */
 #define UB_OGRNIP 15
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_ogrnip(const u8 *buf, u16 len)
@@ -5857,11 +6457,12 @@ static int parse_rdn_val_ogrnip(const u8 *buf, u16 len)
 /* INN is the individual taxpayer number (ITN). */
 #define UB_INN 12
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_inn(const u8 *buf, u16 len)
@@ -5872,11 +6473,12 @@ static int parse_rdn_val_inn(const u8 *buf, u16 len)
 /* street address. */
 #define UB_STREET_ADDRESS 64 /* XXX FIXME Don't know what the limit is */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_street_address(const u8 *buf, u16 len)
@@ -5891,9 +6493,10 @@ typedef struct {
 } _name_oid;
 
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_rdn_val_bad_oid(const u8 *buf, u16 len)
@@ -6003,11 +6606,12 @@ static const _name_oid known_dn_oids[] = {
 #define NUM_KNOWN_DN_OIDS (sizeof(known_dn_oids) / sizeof(known_dn_oids[0]))
 
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != NULL)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures (\result != NULL) ==> \exists integer i ; 0 <= i < NUM_KNOWN_DN_OIDS && \result == &known_dn_oids[i];
   @ ensures (len == 0) ==> \result == NULL;
   @ ensures (buf == NULL) ==> \result == NULL;
+  @
   @ assigns \nothing;
   @*/
 static const _name_oid * find_dn_by_oid(const u8 *buf, u16 len)
@@ -6058,13 +6662,15 @@ out:
  *  AttributeValue ::= ANY -- DEFINED BY AttributeType
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
+  @ requires \separated(buf+(..), eaten);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (1 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten;
   @*/
 static int parse_AttributeTypeAndValue(const u8 *buf, u16 len, u16 *eaten)
@@ -6175,14 +6781,15 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \separated(eaten,buf+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (1 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten;
   @*/
 static int parse_RelativeDistinguishedName(const u8 *buf, u16 len, u16 *eaten)
@@ -6308,15 +6915,16 @@ out:
  * convert such names into DNS names.
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \separated(eaten, empty, buf+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (1 < *eaten <= len);
   @ ensures (\result == 0) ==> ((*empty == 0) || (*empty == 1));
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten, *empty;
   @*/
 static int parse_x509_Name(const u8 *buf, u16 len, u16 *eaten, int *empty)
@@ -6374,7 +6982,9 @@ out:
 /*@
   @ requires 0x30 <= d <= 0x39;
   @ requires 0x30 <= u <= 0x39;
+  @
   @ ensures 0 <= \result <= 99;
+  @
   @ assigns \nothing;
   @*/
 u8 compute_decimal(u8 d, u8 u)
@@ -6384,7 +6994,6 @@ u8 compute_decimal(u8 d, u8 u)
 
 /* Validate UTCTime (including the constraints from RFC 5280) */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \valid(eaten);
@@ -6395,11 +7004,13 @@ u8 compute_decimal(u8 d, u8 u)
   @ requires \valid(min);
   @ requires \valid(sec);
   @ requires \separated(eaten, year, month, day, hour, min, sec, buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (\result == 0) ==> (*eaten == 15);
   @ ensures (len < 15) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten, *year, *month, *day, *hour, *min, *sec;
   @*/
 static int parse_UTCTime(const u8 *buf, u16 len, u16 *eaten,
@@ -6533,7 +7144,9 @@ out:
   @ requires 0x30 <= d2 <= 0x39;
   @ requires 0x30 <= d3 <= 0x39;
   @ requires 0x30 <= d4 <= 0x39;
+  @
   @ ensures 0 <= \result <= 9999;
+  @
   @ assigns \nothing;
   @*/
 u16 compute_year(u8 d1, u8 d2, u8 d3, u8 d4)
@@ -6551,7 +7164,6 @@ u16 compute_year(u8 d1, u8 d2, u8 d3, u8 d4)
  * but this would impact readibility.
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \valid(year);
@@ -6561,11 +7173,13 @@ u16 compute_year(u8 d1, u8 d2, u8 d3, u8 d4)
   @ requires \valid(min);
   @ requires \valid(sec);
   @ requires \separated(eaten, year, month, day, hour, min, sec, buf + (0 .. (len - 1)));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (\result == 0) ==> (*eaten == 17);
   @ ensures (len < 17) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten, *year, *month, *day, *hour, *min, *sec;
   @*/
 static int parse_generalizedTime(const u8 *buf, u16 len, u16 *eaten,
@@ -6695,7 +7309,6 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \valid(eaten);
@@ -6706,10 +7319,12 @@ out:
   @ requires \valid(min);
   @ requires \valid(sec);
   @ requires \separated(t_type,eaten,year,month,day,hour,min,sec,buf+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *t_type, *eaten, *year, *month, *day, *hour, *min, *sec;
   @*/
 static int parse_Time(const u8 *buf, u16 len, u8 *t_type, u16 *eaten,
@@ -6771,6 +7386,7 @@ out:
  * zero value on error.
  */
 /*@ ensures \result < 0 || \result == 0;
+  @
   @ assigns \nothing;
   @*/
 static int _verify_correct_time_use(u8 time_type, u16 yyyy)
@@ -6801,18 +7417,19 @@ static int _verify_correct_time_use(u8 time_type, u16 yyyy)
  * is indeed before notAfter, etc).
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \valid(eaten);
   @ requires \separated(eaten, cert+(..), ctx);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
-  @ assigns *eaten, *ctx;
+  @
+  @ assigns *eaten, ctx->not_before, ctx->not_after;
   @*/
 static int parse_x509_Validity(cert_parsing_ctx *ctx,
 			       const u8 *cert, u16 off, u16 len, u16 *eaten)
@@ -6833,6 +7450,8 @@ static int parse_x509_Validity(cert_parsing_ctx *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/* Check we are dealing with a valid sequence */
 	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
@@ -6922,17 +7541,18 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \valid(eaten);
   @ requires \separated(eaten, cert+(..), ctx);
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
+  @
   @ assigns *eaten, *ctx;
   @*/
 static int parse_x509_subjectPublicKeyInfo(cert_parsing_ctx *ctx,
@@ -6940,12 +7560,12 @@ static int parse_x509_subjectPublicKeyInfo(cert_parsing_ctx *ctx,
 					   u16 *eaten)
 {
 	u16 hdr_len = 0, data_len = 0, parsed = 0, remain = 0;
+	u16 saved_off = off;
 	const u8 *buf = cert + off;
-	const _alg_id *alg = NULL;
-	alg_param param;
+	const _pubkey_alg *alg = NULL;
 	int ret;
 
-	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
+	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -6963,27 +7583,18 @@ static int parse_x509_subjectPublicKeyInfo(cert_parsing_ctx *ctx,
 	remain = data_len;
 	off += hdr_len;
 
-	// memset(&param, 0, sizeof(param));
-	param.curve_param = NULL;
-	param.null_param = NULL;
-	param.ecdsa_no_param = 0;
-	param.unparsed_param = 0;
-
-	ret = parse_x509_AlgorithmIdentifier(buf, remain,
-					     &alg, &param, &parsed);
+	ret = parse_x509_pubkey_AlgorithmIdentifier(ctx, cert, off, remain,
+						    &alg, &parsed);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	if (!(alg->alg_type & ALG_PUBKEY)) {
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
+	/*@ assert alg->parse_pubkey == parse_pubkey_bign ==> \initialized(&(ctx->spki_alg_params.bign.curve_order_bit_len)); */
+	/*@ assert alg->parse_pubkey == parse_pubkey_bign ==> \initialized(&(ctx->spki_alg_params.bign.curve)); */
+	/*@ assert alg->parse_pubkey == parse_pubkey_ec ==> \initialized(&(ctx->spki_alg_params.ecpubkey.curve_order_bit_len)); */
+	/*@ assert alg->parse_pubkey == parse_pubkey_ec ==> \initialized(&(ctx->spki_alg_params.ecpubkey.curve)); */
 
-	ctx->spki_alg_oid_start = off;
-	ctx->spki_alg_oid_len = parsed;
 	buf += parsed;
 	remain -= parsed;
 	off += parsed;
@@ -6992,24 +7603,38 @@ static int parse_x509_subjectPublicKeyInfo(cert_parsing_ctx *ctx,
 	 * Let's now check if subjectPublicKey is ok based on the
 	 * algorithm and parameters we found.
 	 */
-	if (!alg->parse_subjectpubkey) {
+	if (!alg->parse_pubkey) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	/*@ assert alg->parse_subjectpubkey \in {
-		  parse_subjectpubkey_ec, parse_subjectpubkey_rsa,
-		  parse_subjectpubkey_ed448, parse_subjectpubkey_ed25519,
-		  parse_subjectpubkey_x448, parse_subjectpubkey_x25519,
-		  parse_subjectpubkey_gost256, parse_subjectpubkey_gost512,
-		  parse_subjectpubkey_generic } ; @*/
-	/*@ calls parse_subjectpubkey_ec, parse_subjectpubkey_rsa,
-		  parse_subjectpubkey_ed448, parse_subjectpubkey_ed25519,
-		  parse_subjectpubkey_x448, parse_subjectpubkey_x25519,
-		  parse_subjectpubkey_gost256, parse_subjectpubkey_gost512,
-		  parse_subjectpubkey_generic ; @*/
-	ret = alg->parse_subjectpubkey(buf, remain, &param);
+	/*@ assert alg->parse_pubkey \in {
+		  parse_pubkey_ed448,
+		  parse_pubkey_x448,
+		  parse_pubkey_ed25519,
+		  parse_pubkey_x25519,
+		  parse_pubkey_ec,
+		  parse_pubkey_rsa,
+		  parse_pubkey_gostr3410_94,
+		  parse_pubkey_gostr3410_2001,
+		  parse_pubkey_gostr3410_2012_256,
+		  parse_pubkey_gostr3410_2012_512,
+		  parse_pubkey_dsa,
+		  parse_pubkey_bign } ; @*/
+	/*@ calls parse_pubkey_ed448,
+		  parse_pubkey_x448,
+		  parse_pubkey_ed25519,
+		  parse_pubkey_x25519,
+		  parse_pubkey_ec,
+		  parse_pubkey_rsa,
+		  parse_pubkey_gostr3410_94,
+		  parse_pubkey_gostr3410_2001,
+		  parse_pubkey_gostr3410_2012_256,
+		  parse_pubkey_gostr3410_2012_512,
+		  parse_pubkey_dsa,
+		  parse_pubkey_bign ; @*/
+	ret = alg->parse_pubkey(ctx, cert, off, remain);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -7017,6 +7642,8 @@ static int parse_x509_subjectPublicKeyInfo(cert_parsing_ctx *ctx,
 
 	ctx->spki_pub_key_start = off;
 	ctx->spki_pub_key_len = remain;
+	ctx->spki_start = saved_off;
+	ctx->spki_len = hdr_len + data_len;
 	*eaten = hdr_len + data_len;
 
 	ret = 0;
@@ -7090,6 +7717,15 @@ out:
  *    looking it up in the Domain Name System.
  *
  */
+/*@
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
+  @ ensures \result <= 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @
+  @ assigns \nothing;
+  @*/
 static int check_prefered_name_syntax(const u8 *buf, u16 len)
 {
 
@@ -7136,15 +7772,16 @@ out:
 #define NAME_TYPE_ediPartyName   0xa5
 
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \separated(eaten, empty, buf+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (1 < *eaten <= len);
   @ ensures (\result == 0) ==> (0 <= *empty <= 1);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten, *empty;
   @*/
 static int parse_GeneralName(const u8 *buf, u16 len, u16 *eaten, int *empty)
@@ -7339,14 +7976,15 @@ out:
 
 /* GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \separated(eaten, buf+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (1 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten;
   @*/
 static int parse_GeneralNames(const u8 *buf, u16 len, tag_class exp_class,
@@ -7396,13 +8034,14 @@ out:
 }
 
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \separated(eaten, buf+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (\result == 0) ==> (1 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten;
   @*/
 static int parse_AccessDescription(const u8 *buf, u16 len, u16 *eaten)
@@ -7531,16 +8170,17 @@ out:
  *       registeredID              [8]  OBJECT IDENTIFIER }
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (critical != 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_ext_AIA(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
@@ -7555,6 +8195,8 @@ static int parse_ext_AIA(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/*
 	 * 4.2.2.1 of RFC5280 has "Conforming CAs MUST mark this
@@ -7628,6 +8270,10 @@ out:
 
 /* 4.2.1.1. Authority Key Identifier
  *
+ * The identification MAY be based on either the key identifier (the subject
+ * key identifier in the issuer's certificate) or the issuer name and serial
+ * number.
+ *
  *   id-ce-authorityKeyIdentifier OBJECT IDENTIFIER ::=  { id-ce 35 }
  *
  *   AuthorityKeyIdentifier ::= SEQUENCE {
@@ -7641,32 +8287,45 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
-  @ assigns *ctx;
+  @
+  @ assigns ctx->aki_has_keyIdentifier,
+	    ctx->aki_keyIdentifier_start,
+	    ctx->aki_keyIdentifier_len,
+	    ctx->aki_has_generalNames_and_serial,
+	    ctx->aki_generalNames_start,
+	    ctx->aki_generalNames_len,
+	    ctx->aki_serial_start,
+	    ctx->aki_serial_len,
+	    ctx->has_aki;
   @*/
 static int parse_ext_AKI(cert_parsing_ctx *ctx,
 			 const u8 *cert, u16 off, u16 len, int critical)
 {
 	u16 hdr_len = 0, data_len = 0;
 	const u8 *buf = cert + off;
-	u16 key_id_hdr_len = 0, key_id_data_len = 0;
+	u16 key_id_hdr_len = 0, key_id_data_len = 0, key_id_data_off = 0;
+	u16 gen_names_off = 0, gen_names_len = 0;
+	u16 cert_serial_off = 0, cert_serial_len = 0;
 	u16 remain;
 	u16 parsed = 0;
-	int ret, has_keyIdentifier = 0;
+	int ret, has_keyIdentifier = 0, has_gen_names_and_serial = 0;
 
 	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/*
 	 * As specified in section 4.2.1.1. of RFC 5280, it is recommended
@@ -7714,11 +8373,13 @@ static int parse_ext_AKI(cert_parsing_ctx *ctx,
 			goto out;
 		}
 
+		key_id_data_off = off + key_id_hdr_len;
 		buf += key_id_hdr_len + key_id_data_len;
 		off += key_id_hdr_len + key_id_data_len;
 		remain -= key_id_hdr_len + key_id_data_len;
 		has_keyIdentifier = 1;
 	}
+
 
 	/*
 	 * See if a (GeneralNames, CertificateSerialNumber) couple follows.
@@ -7728,7 +8389,8 @@ static int parse_ext_AKI(cert_parsing_ctx *ctx,
 	ret = parse_GeneralNames(buf, remain, CLASS_CONTEXT_SPECIFIC, 1,
 				 &parsed);
 	if (!ret) {
-		u16 cert_serial_len = 0;
+		gen_names_off = off;
+		gen_names_len = parsed;
 
 		buf += parsed;
 		off += parsed;
@@ -7742,6 +8404,10 @@ static int parse_ext_AKI(cert_parsing_ctx *ctx,
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
 		}
+		/*@ assert cert_serial_len > 2; */
+
+		has_gen_names_and_serial = 1;
+		cert_serial_off = off;
 
 		buf += cert_serial_len;
 		off += cert_serial_len;
@@ -7755,7 +8421,29 @@ static int parse_ext_AKI(cert_parsing_ctx *ctx,
 		goto out;
 	}
 
+	/* Only populate context when we know everything is ok. */
 	ctx->aki_has_keyIdentifier = has_keyIdentifier;
+	/*@ assert \initialized(&ctx->aki_has_keyIdentifier); */
+	if (ctx->aki_has_keyIdentifier) {
+		ctx->aki_keyIdentifier_start = key_id_data_off;
+		/*@ assert \initialized(&ctx->aki_keyIdentifier_start); */
+		ctx->aki_keyIdentifier_len = key_id_data_len;
+		/*@ assert \initialized(&ctx->aki_keyIdentifier_len); */
+	}
+	ctx->aki_has_generalNames_and_serial = has_gen_names_and_serial;
+	/*@ assert \initialized(&ctx->aki_has_generalNames_and_serial); */
+	if (ctx->aki_has_generalNames_and_serial) {
+		ctx->aki_generalNames_start = gen_names_off;
+		/*@ assert \initialized(&ctx->aki_generalNames_start); */
+		ctx->aki_generalNames_len = gen_names_len;
+		/*@ assert \initialized(&ctx->aki_generalNames_len); */
+		ctx->aki_serial_start = cert_serial_off + 2;  /* 2 bytes long hdr for a valid SN */
+		/*@ assert \initialized(&ctx->aki_serial_start); */
+		ctx->aki_serial_len = cert_serial_len - 2;
+		/*@ assert \initialized(&ctx->aki_serial_len); */
+	}
+	ctx->has_aki = 1;
+	/*@ assert \initialized(&ctx->has_aki); */
 	ret = 0;
 
 out:
@@ -7769,16 +8457,19 @@ out:
  * KeyIdentifier ::= OCTET STRING
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx,cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
-  @ assigns *ctx;
+  @
+  @ assigns ctx->has_ski,
+	    ctx->ski_start,
+	    ctx->ski_len;
   @*/
 static int parse_ext_SKI(cert_parsing_ctx *ctx,
 			 const u8 *cert, u16 off, u16 len, int critical)
@@ -7793,6 +8484,8 @@ static int parse_ext_SKI(cert_parsing_ctx *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	remain = len;
 
@@ -7838,7 +8531,8 @@ static int parse_ext_SKI(cert_parsing_ctx *ctx,
 	}
 
 	ctx->has_ski = 1;
-
+	ctx->ski_start = off + key_id_hdr_len;
+	ctx->ski_len = key_id_data_len;
 	ret = 0;
 
 out:
@@ -7859,12 +8553,13 @@ out:
  * to one."
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \separated(val, buf+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *val;
   @*/
 static int parse_nine_bit_named_bit_list(const u8 *buf, u16 len, u16 *val)
@@ -8064,16 +8759,19 @@ out:
 #define KU_decipherOnly      0x0100
 
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
-  @ assigns *ctx;
+  @
+  @ assigns ctx->has_keyUsage,
+	    ctx->keyCertSign_set,
+	    ctx->cRLSign_set;
   @*/
 static int parse_ext_keyUsage(cert_parsing_ctx *ctx,
 			      const u8 *cert, u16 off, u16 len,
@@ -8158,14 +8856,15 @@ out:
 
 /* CPSuri ::= IA5String */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \separated(eaten,buf+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten;
   @*/
 static int parse_CPSuri(const u8 *buf, u16 len, u16 *eaten)
@@ -8200,14 +8899,15 @@ out:
  *          utf8String       UTF8String     (SIZE (1..200)) }
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \separated(eaten, buf+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten;
   @*/
 static int parse_DisplayText(const u8 *buf, u16 len, u16 *eaten)
@@ -8301,14 +9001,15 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \separated(eaten, buf+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (1 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten;
   @*/
 static int parse_NoticeReference(const u8 *buf, u16 len, u16 *eaten)
@@ -8372,7 +9073,7 @@ static int parse_NoticeReference(const u8 *buf, u16 len, u16 *eaten)
 
 	/* The sequence contains integers */
 	/*@
-	  @ loop assigns ret, buf, remain, parsed;
+	  @ loop assigns ret, buf, remain, parsed, hdr_len, data_len;
 	  @ loop invariant \valid_read(buf + (0 .. (remain - 1)));
 	  @ loop variant remain;
 	  @ */
@@ -8380,12 +9081,13 @@ static int parse_NoticeReference(const u8 *buf, u16 len, u16 *eaten)
 		/* Verify the integer is encoded as it should */
 		ret = parse_integer(buf, remain,
 				    CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
-				    &parsed);
+				    &hdr_len, &data_len);
 		if (ret) {
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
 		}
 
+		parsed = hdr_len + data_len;
 		remain -= parsed;
 		buf += parsed;
 	}
@@ -8415,14 +9117,15 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \separated(eaten, buf+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten;
   @*/
 static int parse_UserNotice(const u8 *buf, u16 len, u16 *eaten)
@@ -8498,14 +9201,15 @@ out:
  *   PolicyQualifierId ::= OBJECT IDENTIFIER ( id-qt-cps | id-qt-unotice )
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \separated(eaten, buf+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (1 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten;
   @*/
 static int parse_policyQualifierInfo(const u8 *buf, u16 len, u16 *eaten)
@@ -8597,14 +9301,15 @@ out:
  *                                PolicyQualifierInfo OPTIONAL }
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \separated(eaten,buf+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (1 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns *eaten;
   @*/
 static int parse_PolicyInformation(const u8 *buf, u16 len, u16 *eaten)
@@ -8748,15 +9453,16 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_ext_certPolicies(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
@@ -8772,6 +9478,8 @@ static int parse_ext_certPolicies(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/*
 	 * FIXME!
@@ -8844,15 +9552,16 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx,cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_ext_policyMapping(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
@@ -8868,6 +9577,8 @@ static int parse_ext_policyMapping(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/*
 	 * As specified in section 4.2.1.5. of RFC 5280, "conforming CAs
@@ -8988,16 +9699,19 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
-  @ assigns *ctx;
+  @
+  @ assigns ctx->has_san,
+	    ctx->san_empty,
+	    ctx->san_critical;
   @*/
 static int parse_ext_SAN(cert_parsing_ctx *ctx,
 			 const u8 *cert, u16 off, u16 len,
@@ -9012,6 +9726,8 @@ static int parse_ext_SAN(cert_parsing_ctx *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/* Let's first check we are dealing with a valid sequence */
 	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
@@ -9100,6 +9816,7 @@ static int parse_ext_SAN(cert_parsing_ctx *ctx,
 	 * Now that we know the extension is valid, let's record some
 	 * useful info.
 	 */
+	ctx->has_san = 1;
 	ctx->san_empty = san_empty;
 	ctx->san_critical = critical;
 
@@ -9111,15 +9828,16 @@ out:
 
 /* 4.2.1.7. Issuer Alternative Name */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_ext_IAN(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
@@ -9135,6 +9853,8 @@ static int parse_ext_IAN(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/*
 	 * Section 4.2.1.7 of RFC 5280 has "Where present, conforming CAs
@@ -9222,15 +9942,16 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_ext_subjectDirAttr(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
@@ -9325,16 +10046,19 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
-  @ assigns *ctx;
+  @
+  @ assigns ctx->bc_critical,
+	    ctx->ca_true,
+	    ctx->pathLenConstraint_set;
   @*/
 static int parse_ext_basicConstraints(cert_parsing_ctx *ctx,
 				      const u8 *cert, u16 off, u16 len,
@@ -9351,6 +10075,8 @@ static int parse_ext_basicConstraints(cert_parsing_ctx *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/* Record if basicConstraints extension was mared critical */
 	ctx->bc_critical = critical;
@@ -9472,11 +10198,12 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_GeneralSubtrees(const u8 *buf, u16 len)
@@ -9553,16 +10280,17 @@ out:
 
 
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
-  @ assigns *ctx;
+  @
+  @ assigns ctx->has_name_constraints;
   @*/
 static int parse_ext_nameConstraints(cert_parsing_ctx *ctx,
 				     const u8 *cert, u16 off, u16 len, int critical)
@@ -9576,6 +10304,8 @@ static int parse_ext_nameConstraints(cert_parsing_ctx *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/*
 	 * Section 4.2.1.10 of RFC 5280 has "Conforming CAs MUST mark
@@ -9673,15 +10403,16 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_ext_policyConstraints(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
@@ -9697,6 +10428,8 @@ static int parse_ext_policyConstraints(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/*
 	 * Section 4.2.1.11 of RFC 5280 has "Conforming CAs MUST mark this
@@ -9733,13 +10466,14 @@ static int parse_ext_policyConstraints(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 
 	/* Check if we have a requireExplicitPolicy */
 	ret = parse_integer(buf, remain, CLASS_CONTEXT_SPECIFIC, 0,
-			    &parsed);
+			    &hdr_len, &data_len);
 	if (!ret) {
 		/*
 		 * As the value is expected to be a very small integer,
 		 * content should be encoded on at most 1 byte, i.e.
 		 * 'parsed' value should be 3 (w/ 2 bytes header).
 		 */
+		parsed = hdr_len + data_len;
 		if (parsed != 3) {
 			ret = -__LINE__;
 			ERROR_TRACE_APPEND(__LINE__);
@@ -9753,13 +10487,14 @@ static int parse_ext_policyConstraints(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 
 	/* Check if we have an inhibitPolicyMapping */
 	ret = parse_integer(buf, remain, CLASS_CONTEXT_SPECIFIC, 1,
-			    &parsed);
+			    &hdr_len, &data_len);
 	if (!ret) {
 		/*
 		 * As the value is expected to be a very small integer,
 		 * content should be encoded on at most 1 byte, i.e.
 		 * 'parsed' value should be 3 (w/ 2 bytes header).
 		 */
+		parsed = hdr_len + data_len;
 		if (parsed != 3) {
 			ret = -__LINE__;
 			ERROR_TRACE_APPEND(__LINE__);
@@ -9850,11 +10585,12 @@ static const _kp_oid known_kp_oids[] = {
 #define NUM_KNOWN_KP_OIDS (sizeof(known_kp_oids) / sizeof(known_kp_oids[0]))
 
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != NULL)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures (\result != NULL) ==> \exists integer i ; 0 <= i < NUM_KNOWN_KP_OIDS && \result == &known_kp_oids[i];
   @ ensures (len == 0) ==> \result == NULL;
   @ ensures (buf == NULL) ==> \result == NULL;
+  @
   @ assigns \nothing;
   @*/
 static const _kp_oid * find_kp_by_oid(const u8 *buf, u16 len)
@@ -9906,16 +10642,17 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
-  @ assigns \nothing;
+  @
+  @ assigns ctx->has_eku;
   @*/
 static int parse_ext_EKU(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 			 const u8 *cert, u16 off, u16 len,
@@ -9931,6 +10668,8 @@ static int parse_ext_EKU(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
 			   &hdr_len, &data_len);
@@ -9987,6 +10726,8 @@ static int parse_ext_EKU(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 		remain -= oid_len;
 	}
 
+	ctx->has_eku = 1;
+
 	ret = 0;
 
 out:
@@ -10007,15 +10748,16 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \separated(eaten, buf+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
+  @
   @ assigns *eaten;
   @*/
 static int parse_crldp_reasons(const u8 *buf, u16 len, u16 *eaten)
@@ -10075,20 +10817,22 @@ out:
  *          aACompromise            (8) }
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \valid(ctx);
   @ requires \separated(eaten, ctx, buf+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (0 < *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
-  @ assigns *eaten, *ctx;
+  @
+  @ assigns *eaten,
+	    ctx->one_crldp_has_all_reasons;
   @*/
-static int parse_DistributionPoint(const u8 *buf, u16 len, u16 *eaten,
-				   cert_parsing_ctx *ctx)
+static int parse_DistributionPoint(cert_parsing_ctx *ctx,
+				   const u8 *buf, u16 len, u16 *eaten)
 {
 	u16 hdr_len = 0, data_len = 0, remain = 0, total_len = 0;
 	int dp_or_issuer_present = 0;
@@ -10258,16 +11002,18 @@ out:
  * be marked as non-critical.
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
-  @ assigns *ctx;
+  @
+  @ assigns ctx->has_crldp,
+	    ctx->one_crldp_has_all_reasons;
   @*/
 static int parse_ext_CRLDP(cert_parsing_ctx *ctx,
 			   const u8 *cert, u16 off, u16 len,
@@ -10313,14 +11059,14 @@ static int parse_ext_CRLDP(cert_parsing_ctx *ctx,
 
 	/* Iterate on DistributionPoint */
 	/*@
-	  @ loop assigns ret, buf, remain, *ctx;
+	  @ loop assigns ret, buf, remain, ctx->one_crldp_has_all_reasons;
 	  @ loop invariant \valid_read(buf + (0 .. (remain - 1)));
 	  @ loop variant remain;
 	  @ */
 	while (remain) {
 		u16 eaten = 0;
 
-		ret = parse_DistributionPoint(buf, remain, &eaten, ctx);
+		ret = parse_DistributionPoint(ctx, buf, remain, &eaten);
 		if (ret) {
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
@@ -10344,15 +11090,16 @@ out:
  * SkipCerts ::= INTEGER (0..MAX)
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 #define MAX_INHIBITANYPOLICY 64
@@ -10361,7 +11108,7 @@ static int parse_ext_inhibitAnyPolicy(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 				      int critical)
 {
 	const u8 *buf = cert + off;
-	u16 eaten = 0;
+	u16 eaten = 0, hdr_len = 0, data_len = 0;
 	int ret;
 
 	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
@@ -10369,6 +11116,8 @@ static int parse_ext_inhibitAnyPolicy(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/*
 	 * 4.2.1.14 of RFC5280 has "Conforming CAs MUST mark this
@@ -10381,12 +11130,13 @@ static int parse_ext_inhibitAnyPolicy(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 	}
 
 	ret = parse_integer(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
-			    &eaten);
+			    &hdr_len, &data_len);
 	if (ret) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+	eaten = hdr_len + data_len;
 
 	/*
 	 * We limit SkipCerts values to integers between 0 and
@@ -10436,15 +11186,16 @@ static const u8 _ext_oid_FreshestCRL[] =       { 0x06, 0x03, 0x55, 0x1d, 0x2e };
 static const u8 _ext_oid_inhibitAnyPolicy[] =  { 0x06, 0x03, 0x55, 0x1d, 0x36 };
 
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
+  @
   @ assigns \nothing;
   @*/
 static int parse_ext_bad_oid(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
@@ -10696,11 +11447,12 @@ static const _ext_oid known_ext_oids[] = {
 #define MAX_EXT_NUM_PER_CERT NUM_KNOWN_EXT_OIDS
 
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != NULL)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @
   @ ensures (\result != NULL) ==> \exists integer i ; 0 <= i < NUM_KNOWN_EXT_OIDS && \result == &known_ext_oids[i];
   @ ensures (len == 0) ==> \result == NULL;
   @ ensures (buf == NULL) ==> \result == NULL;
+  @
   @ assigns \nothing;
   @*/
 static _ext_oid const * find_ext_by_oid(const u8 *buf, u16 len)
@@ -10745,7 +11497,10 @@ out:
   @ requires ext != \null;
   @ requires \valid(parsed_oid_list + (0 .. (MAX_EXT_NUM_PER_CERT - 1)));
   @ requires \initialized(parsed_oid_list + (0 .. (MAX_EXT_NUM_PER_CERT - 1)));
+  @ requires \separated(ext, parsed_oid_list);
+  @
   @ ensures \result <= 0;
+  @
   @ assigns parsed_oid_list[0 .. (MAX_EXT_NUM_PER_CERT - 1)];
   @*/
 static int check_record_ext_unknown(const _ext_oid *ext,
@@ -10806,18 +11561,20 @@ out:
  *       }
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
   @ requires \valid(ctx);
   @ requires \valid(parsed_oid_list);
   @ requires \initialized(parsed_oid_list + (0 .. (MAX_EXT_NUM_PER_CERT - 1)));
+  @ requires \separated(ctx, cert+(..),parsed_oid_list,eaten);
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (1 <= *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
+  @
   @ assigns parsed_oid_list[0 .. (MAX_EXT_NUM_PER_CERT - 1)], *eaten, *ctx;
   @*/
 static int parse_x509_Extension(cert_parsing_ctx *ctx,
@@ -10930,7 +11687,21 @@ static int parse_x509_Extension(cert_parsing_ctx *ctx,
 	 * would be a lot of work for three simple bytes.
 	 */
 	ret = parse_boolean(buf, ext_data_len, &parsed);
-	if (!ret) {
+	if (ret) {
+		/*
+		 * parse_boolean() returned an error which means this
+		 * was either a boolean with invalid content or
+		 * something else. If this was indeed a boolean, we can
+		 * just leave. Otherwise, this just measn the critical
+		 * flag was missing and the default value (false) applies,
+		 * in which case, we can continue parsing.
+		 */
+		if (ext_data_len && (buf[0] == ASN1_TYPE_BOOLEAN)) {
+			ret = -__LINE__;
+			ERROR_TRACE_APPEND(__LINE__);
+			goto out;
+		}
+	} else {
 		/*
 		 * We now know it's a valid BOOLEAN, *but* in our
 		 * case (DER), the DEFAULT FALSE means we cannot
@@ -11033,18 +11804,19 @@ out:
  *
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
   @ requires \valid(ctx);
   @ requires \separated(eaten, ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (1 <= *eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
+  @
   @ assigns *eaten, *ctx;
   @*/
 static int parse_x509_Extensions(cert_parsing_ctx *ctx,
@@ -11064,6 +11836,8 @@ static int parse_x509_Extensions(cert_parsing_ctx *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/*
 	 * Extensions in X.509 v3 certificates is an EXPLICITLY tagged
@@ -11178,12 +11952,12 @@ out:
  * algorithm found in the signatureAlgorithm field of the certificate.
  */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
   @ requires \valid(ctx);
   @ requires \separated(sig_alg, eaten, cert+(..), ctx);
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
@@ -11191,29 +11965,36 @@ out:
   @ ensures (sig_alg == \null) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
   @ ensures (\result == 0) ==> (1 < *eaten <= len);
-  @ assigns *eaten, *sig_alg, *ctx;
+  @ ensures (\result == 0) ==> \initialized(&(ctx->tbs_sig_alg_start));
+  @ ensures (\result == 0) ==> \initialized(&(ctx->tbs_sig_alg_len));
+  @ ensures (\result == 0) ==> \initialized(&(ctx->sig_alg));
+  @ ensures (\result == 0) ==> ctx->tbs_sig_alg_start < off + *eaten;
+  @
+  @ assigns *eaten, *ctx, *sig_alg;
   @*/
 static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 				     const u8 *cert, u16 off, u16 len,
-				     const _alg_id **sig_alg, u16 *eaten)
+				     const _sig_alg **sig_alg, u16 *eaten)
 {
 	u16 tbs_data_len = 0;
 	u16 tbs_hdr_len = 0;
+	u16 tbs_cert_len = 0;
 	u16 remain = 0;
 	u16 parsed = 0;
-	const u8 *buf = cert + off;
+	u16 cur_off = off;
+	const u8 *buf = cert + cur_off;
 	const u8 *subject_ptr, *issuer_ptr;
 	u16 subject_len, issuer_len;
-	alg_param param;
-	const _alg_id *alg = NULL;
+	const _sig_alg *alg = NULL;
 	int ret, empty_issuer = 1;
 
-	if ((cert == NULL) || (len == 0) || (ctx == NULL) ||
-	    (sig_alg == NULL) || (eaten == NULL)) {
+	if ((ctx == NULL) || (cert == NULL) || (len == 0) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
 	/*
 	 * Let's first check we are dealing with a valid sequence containing
@@ -11226,8 +12007,9 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 		goto out;
 	}
 
+	tbs_cert_len = tbs_hdr_len + tbs_data_len;
 	buf += tbs_hdr_len;
-	off += tbs_hdr_len;
+	cur_off += tbs_hdr_len;
 	remain = tbs_data_len;
 
 	/*
@@ -11236,18 +12018,18 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 	 */
 
 	/* version */
-	ret = parse_x509_Version(ctx, cert, off, remain, &parsed);
+	ret = parse_x509_Version(ctx, cert, cur_off, remain, &parsed);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
 	buf += parsed;
-	off += parsed;
+	cur_off += parsed;
 	remain -= parsed;
 
 	/* serialNumber */
-	ret = parse_CertSerialNumber(ctx, cert, off, remain,
+	ret = parse_CertSerialNumber(ctx, cert, cur_off, remain,
 				     CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
 				     &parsed);
 	if (ret) {
@@ -11256,25 +12038,24 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 	}
 
 	buf += parsed;
-	off += parsed;
+	cur_off += parsed;
 	remain -= parsed;
 
 	/* signature */
-	ret = parse_x509_AlgorithmIdentifier(buf, remain,
-					     &alg, &param, &parsed);
+	ret = parse_x509_tbsCert_sig_AlgorithmIdentifier(ctx, cert, cur_off, remain,
+							 &alg, &parsed);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
-
-	if (!(alg->alg_type & ALG_SIG)) {
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
+	/*@ assert \initialized(&(ctx->tbs_sig_alg_start)); */
+	/*@ assert ctx->tbs_sig_alg_start == cur_off; */
+	/*@ assert ctx->tbs_sig_alg_start < off + tbs_cert_len; */
+	/*@ assert \initialized(&(ctx->tbs_sig_alg_len)); */
+	/*@ assert \initialized(&(ctx->sig_alg)); */
 
 	buf += parsed;
-	off += parsed;
+	cur_off += parsed;
 	remain -= parsed;
 
 	/* issuer */
@@ -11283,7 +12064,7 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
-	ctx->issuer_start = off;
+	ctx->issuer_start = cur_off;
 	ctx->issuer_len = parsed;
 
 	/*
@@ -11301,18 +12082,20 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 	issuer_len = parsed;
 
 	buf += parsed;
-	off += parsed;
+	cur_off += parsed;
 	remain -= parsed;
 
 	/* validity */
-	ret = parse_x509_Validity(ctx, cert, off, remain, &parsed);
+	ret = parse_x509_Validity(ctx, cert, cur_off, remain, &parsed);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
+	/*@ assert ctx->tbs_sig_alg_start < off + tbs_cert_len; */
+
 	buf += parsed;
-	off += parsed;
+	cur_off += parsed;
 	remain -= parsed;
 
 	/* subject */
@@ -11322,14 +12105,14 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 		goto out;
 	}
 
-	ctx->subject_start = off;
+	ctx->subject_start = cur_off;
 	ctx->subject_len = parsed;
 
 	subject_ptr = buf;
 	subject_len = parsed;
 
 	buf += parsed;
-	off += parsed;
+	cur_off += parsed;
 	remain -= parsed;
 
 	/* We can now check if subject and issuer fields are identical */
@@ -11341,16 +12124,16 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 	}
 
 	/* subjectPublicKeyInfo */
-	ret = parse_x509_subjectPublicKeyInfo(ctx, cert, off, remain, &parsed);
+	ret = parse_x509_subjectPublicKeyInfo(ctx, cert, cur_off, remain, &parsed);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	ctx->spki_start = off;
-	ctx->spki_len = parsed;
+	/*@ assert ctx->tbs_sig_alg_start < off + tbs_cert_len; */
+
 	buf += parsed;
-	off += parsed;
+	cur_off += parsed;
 	remain -= parsed;
 
 	/*
@@ -11383,16 +12166,18 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 	 * a full parsing of the Extensions.
 	 */
 	if (remain) {
-		ret = parse_x509_Extensions(ctx, cert, off, remain, &parsed);
+		ret = parse_x509_Extensions(ctx, cert, cur_off, remain, &parsed);
 		if (ret) {
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
 		}
 
 		buf += parsed;
-		off += parsed;
+		cur_off += parsed;
 		remain -= parsed;
 	}
+
+	/*@ assert ctx->tbs_sig_alg_start < off + tbs_cert_len; */
 
 	if (remain != 0) {
 		ret = -__LINE__;
@@ -11485,8 +12270,10 @@ static int parse_x509_tbsCertificate(cert_parsing_ctx *ctx,
 		goto out;
 	}
 
-	/*@ assert 1 < (tbs_hdr_len + tbs_data_len) <= len; */
-	*eaten = tbs_hdr_len + tbs_data_len;
+	/*@ assert ctx->tbs_sig_alg_start < off + tbs_cert_len; */
+	/*@ assert 1 < tbs_cert_len <= len; */
+	*eaten = tbs_cert_len;
+	/*@ assert ctx->tbs_sig_alg_start < off + *eaten; */
 	*sig_alg = alg;
 
 	ret = 0;
@@ -11495,29 +12282,41 @@ out:
 	return ret;
 }
 
+/*
+ * The function is used to parse signatureAlgorithm field found after the
+ * tbsCertificate and before the signature. As the field is expected
+ * to exactly match the tbsCertificate.signature field which has already
+ * been fully parsed and validated, we only verify here that the element
+ * to parse is identical to previously parsed tbsCertificate.signature
+ * using the pointers in the context.
+ */
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
-  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (0 .. (off + len - 1)));
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires \valid(eaten);
   @ requires \valid(ctx);
-  @ requires \separated(eaten, cert+(..), exp_sig_alg, ctx);
+  @ requires \initialized(&(ctx->tbs_sig_alg_start));
+  @ requires \initialized(&(ctx->tbs_sig_alg_len));
+  @ requires ctx->tbs_sig_alg_start <= off;
+  @ requires \separated(eaten, cert+(..), ctx);
+  @
   @ ensures \result <= 0;
-  @ ensures (\result == 0) ==> (1 < *eaten <= len);
+  @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures (ctx == \null) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @
+  @ assigns *eaten,
+	    ctx->sig_alg_start,
+	    ctx->sig_alg_len;
   @*/
-static int parse_x509_signatureAlgorithm(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+static int parse_x509_signatureAlgorithm(cert_parsing_ctx *ctx,
 					 const u8 *cert, u16 off, u16 len,
-					 const _alg_id *exp_sig_alg, u16 *eaten)
+					 u16 *eaten)
 {
-	const _alg_id *alg = NULL;
-	const u8 *buf = cert + off;
-	alg_param param;
-	u16 parsed = 0;
+	u16 prev_len;
 	int ret;
 
 	if ((cert == NULL) || (len == 0) || (ctx == NULL) || (eaten == NULL)) {
@@ -11526,34 +12325,23 @@ static int parse_x509_signatureAlgorithm(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 		goto out;
 	}
 
-	/* signature */
-	ret = parse_x509_AlgorithmIdentifier(buf, len, &alg, &param, &parsed);
+	prev_len = ctx->tbs_sig_alg_len;
+	if (prev_len > len) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = bufs_differ(cert + ctx->tbs_sig_alg_start, cert + off, prev_len);
 	if (ret) {
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
-
-	if (!(alg->alg_type & ALG_SIG)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+	ctx->sig_alg_start = off;
+	ctx->sig_alg_len = prev_len;
 
-	buf += parsed;
-	len -= parsed;
-
-	/*
-	 * As specified in section 4.1.1.2 of RFC 5280, the signatureAlgorithm
-	 * field "MUST contain the same algorithm identifier as the signature
-	 * field in the sequence tbsCertificate (Section 4.1.2.3)."
-	 */
-	if (alg != exp_sig_alg) {
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
-
-	*eaten = parsed;
+	*eaten = prev_len;
 
 	ret = 0;
 
@@ -11563,23 +12351,37 @@ out:
 
 
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \separated(eaten, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    ctx->sig_alg_params.monkeysphere.sig_raw_off,
+	    ctx->sig_alg_params.monkeysphere.sig_raw_len;
   @*/
-static int parse_sig_generic(const u8 *buf, u16 len, u16 *eaten)
+static int parse_sig_monkey(cert_parsing_ctx *ctx,
+			    const u8 *cert, u16 off, u16 len, u16 *eaten)
 {
-	u16 bs_hdr_len = 0, bs_data_len = 0;
+	u16 remain, hdr_len = 0, data_len = 0;
+	const u8 *buf = cert  + off;
 	int ret;
 
+	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
 	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
-			   &bs_hdr_len, &bs_data_len);
+			   &hdr_len, &data_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -11590,13 +12392,37 @@ static int parse_sig_generic(const u8 *buf, u16 len, u16 *eaten)
 	 * octet encoding the number of unused bits in the final
 	 * subsequent octet of the bistring.
 	 * */
-	if (bs_data_len == 0) {
+	if (data_len == 0) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	*eaten = bs_hdr_len + bs_data_len;
+	buf += hdr_len;
+	off += hdr_len;
+
+	/*
+	 * We expect the initial octet to encode a value of 0
+	 * indicating that there are no unused bits in the final
+	 * subsequent octet of the bitstring.
+	 */
+	if (buf[0] != 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	buf += 1;
+	off += 1;
+	remain = data_len - 1;
+
+	/*
+	 * In practice, the sig contains an ASCII string: 'use OpenPGP' in the
+	 * certificate we have. XXX Revisit later.
+	 */
+	ctx->sig_alg_params.monkeysphere.sig_raw_off = off;
+	ctx->sig_alg_params.monkeysphere.sig_raw_len = remain;
+
+	*eaten = hdr_len + data_len;
 
 	ret = 0;
 
@@ -11606,27 +12432,35 @@ out:
 
 /*
  * All version of GOST signature algorithms (GOST R34.10-94, -2001 and -2012)
- * do encode their signature using a bitstring. This is what this generic
- * helper implements.
+ * do encode their signature using a bitstring. This is what this helper
+ * implements.
  */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \separated(eaten, buf+(..),r_start_off,r_len,s_start_off,s_len);
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @ ensures (\result == 0) ==> *r_start_off <= len;
+  @ ensures (\result == 0) ==> *s_start_off <= len;
+  @ ensures (\result == 0) ==> (int)*r_start_off + (int)*r_len <= 65535;
+  @ ensures (\result == 0) ==> (int)*s_start_off + (int)*s_len <= 65535;
+  @
+  @ assigns *eaten, *r_start_off, *r_len, *s_start_off, *s_len;
   @*/
-static int parse_sig_gost_generic(const u8 *buf, u16 len, u16 *eaten)
+static int sig_gost_extract_r_s(const u8 *buf, u16 len,
+				u16 *r_start_off, u16 *r_len,
+				u16 *s_start_off, u16 *s_len,
+				u16 *eaten)
 {
-	u16 bs_hdr_len = 0, bs_data_len = 0;
+	u16 remain, hdr_len = 0, data_len = 0, off = 0;
 	int ret;
 
 	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
-			   &bs_hdr_len, &bs_data_len);
+			   &hdr_len, &data_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -11637,13 +12471,38 @@ static int parse_sig_gost_generic(const u8 *buf, u16 len, u16 *eaten)
 	 * octet encoding the number of unused bits in the final
 	 * subsequent octet of the bistring.
 	 * */
-	if (bs_data_len == 0) {
+	if (data_len == 0) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	*eaten = bs_hdr_len + bs_data_len;
+	buf += hdr_len;
+	off += hdr_len;
+
+	/*
+	 * We expect the initial octet to encode a value of 0
+	 * indicating that there are no unused bits in the final
+	 * subsequent octet of the bitstring.
+	 */
+	if (buf[0] != 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	buf += 1;
+	off += 1;
+	remain = data_len - 1;
+
+	/*
+	 * For an unknown reason, the order of signature components is
+	 * reversed, i.e. s comes before r.
+	 */
+	*s_start_off = off;
+	*s_len = remain / 2;
+	*r_start_off = off + *s_len;
+	*r_len = *s_len;
+	*eaten = hdr_len + data_len;
 
 	ret = 0;
 
@@ -11651,86 +12510,400 @@ out:
 	return ret;
 }
 
-#ifdef TEMPORARY_BADALGS
 /* Handle GOST R34.10-94 signature parsing */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \separated(eaten, cert+(..), ctx);
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    ctx->sig_alg_params.gost_r3410_94.r_raw_off,
+	    ctx->sig_alg_params.gost_r3410_94.r_raw_len,
+	    ctx->sig_alg_params.gost_r3410_94.s_raw_off,
+	    ctx->sig_alg_params.gost_r3410_94.s_raw_len;
   @*/
-static int parse_sig_gost94(const u8 *buf, u16 len, u16 *eaten)
+static int parse_sig_gost94(cert_parsing_ctx *ctx,
+			    const u8 *cert, u16 off, u16 len, u16 *eaten)
 {
-	return parse_sig_gost_generic(buf, len, eaten);
+	u16 r_start_off = 0, r_len = 0, s_start_off = 0, s_len = 0;
+	const u8 *buf =  cert + off;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = sig_gost_extract_r_s(buf, len, &r_start_off, &r_len,
+				   &s_start_off, &s_len, eaten);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert *eaten <= len; */
+
+	ctx->sig_alg_params.gost_r3410_94.r_raw_off = off + r_start_off;
+	ctx->sig_alg_params.gost_r3410_94.r_raw_len = r_len;
+	ctx->sig_alg_params.gost_r3410_94.s_raw_off = off + s_start_off;
+	ctx->sig_alg_params.gost_r3410_94.s_raw_len = s_len;
+	ret = 0;
+
+out:
+	return ret;
 }
 
 /* Handle GOST R34.10-2001 signature parsing */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \separated(eaten, cert+(..), ctx);
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    ctx->sig_alg_params.gost_r3410_2001.r_raw_off,
+	    ctx->sig_alg_params.gost_r3410_2001.r_raw_len,
+	    ctx->sig_alg_params.gost_r3410_2001.s_raw_off,
+	    ctx->sig_alg_params.gost_r3410_2001.s_raw_len;
   @*/
-static int parse_sig_gost2001(const u8 *buf, u16 len, u16 *eaten)
+static int parse_sig_gost2001(cert_parsing_ctx *ctx,
+			      const u8 *cert, u16 off, u16 len, u16 *eaten)
 {
-	return parse_sig_gost_generic(buf, len, eaten);
+	u16 r_start_off = 0, r_len = 0, s_start_off = 0, s_len = 0;
+	const u8 *buf =  cert + off;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = sig_gost_extract_r_s(buf, len, &r_start_off, &r_len,
+				   &s_start_off, &s_len, eaten);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert *eaten <= len; */
+
+	ctx->sig_alg_params.gost_r3410_2001.r_raw_off = off + r_start_off;
+	ctx->sig_alg_params.gost_r3410_2001.r_raw_len = r_len;
+	ctx->sig_alg_params.gost_r3410_2001.s_raw_off = off + s_start_off;
+	ctx->sig_alg_params.gost_r3410_2001.s_raw_len = s_len;
+	ret = 0;
+
+out:
+	return ret;
 }
-#endif
+
+/* Handle bign (Belarus Signature standard TB 34.101.45-2013) signature parsing */
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, cert+(..), ctx);
+  @
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    ctx->sig_alg_params.bign.sig_raw_off,
+	    ctx->sig_alg_params.bign.sig_raw_len;
+  @*/
+static int parse_sig_bign(cert_parsing_ctx *ctx,
+			  const u8 *cert, u16 off, u16 len, u16 *eaten)
+{
+	u16 remain, hdr_len = 0, data_len = 0;
+	const u8 *buf = cert + off;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * We expect the bitstring data to contain at least the initial
+	 * octet encoding the number of unused bits in the final
+	 * subsequent octet of the bistring.
+	 * */
+	if (data_len == 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+	off += hdr_len;
+
+	/*
+	 * We expect the initial octet to encode a value of 0
+	 * indicating that there are no unused bits in the final
+	 * subsequent octet of the bitstring.
+	 */
+	if (buf[0] != 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	buf += 1;
+	off += 1;
+	remain = data_len - 1;
+
+	ctx->sig_alg_params.bign.sig_raw_off = off;
+	ctx->sig_alg_params.bign.sig_raw_len = remain;
+	*eaten = hdr_len + data_len;
+	ret = 0;
+
+out:
+	return ret;
+}
 
 /* Handle GOST R34.10-2012 signature parsing */
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \separated(eaten, cert+(..), ctx);
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    ctx->sig_alg_params.gost_r3410_2012_256.r_raw_off,
+	    ctx->sig_alg_params.gost_r3410_2012_256.r_raw_len,
+	    ctx->sig_alg_params.gost_r3410_2012_256.s_raw_off,
+	    ctx->sig_alg_params.gost_r3410_2012_256.s_raw_len;
   @*/
-static int parse_sig_gost2012(const u8 *buf, u16 len, u16 *eaten)
+static int parse_sig_gost2012_256(cert_parsing_ctx *ctx,
+				  const u8 *cert, u16 off, u16 len, u16 *eaten)
 {
-	return parse_sig_gost_generic(buf, len, eaten);
+	u16 r_start_off = 0, r_len = 0, s_start_off = 0, s_len = 0;
+	const u8 *buf =  cert + off;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = sig_gost_extract_r_s(buf, len, &r_start_off, &r_len,
+				   &s_start_off, &s_len, eaten);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert *eaten <= len; */
+
+	ctx->sig_alg_params.gost_r3410_2012_256.r_raw_off = off + r_start_off;
+	ctx->sig_alg_params.gost_r3410_2012_256.r_raw_len = r_len;
+	ctx->sig_alg_params.gost_r3410_2012_256.s_raw_off = off + s_start_off;
+	ctx->sig_alg_params.gost_r3410_2012_256.s_raw_len = s_len;
+	ret = 0;
+
+out:
+	return ret;
 }
 
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \separated(eaten, cert+(..), ctx);
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
-  @ ensures (\result == 0) ==> ((*r_start_off + *r_len) <= len);
-  @ ensures (\result == 0) ==> ((*s_start_off + *s_len) <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    ctx->sig_alg_params.gost_r3410_2012_512.r_raw_off,
+	    ctx->sig_alg_params.gost_r3410_2012_512.r_raw_len,
+	    ctx->sig_alg_params.gost_r3410_2012_512.s_raw_off,
+	    ctx->sig_alg_params.gost_r3410_2012_512.s_raw_len;
+  @*/
+static int parse_sig_gost2012_512(cert_parsing_ctx *ctx,
+				  const u8 *cert, u16 off, u16 len, u16 *eaten)
+{
+	u16 r_start_off = 0, r_len = 0, s_start_off = 0, s_len = 0;
+	const u8 *buf =  cert + off;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = sig_gost_extract_r_s(buf, len, &r_start_off, &r_len,
+				   &s_start_off, &s_len, eaten);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert *eaten <= len; */
+
+	ctx->sig_alg_params.gost_r3410_2012_512.r_raw_off = off + r_start_off;
+	ctx->sig_alg_params.gost_r3410_2012_512.r_raw_len = r_len;
+	ctx->sig_alg_params.gost_r3410_2012_512.s_raw_off = off + s_start_off;
+	ctx->sig_alg_params.gost_r3410_2012_512.s_raw_len = s_len;
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, buf+(..), bs_data_start_off, bs_data_len);
+  @
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (\result == 0) ==> ((*bs_data_start_off + *bs_data_len) <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (bs_data_start_off == \null) ==> \result < 0;
+  @ ensures (bs_data_len == \null) ==> \result < 0;
+  @
+  @ assigns *eaten, *bs_data_start_off, *bs_data_len;
+  @*/
+int parse_sig_rsa_helper(const u8 *buf, u16 len,
+			 u16 *bs_data_start_off, u16 *bs_data_len,
+			 u16 *eaten)
+{
+	u16 hdr_len = 0, data_len = 0;
+	int ret;
+
+	if ((buf == NULL) || (len == 0) || (eaten == NULL) ||
+	    (bs_data_start_off == NULL) || (bs_data_len == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	buf += hdr_len;
+
+	if (len != (hdr_len + data_len)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	/*@ assert hdr_len + data_len == len; */
+
+	/*
+	 * We expect the bitstring data to contain at least the initial
+	 * octet encoding the number of unused bits in the final
+	 * subsequent octet of the bistring.
+	 * */
+	if (data_len == 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * We expect the initial octet to encode a value of 0
+	 * indicating that there are no unused bits in the final
+	 * subsequent octet of the bitstring.
+	 */
+	if (buf[0] != 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+	buf += 1;
+	*bs_data_start_off = hdr_len + 1;
+	*bs_data_len = data_len - 1;
+	*eaten = hdr_len + data_len;
+	ret = 0;
+	/*@ assert (*bs_data_start_off + *bs_data_len) <= len; */
+
+out:
+	return ret;
+}
+
+/*
+ * RFC 8410 defines Agorithm Identifiers for Ed25519 and Ed448
+ *
+ * The same algorithm identifiers are used for signatures as are used
+ * for public keys.  When used to identify signature algorithms, the
+ * parameters MUST be absent.
+ */
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, cert+(..), r_start_off, r_len, s_start_off, s_len);
+  @
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (\result == 0) ==> (((int)*r_start_off + (int)*r_len) <= (int)off + (int)len);
+  @ ensures (\result == 0) ==> (((int)*s_start_off + (int)*s_len) <= (int)off + (int)len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
   @ ensures (r_start_off == \null) ==> \result < 0;
   @ ensures (r_len == \null) ==> \result < 0;
   @ ensures (s_start_off == \null) ==> \result < 0;
   @ ensures (s_len == \null) ==> \result < 0;
+  @
   @ assigns *eaten, *r_start_off, *r_len, *s_start_off, *s_len;
   @*/
-int parse_sig_eddsa_export_r_s(const u8 *buf, u16 len,
-			       u16 *r_start_off, u16 *r_len,
-			       u16 *s_start_off, u16 *s_len,
-			       u16 *eaten)
+static int parse_sig_eddsa(const u8 *cert, u16 off, u16 len, u16 exp_sig_len,
+			   u16 *r_start_off, u16 *r_len, u16 *s_start_off, u16 *s_len,
+			   u16 *eaten)
 {
-	u16 sig_len = 0, hdr_len = 0, data_len = 0, remain = 0;
-	u16 comp_len;
+	u16 comp_len, sig_len = 0, hdr_len = 0, data_len = 0, remain = 0;
+	const u8 *buf = cert + off;
 	int ret;
 
-	if ((buf == NULL) || (len == 0) || (eaten == NULL) ||
+	if ((cert == NULL) || (len == 0) || (eaten == NULL) ||
 	    (r_start_off == NULL) || (r_len == NULL) ||
 	    (s_start_off == NULL) || (s_len == NULL)) {
 		ret = -__LINE__;
@@ -11777,6 +12950,12 @@ int parse_sig_eddsa_export_r_s(const u8 *buf, u16 len,
 	}
 	buf += 1;
 	sig_len = data_len - 1;
+	if (sig_len != exp_sig_len) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
 	comp_len = sig_len / 2;
 
 	if (sig_len != (comp_len * 2)) {
@@ -11786,15 +12965,15 @@ int parse_sig_eddsa_export_r_s(const u8 *buf, u16 len,
 	}
 	/*@ assert sig_len == 2 * comp_len; */
 
-	*r_start_off = hdr_len + 1;
+	*r_start_off = off + hdr_len + 1;
 	*r_len = comp_len;
 	/*@ assert *r_len == comp_len; */
-	/*@ assert *r_start_off + *r_len <= len; */
+	/*@ assert (int)*r_start_off + (int)*r_len <= (int)off + (int)len; */
 
-	*s_start_off = hdr_len + 1 + comp_len;
+	*s_start_off = off + hdr_len + 1 + comp_len;
 	*s_len = comp_len;
 	/*@ assert *s_len == comp_len; */
-	/*@ assert (*s_start_off + *s_len) <= len; */
+	/*@ assert ((int)*s_start_off + (int)*s_len) <= (int)off + (int)len; */
 
 	/*
 	 * Check there is nothing remaining in the bitstring
@@ -11808,47 +12987,49 @@ int parse_sig_eddsa_export_r_s(const u8 *buf, u16 len,
 
 	*eaten = hdr_len + data_len;
 	ret = 0;
-	/*@ assert (*r_start_off + *r_len) <= len; */
-	/*@ assert (*s_start_off + *s_len) <= len; */
+	/*@ assert ((int)*r_start_off + (int)*r_len) <= (int)off + (int)len; */
+	/*@ assert ((int)*s_start_off + (int)*s_len) <= (int)off + (int)len; */
 
 out:
 	return ret;
 }
 
-/*
- * RFC 8410 defines Agorithm Identifiers for Ed25519 and Ed448
- *
- * The same algorithm identifiers are used for signatures as are used
- * for public keys.  When used to identify signature algorithms, the
- * parameters MUST be absent.
- */
+#define ED448_SIG_LEN 114
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \separated(eaten, cert+(..), ctx);
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    ctx->sig_alg_params.ed448.r_raw_off,
+	    ctx->sig_alg_params.ed448.r_raw_len,
+	    ctx->sig_alg_params.ed448.s_raw_off,
+	    ctx->sig_alg_params.ed448.s_raw_len;
   @*/
-static int parse_sig_eddsa(const u8 *buf, u16 len, u16 exp_sig_len, u16 *eaten)
+static int parse_sig_ed448(cert_parsing_ctx *ctx,
+			   const u8 *cert, u16 off, u16 len, u16 *eaten)
 {
-	u16 r_start_off = 0, r_len = 0, s_start_off = 0, s_len = 0;
 	int ret;
 
-	ret = parse_sig_eddsa_export_r_s(buf, len,
-					 &r_start_off, &r_len,
-					 &s_start_off, &s_len,
-					 eaten);
-	if (ret) {
+	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	if ((r_len + s_len) != exp_sig_len) {
-		ret = -__LINE__;
+	ret = parse_sig_eddsa(cert, off, len, ED448_SIG_LEN,
+			      &ctx->sig_alg_params.ed448.r_raw_off,
+			      &ctx->sig_alg_params.ed448.r_raw_len,
+			      &ctx->sig_alg_params.ed448.s_raw_off,
+			      &ctx->sig_alg_params.ed448.s_raw_len,
+			      eaten);
+	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
@@ -11859,45 +13040,65 @@ out:
 	return ret;
 }
 
-#define ED448_SIG_LEN 114
-/*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
-  @ ensures \result <= 0;
-  @ ensures (\result == 0) ==> (*eaten <= len);
-  @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns *eaten;
-  @*/
-static int parse_sig_ed448(const u8 *buf, u16 len, u16 *eaten)
-{
-	return parse_sig_eddsa(buf, len, ED448_SIG_LEN, eaten);
-}
-
 #define ED25519_SIG_LEN 64
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \separated(eaten, cert+(..), ctx);
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    ctx->sig_alg_params.ed25519.r_raw_off,
+	    ctx->sig_alg_params.ed25519.r_raw_len,
+	    ctx->sig_alg_params.ed25519.s_raw_off,
+	    ctx->sig_alg_params.ed25519.s_raw_len;
   @*/
-static int parse_sig_ed25519(const u8 *buf, u16 len, u16 *eaten)
+static int parse_sig_ed25519(cert_parsing_ctx *ctx,
+			     const u8 *cert, u16 off, u16 len, u16 *eaten)
 {
-	return parse_sig_eddsa(buf, len, ED25519_SIG_LEN, eaten);
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = parse_sig_eddsa(cert, off, len, ED25519_SIG_LEN,
+			      &ctx->sig_alg_params.ed25519.r_raw_off,
+			      &ctx->sig_alg_params.ed25519.r_raw_len,
+			      &ctx->sig_alg_params.ed25519.s_raw_off,
+			      &ctx->sig_alg_params.ed25519.s_raw_len,
+			      eaten);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = 0;
+
+out:
+	return ret;
 }
 
+/*
+ * DSA-based signatures often share the same layout for (r,s), i.e. a bitstring
+ * whose content will be parsed as a sequence of two positive integers. This
+ * helper does that job by providing positions of integer *values* and length
+ * along with the size of the whole structure (bitstring). Note that the
+ * function cannot and does not make hypothesis on the length of r and s. This
+ * checks, if needed, are left to the caller.
+ */
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
   @ requires \valid(eaten);
   @ requires \separated(eaten, buf+(..), r_start_off, r_len, s_start_off, s_len);
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (\result == 0) ==> ((*r_start_off + *r_len) <= len);
@@ -11908,16 +13109,18 @@ static int parse_sig_ed25519(const u8 *buf, u16 len, u16 *eaten)
   @ ensures (r_len == \null) ==> \result < 0;
   @ ensures (s_start_off == \null) ==> \result < 0;
   @ ensures (s_len == \null) ==> \result < 0;
+  @
   @ assigns *eaten, *r_start_off, *r_len, *s_start_off, *s_len;
   @*/
-int parse_sig_ecdsa_export_r_s(const u8 *buf, u16 len,
-			       u16 *r_start_off, u16 *r_len,
-			       u16 *s_start_off, u16 *s_len,
-			       u16 *eaten)
+static int sig_dsa_based_extract_r_s(const u8 *buf, u16 len,
+				     u16 *r_start_off, u16 *r_len,
+				     u16 *s_start_off, u16 *s_len,
+				     u16 *eaten)
 {
 	u16 bs_hdr_len = 0, bs_data_len = 0, sig_len = 0, hdr_len = 0;
 	u16 data_len = 0, remain = 0, saved_sig_len = 0;
-	u16 pos;
+	u16 integer_len = 0;
+	u16 off;
 	int ret;
 
 	if ((buf == NULL) || (len == 0) || (eaten == NULL) ||
@@ -11938,8 +13141,8 @@ int parse_sig_ecdsa_export_r_s(const u8 *buf, u16 len,
 	saved_sig_len = bs_hdr_len + bs_data_len;
 	/*@ assert saved_sig_len <= len; */
 	buf += bs_hdr_len;
-	pos = bs_hdr_len;
-	/*@ assert pos + bs_data_len <= len; */
+	off = bs_hdr_len;
+	/*@ assert off + bs_data_len <= len; */
 
 	/*
 	 * We expect the bitstring data to contain at least the initial
@@ -11981,13 +13184,13 @@ int parse_sig_ecdsa_export_r_s(const u8 *buf, u16 len,
 		goto out;
 	}
 	buf += 1;
-	pos += 1;
+	off += 1;
 	sig_len = bs_data_len - 1;
-	/*@ assert pos + bs_data_len - 1 <= len; */
-	/*@ assert pos + sig_len <= len; */
+	/*@ assert off + bs_data_len - 1 <= len; */
+	/*@ assert off + sig_len <= len; */
 
 	/*
-	 * Now that we know we are indeed dealing w/ an ECDSA sig mechanism,
+	 * Now that we know we are indeed dealing w/ a DSA sig mechanism,
 	 * let's check we have a sequence of two integers.
 	 */
 	ret = parse_id_len(buf, sig_len,
@@ -11998,55 +13201,68 @@ int parse_sig_ecdsa_export_r_s(const u8 *buf, u16 len,
 		goto out;
 	}
 
-	remain = sig_len - hdr_len;
-	buf += hdr_len;
-	pos += hdr_len;
-	/*@ assert (pos + remain) <= len; */
+	/* Nothing must remain in the bitstring after the sequence. */
+	if (sig_len != (hdr_len + data_len)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
-	/* Now, we should find the first integer, r */
-	ret = parse_id_len(buf, remain, CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
-			   &hdr_len, &data_len);
+	remain = data_len;
+	buf += hdr_len;
+	off += hdr_len;
+	/*@ assert (off + remain) <= len; */
+
+	/*
+	 * Now, we should find the first non negative integer, r.
+	 */
+	ret = parse_non_negative_integer(buf, remain, CLASS_UNIVERSAL,
+					 ASN1_TYPE_INTEGER,
+					 &hdr_len, &data_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	/*@ assert hdr_len + data_len <= remain; */
-	/*@ assert (pos + remain) <= len; */
-	/*@ assert (pos + hdr_len + data_len) <= len; */
-	remain -= hdr_len + data_len;
-	buf += hdr_len + data_len;
-	*r_start_off = pos + hdr_len;
-	/*@ assert *r_start_off == pos + hdr_len; */
+	integer_len = hdr_len + data_len;
+	/*@ assert integer_len <= remain; */
+	/*@ assert (off + remain) <= len; */
+	/*@ assert (off + integer_len) <= len; */
+	remain -= integer_len;
+	buf += integer_len;
+	*r_start_off = off + hdr_len;
+	/*@ assert *r_start_off == off + hdr_len; */
 	*r_len = data_len;
 	/*@ assert *r_len == data_len; */
-	/*@ assert *r_start_off == pos + hdr_len; */
-	/*@ assert (*r_start_off + *r_len) == (pos + hdr_len + data_len); */
+	/*@ assert *r_start_off == off + hdr_len; */
+	/*@ assert (*r_start_off + *r_len) == (off + integer_len); */
 	/*@ assert *r_start_off + *r_len <= len; */
-	pos += hdr_len + data_len;
-	/*@ assert (pos + remain) <= len; */
+	off += hdr_len + data_len;
+	/*@ assert (off + remain) <= len; */
 
 	/* An then, the second one, s */
-	ret = parse_id_len(buf, remain, CLASS_UNIVERSAL, ASN1_TYPE_INTEGER,
-			   &hdr_len, &data_len);
+	ret = parse_non_negative_integer(buf, remain, CLASS_UNIVERSAL,
+					 ASN1_TYPE_INTEGER,
+					 &hdr_len, &data_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	/*@ assert hdr_len + data_len <= remain; */
-	/*@ assert (pos + remain) <= len; */
-	/*@ assert (pos + hdr_len + data_len) <= len; */
-	remain -= hdr_len + data_len;
+	integer_len = hdr_len + data_len;
+	/*@ assert integer_len <= remain; */
+	/*@ assert (off + remain) <= len; */
+	/*@ assert (off + integer_len) <= len; */
+	remain -= integer_len;
 	buf += hdr_len + data_len;
-	*s_start_off = pos + hdr_len;
-	/*@ assert *s_start_off == pos + hdr_len; */
+	*s_start_off = off + hdr_len;
+	/*@ assert *s_start_off == off + hdr_len; */
 	*s_len = data_len;
 	/*@ assert *s_len == data_len; */
-	/*@ assert *s_start_off == pos + hdr_len; */
-	/*@ assert (*s_start_off + *s_len) == (pos + hdr_len + data_len); */
+	/*@ assert *s_start_off == off + hdr_len; */
+	/*@ assert (*s_start_off + *s_len) == (off + integer_len); */
 	/*@ assert *s_start_off + *s_len <= len; */
-	pos += hdr_len + data_len;
+	off += integer_len;
 
 	/*
 	 * Check there is nothing remaining in the bitstring
@@ -12070,32 +13286,257 @@ out:
 }
 
 /*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, buf+(..));
+  @ requires \separated(eaten, cert+(..), ctx);
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    ctx->sig_alg_params.ecdsa.r_raw_off,
+	    ctx->sig_alg_params.ecdsa.r_raw_len,
+	    ctx->sig_alg_params.ecdsa.s_raw_off,
+	    ctx->sig_alg_params.ecdsa.s_raw_len;
   @*/
-static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten)
+static int parse_sig_ecdsa(cert_parsing_ctx *ctx,
+			   const u8 *cert, u16 off, u16 len, u16 *eaten)
 {
-	u16 r_start_off, r_len, s_start_off, s_len;
+	u16 r_start_off = 0, r_len= 0, s_start_off = 0, s_len = 0;
+	const u8 *buf =  cert + off;
+	int ret;
 
-	return parse_sig_ecdsa_export_r_s(buf, len, &r_start_off, &r_len,
-					  &s_start_off, &s_len, eaten);
+	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = sig_dsa_based_extract_r_s(buf, len, &r_start_off, &r_len,
+					&s_start_off, &s_len, eaten);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert *eaten <= len; */
+
+	ctx->sig_alg_params.ecdsa.r_raw_off = off + r_start_off;
+	ctx->sig_alg_params.ecdsa.r_raw_len = r_len;
+	ctx->sig_alg_params.ecdsa.s_raw_off = off + s_start_off;
+	ctx->sig_alg_params.ecdsa.s_raw_len = s_len;
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*
+ * SM2 signature and ECDSA signature have exactly the same structre, i.e. a
+ * bitstring which encapsulates a sequence of 2 integers (r and s).
+ */
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, cert+(..), ctx);
+  @
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    ctx->sig_alg_params.sm2.r_raw_off,
+	    ctx->sig_alg_params.sm2.r_raw_len,
+	    ctx->sig_alg_params.sm2.s_raw_off,
+	    ctx->sig_alg_params.sm2.s_raw_len;
+  @*/
+static int parse_sig_sm2(cert_parsing_ctx *ctx,
+			 const u8 *cert, u16 off, u16 len, u16 *eaten)
+{
+	u16 r_start_off = 0, r_len = 0, s_start_off = 0, s_len = 0;
+	const u8 *buf = cert + off;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = sig_dsa_based_extract_r_s(buf, len, &r_start_off, &r_len,
+					&s_start_off, &s_len, eaten);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert *eaten <= len; */
+
+	ctx->sig_alg_params.sm2.r_raw_off = off + r_start_off;
+	ctx->sig_alg_params.sm2.r_raw_len = r_len;
+	ctx->sig_alg_params.sm2.s_raw_off = off + s_start_off;
+	ctx->sig_alg_params.sm2.s_raw_len = s_len;
+	ret = 0;
+
+out:
+	return ret;
+}
+
+
+/*
+ * Handle both parsing of RSA PKCS#1 v1.5 and RSASSA PSS signatures structures,
+ * i.e. the opaque content of the bitstring.
+ */
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \initialized(&(ctx->sig_alg));
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, cert+(..), ctx);
+  @
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    ctx->sig_alg_params.rsa_ssa_pss.sig_raw_off,
+	    ctx->sig_alg_params.rsa_ssa_pss.sig_raw_len,
+	    ctx->sig_alg_params.rsa_pkcs1_v1_5.sig_raw_off,
+	    ctx->sig_alg_params.rsa_pkcs1_v1_5.sig_raw_len,
+	    ctx->sig_alg_params.rsa_9796_2_pad.sig_raw_off,
+	    ctx->sig_alg_params.rsa_9796_2_pad.sig_raw_len,
+	    ctx->sig_alg_params.belgian_rsa.sig_raw_off,
+	    ctx->sig_alg_params.belgian_rsa.sig_raw_len;
+  @*/
+static int parse_sig_rsa(cert_parsing_ctx *ctx,
+			 const u8 *cert, u16 off, u16 len, u16 *eaten)
+{
+	u16 bs_data_start_off = 0, bs_data_len = 0;
+	const u8 *buf = cert + off;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = parse_sig_rsa_helper(buf, len,
+				   &bs_data_start_off, &bs_data_len,
+				   eaten);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert *eaten <= len; */
+
+	/*
+	 * We can now record start and length of data carried in the signature
+	 * bitstring, i.e. usually the raw big endian encoded integer value (no
+	 * ASN.1 integer encoding) corresponding to the signature.
+	 */
+	switch (ctx->sig_alg) {
+	case SIG_ALG_RSA_SSA_PSS:
+		ctx->sig_alg_params.rsa_ssa_pss.sig_raw_off = off + bs_data_start_off;
+		ctx->sig_alg_params.rsa_ssa_pss.sig_raw_len = bs_data_len;
+		break;
+	case SIG_ALG_RSA_PKCS1_V1_5:
+		ctx->sig_alg_params.rsa_pkcs1_v1_5.sig_raw_off = off + bs_data_start_off;
+		ctx->sig_alg_params.rsa_pkcs1_v1_5.sig_raw_len = bs_data_len;
+		break;
+	case SIG_ALG_RSA_9796_2_PAD:
+		ctx->sig_alg_params.rsa_9796_2_pad.sig_raw_off = off + bs_data_start_off;
+		ctx->sig_alg_params.rsa_9796_2_pad.sig_raw_len = bs_data_len;
+		break;
+	case  SIG_ALG_BELGIAN_RSA:
+		ctx->sig_alg_params.belgian_rsa.sig_raw_off = off + bs_data_start_off;
+		ctx->sig_alg_params.belgian_rsa.sig_raw_len = bs_data_len;
+		break;
+	default:
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+		break;
+	}
+
+out:
+	return ret;
 }
 
 /*@
-  @ requires len >= 0;
-  @ requires off + len <= 65535;
+  @ requires ((int)off + (int)len) <= 65535;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, cert+(..), ctx);
+  @
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    ctx->sig_alg_params.dsa.r_raw_off,
+	    ctx->sig_alg_params.dsa.r_raw_len,
+	    ctx->sig_alg_params.dsa.s_raw_off,
+	    ctx->sig_alg_params.dsa.s_raw_len;
+  @*/
+static int parse_sig_dsa(cert_parsing_ctx *ctx,
+			 const u8 *cert, u16 off, u16 len, u16 *eaten)
+{
+	u16 r_start_off = 0, r_len=0, s_start_off = 0, s_len = 0;
+	const u8 *buf = cert + off;
+	int ret;
+
+	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = sig_dsa_based_extract_r_s(buf, len, &r_start_off, &r_len,
+					&s_start_off, &s_len, eaten);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert *eaten <= len; */
+
+	ctx->sig_alg_params.dsa.r_raw_off = off + r_start_off;
+	ctx->sig_alg_params.dsa.r_raw_len = r_len;
+	ctx->sig_alg_params.dsa.s_raw_off = off + s_start_off;
+	ctx->sig_alg_params.dsa.s_raw_len = s_len;
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires ((int)off + (int)len) <= 65535;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires (sig_alg != \null) ==> \valid_read(sig_alg) && \valid_function(sig_alg->parse_sig);
+  @ requires (\initialized(&ctx->sig_alg));
   @ requires \valid(eaten);
   @ requires \valid(ctx);
   @ requires \separated(ctx, cert+(..), sig_alg, eaten);
+  @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
@@ -12103,13 +13544,14 @@ static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten)
   @ ensures (ctx == \null) ==> \result < 0;
   @ ensures (sig_alg == \null) ==> \result < 0;
   @ ensures (eaten == \null) ==> \result < 0;
-  @ assigns *eaten;
+  @
+  @ assigns *eaten, *ctx;
   @*/
-static int parse_x509_signatureValue(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+static int parse_x509_signatureValue(cert_parsing_ctx *ctx,
 				     const u8 *cert, u16 off, u16 len,
-				     const _alg_id *sig_alg, u16 *eaten)
+				     const _sig_alg *sig_alg, u16 *eaten)
 {
-	const u8 *buf = cert + off;
+	u16 saved_off = off;
 	int ret;
 
 	if ((cert == NULL) || (len == 0) || (cert == NULL) || (eaten == NULL)) {
@@ -12130,46 +13572,81 @@ static int parse_x509_signatureValue(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 		goto out;
 	}
 
-#ifdef TEMPORARY_BADALGS
 	/*@ assert sig_alg->parse_sig \in {
-		  parse_sig_ecdsa, parse_sig_generic,
-		  parse_sig_ed448, parse_sig_ed25519,
-		  parse_sig_gost94, parse_sig_gost2001,
-		  parse_sig_gost2012 }; @*/
-	/*@ calls parse_sig_ecdsa, parse_sig_generic,
-		  parse_sig_ed448, parse_sig_ed25519,
-		  parse_sig_gost94, parse_sig_gost2001,
-		  parse_sig_gost2012; @*/
-#else
-	/*@ assert sig_alg->parse_sig \in {
-		  parse_sig_ecdsa, parse_sig_generic,
-		  parse_sig_ed448, parse_sig_ed25519,
-		  parse_sig_gost2012 }; @*/
-	/*@ calls parse_sig_ecdsa, parse_sig_generic,
-		  parse_sig_ed448, parse_sig_ed25519,
-		  parse_sig_gost2012; @*/
-#endif
-	ret = sig_alg->parse_sig(buf, len, eaten);
+		  parse_sig_ed448,
+		  parse_sig_ed25519,
+		  parse_sig_ecdsa,
+		  parse_sig_sm2,
+		  parse_sig_dsa,
+		  parse_sig_rsa,
+		  parse_sig_gost94,
+		  parse_sig_gost2001,
+		  parse_sig_gost2012_512,
+		  parse_sig_gost2012_256,
+		  parse_sig_bign,
+		  parse_sig_monkey }; @*/
+	/*@ calls parse_sig_ed448,
+		  parse_sig_ed25519,
+		  parse_sig_ecdsa,
+		  parse_sig_sm2,
+		  parse_sig_dsa,
+		  parse_sig_rsa,
+		  parse_sig_gost94,
+		  parse_sig_gost2001,
+		  parse_sig_gost2012_512,
+		  parse_sig_gost2012_256,
+		  parse_sig_bign,
+		  parse_sig_monkey; @*/
+	ret = sig_alg->parse_sig(ctx, cert, off, len, eaten);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
+	ctx->sig_start = saved_off;
+	ctx->sig_len = *eaten;
 	ret = 0;
 
 out:
 	return ret;
 }
 
+/*
+ * The goal being to zeroify all the fields of a given structure (not a buffer)
+ * using a function, we did not manage to do that using memset() in Typed memory
+ * model and at the same time validate assigns clause. I tried and reimplement
+ * a specific function but conversion of the structure to a buffer to initialize
+ * one by one all the bytes of the structure result in an inability to validate
+ * assigns clause for the structure in the function. A good amount of time was
+ * spent on annotations strategies w/o success.
+ *
+ * Until one finds a better solution, a decent workaround has been found with
+ * the following function, which internally declares a structure with a static
+ * initializer and returns that (zeroized) structure by value. In a caller, the
+ * variable to be zeroized can just be overridden with the result of the
+ * function. This is not generic but sufficient for the need we have in the
+ * parser.
+ */
 /*@
-  @ requires len >= 0;
+  @ assigns \nothing;
+  @*/
+static cert_parsing_ctx get_zeroized_ctx_val(void)
+{
+	cert_parsing_ctx zeroized_ctx = { 0 };
+
+	return zeroized_ctx;
+}
+
+/*@
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (0 .. (len - 1)));
-  @ requires \separated(ctx, cert+(..));
   @ requires \valid(ctx);
+  @ requires \separated(ctx, cert+(..));
+  @
   @ ensures \result <= 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (ctx == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
+  @
   @ assigns *ctx;
   @*/
 int parse_x509_cert(cert_parsing_ctx *ctx, const u8 *cert, u16 len)
@@ -12177,7 +13654,7 @@ int parse_x509_cert(cert_parsing_ctx *ctx, const u8 *cert, u16 len)
 	u16 seq_data_len = 0;
 	u16 eaten = 0;
 	u16 off = 0;
-	const _alg_id *sig_alg = NULL;
+	const _sig_alg *sig_alg = NULL;
 	int ret;
 
 	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
@@ -12186,41 +13663,7 @@ int parse_x509_cert(cert_parsing_ctx *ctx, const u8 *cert, u16 len)
 		goto out;
 	}
 
-	/*
-	 * FIXME! At the moment, when using Frama-C with Typed memory model
-	 * the use of memset() prevents to validate assigns clause for the
-	 * function. At the moment, we workaround that problem by
-	 * initializing the structure field by field. Yes, this is sad.
-	 */
-	/* memset(&ctx, 0, sizeof(ctx)); */
-	ctx->tbs_start = 0;
-	ctx->tbs_len = 0;
-	ctx->spki_alg_oid_start = 0;
-	ctx->spki_alg_oid_len = 0;
-	ctx->spki_pub_key_start = 0;
-	ctx->spki_pub_key_len = 0;
-	ctx->sig_alg_start = 0;
-	ctx->sig_alg_len = 0;
-	ctx->sig_start = 0;
-	ctx->sig_len = 0;
-	ctx->version = 0;
-	ctx->empty_subject = 0;
-	ctx->san_empty = 0;
-	ctx->san_critical = 0;
-	ctx->ca_true = 0;
-	ctx->bc_critical = 0;
-	ctx->has_ski = 0;
-	ctx->spki_start = 0;
-	ctx->spki_len = 0;
-	ctx->has_keyUsage = 0;
-	ctx->keyCertSign_set = 0;
-	ctx->cRLSign_set = 0;
-	ctx->pathLenConstraint_set = 0;
-	ctx->has_name_constraints = 0;
-	ctx->has_crldp = 0;
-	ctx->one_crldp_has_all_reasons = 0;
-	ctx->aki_has_keyIdentifier = 0;
-	ctx->subject_issuer_identical = 0;
+	*ctx = get_zeroized_ctx_val();
 
 	/*
 	 * Parse beginning of buffer to verify it's a sequence and get
@@ -12254,21 +13697,25 @@ int parse_x509_cert(cert_parsing_ctx *ctx, const u8 *cert, u16 len)
 		goto out;
 	}
 
+	/*@ assert \initialized(&(ctx->sig_alg)); */
+	/*@ assert ctx->tbs_sig_alg_start < off + eaten; */
+
 	ctx->tbs_start = off;
 	ctx->tbs_len = eaten;
 
 	len -= eaten;
 	off += eaten;
 
+	/*@ assert ctx->tbs_sig_alg_start <= off; */
+
 	/* Parse second element of the sequence: signatureAlgorithm */
-	ret = parse_x509_signatureAlgorithm(ctx, cert, off, len, sig_alg, &eaten);
+	ret = parse_x509_signatureAlgorithm(ctx, cert, off, len, &eaten);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	ctx->sig_alg_start = off;
-	ctx->sig_alg_len = eaten;
+	/*@ assert \initialized(&(ctx->sig_alg)); */
 
 	len -= eaten;
 	off += eaten;
@@ -12279,9 +13726,6 @@ int parse_x509_cert(cert_parsing_ctx *ctx, const u8 *cert, u16 len)
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
-
-	ctx->sig_start = off;
-	ctx->sig_len = eaten;
 
 	/* Check there is nothing left behind */
 	if (len != eaten) {
@@ -12297,25 +13741,25 @@ out:
 }
 
 /*@
-  @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires \separated(eaten, buf+(..));
   @ requires \valid(eaten);
+  @ requires \separated(eaten, buf+(..), ctx);
+  @
   @ ensures \result <= 1;
   @ ensures (eaten == \null) ==> \result < 0;
   @ ensures (buf == \null) ==> \result < 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (\result == 0) ==> (*eaten > 0);
-  @ assigns *eaten;
+  @
+  @ assigns *eaten, *ctx;
  */
-int parse_x509_cert_relaxed(const u8 *buf, u16 len, u16 *eaten)
+int parse_x509_cert_relaxed(cert_parsing_ctx *ctx, const u8 *buf, u16 len, u16 *eaten)
 {
-	cert_parsing_ctx ctx;
 	u16 seq_data_len = 0;
 	u16 rbytes = 0;
 	int ret;
 
-	if ((buf == NULL) || (len == 0) || (eaten == NULL)) {
+	if ((ctx == NULL) || (buf == NULL) || (len == 0) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -12337,7 +13781,7 @@ int parse_x509_cert_relaxed(const u8 *buf, u16 len, u16 *eaten)
 	*eaten = rbytes + seq_data_len;
 
 	/* Parse it */
-	ret = parse_x509_cert(&ctx, buf, rbytes + seq_data_len);
+	ret = parse_x509_cert(ctx, buf, rbytes + seq_data_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -12348,6 +13792,7 @@ int parse_x509_cert_relaxed(const u8 *buf, u16 len, u16 *eaten)
 out:
 	return ret;
 }
+
 
 #if defined(__FRAMAC__)
 
@@ -12363,7 +13808,7 @@ int main(int argc, char *argv[]) {
 	int ret;
 
 	/*@ assert \valid(buf + (0 .. (RAND_BUF_SIZE - 1))); */
-	Frama_C_make_unknown(buf, RAND_BUF_SIZE);
+	Frama_C_make_unknown((char *)buf, RAND_BUF_SIZE);
 
 	len = Frama_C_interval(0, RAND_BUF_SIZE);
 	/*@ assert 0 <= len <= RAND_BUF_SIZE; */

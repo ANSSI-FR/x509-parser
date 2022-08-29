@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2019 - This file is part of x509-parser project
+ *  Copyright (C) 2022 - This file is part of x509-parser project
  *
  *  Author:
  *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
@@ -24,6 +24,7 @@ static void usage(char *argv0)
 int main(int argc, char *argv[])
 {
 	u8 buf[ASN1_MAX_BUFFER_SIZE];
+	cert_parsing_ctx ctx;
 	off_t pos, offset = 0;
 	char *path = argv[1];
 	u16 rem, copied, eaten;
@@ -74,7 +75,8 @@ int main(int argc, char *argv[])
 		}
 
 		eaten = 0;
-		ret = parse_x509_cert_relaxed(buf, copied, &eaten);
+		memset(&ctx, 0, sizeof(ctx));
+		ret = parse_x509_cert_relaxed(&ctx, buf, copied, &eaten);
 #ifdef ERROR_TRACE_ENABLE
 		printf("- %05d %ld %d %s\n", -ret, offset, eaten, path);
 #endif
