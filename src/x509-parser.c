@@ -1514,30 +1514,31 @@ typedef struct {
 static int parse_sig_ed448(const u8 *buf, u16 len, u16 *eaten);
 static int parse_sig_ed25519(const u8 *buf, u16 len, u16 *eaten);
 static int parse_sig_ecdsa(const u8 *buf, u16 len, u16 *eaten);
-static int parse_sig_gost94(const u8 *buf, u16 len, u16 *eaten);
-static int parse_sig_gost2001(const u8 *buf, u16 len, u16 *eaten);
-static int parse_sig_gost2012(const u8 *buf, u16 len, u16 *eaten);
 static int parse_algoid_params_ecdsa_with(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_ecPublicKey(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_sm2(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_eddsa(const u8 *buf, u16 len, alg_param *param);
-static int parse_algoid_params_pub_gost_r3410_2001(const u8 *buf, u16 len, alg_param *param);
-static int parse_algoid_params_pub_gost_r3410_2012_256(const u8 *buf, u16 len, alg_param *param);
-static int parse_algoid_params_pub_gost_r3410_2012_512(const u8 *buf, u16 len, alg_param *param);
-static int parse_algoid_params_sig_gost_none(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_ed448(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_x448(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_ed25519(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_x25519(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_ec(const u8 *buf, u16 len, alg_param *param);
+static int parse_subjectpubkey_rsa(const u8 *buf, u16 len, alg_param *param);
+static int parse_sig_generic(const u8 *buf, u16 len, u16 *eaten);
+static int parse_algoid_params_rsa(const u8 *buf, u16 len, alg_param *param);
+static int parse_sig_gost2012(const u8 *buf, u16 len, u16 *eaten);
+static int parse_algoid_params_pub_gost_r3410_2012_256(const u8 *buf, u16 len, alg_param *param);
+static int parse_algoid_params_pub_gost_r3410_2012_512(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_gost256(const u8 *buf, u16 len, alg_param *param);
 static int parse_subjectpubkey_gost512(const u8 *buf, u16 len, alg_param *param);
-static int parse_subjectpubkey_rsa(const u8 *buf, u16 len, alg_param *param);
+static int parse_algoid_params_sig_gost_none(const u8 *buf, u16 len, alg_param *param);
+
 #ifdef TEMPORARY_BADALGS
-static int parse_sig_generic(const u8 *buf, u16 len, u16 *eaten);
-static int parse_subjectpubkey_generic(const u8 *buf, u16 len, alg_param *param);
 static int parse_algoid_params_generic(const u8 *buf, u16 ATTRIBUTE_UNUSED len, alg_param *param);
-static int parse_algoid_params_rsa(const u8 *buf, u16 len, alg_param *param);
+static int parse_subjectpubkey_generic(const u8 *buf, u16 len, alg_param *param);
+static int parse_sig_gost94(const u8 *buf, u16 len, u16 *eaten);
+static int parse_sig_gost2001(const u8 *buf, u16 len, u16 *eaten);
+static int parse_algoid_params_pub_gost_r3410_2001(const u8 *buf, u16 len, alg_param *param);
 #endif
 
 typedef struct {
@@ -1751,75 +1752,6 @@ static const _alg_id _sm2_sm3_alg = {
 };
 
 
-#ifdef TEMPORARY_BADALGS
-static const u8 _rsa_md2_name[] = "md2WithRSAEncryption";
-static const u8 _rsa_md2_printable_oid[] = "1.2.840.113549.1.1.2";
-static const u8 _rsa_md2_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
-				      0xf7, 0x0d, 0x01, 0x01, 0x02 };
-
-static const _alg_id _rsa_md2_alg = {
-	.alg_name = _rsa_md2_name,
-	.alg_printable_oid = _rsa_md2_printable_oid,
-	.alg_der_oid = _rsa_md2_der_oid,
-	.alg_der_oid_len = sizeof(_rsa_md2_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_rsa,
-};
-
-
-static const u8 _rsa_md4_name[] = "md4WithRSAEncryption";
-static const u8 _rsa_md4_printable_oid[] = "1.2.840.113549.1.1.3";
-static const u8 _rsa_md4_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
-				      0xf7, 0x0d, 0x01, 0x01, 0x03 };
-
-static const _alg_id _rsa_md4_alg = {
-	.alg_name = _rsa_md4_name,
-	.alg_printable_oid = _rsa_md4_printable_oid,
-	.alg_der_oid = _rsa_md4_der_oid,
-	.alg_der_oid_len = sizeof(_rsa_md4_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_rsa,
-};
-
-
-static const u8 _rsa_md5_name[] = "md5WithRSAEncryption";
-static const u8 _rsa_md5_printable_oid[] = "1.2.840.113549.1.1.4";
-static const u8 _rsa_md5_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
-				      0xf7, 0x0d, 0x01, 0x01, 0x04 };
-
-static const _alg_id _rsa_md5_alg = {
-	.alg_name = _rsa_md5_name,
-	.alg_printable_oid = _rsa_md5_printable_oid,
-	.alg_der_oid = _rsa_md5_der_oid,
-	.alg_der_oid_len = sizeof(_rsa_md5_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_rsa,
-};
-
-
-static const u8 _rsa_sha1_name[] = "sha1WithRSAEncryption";
-static const u8 _rsa_sha1_printable_oid[] = "1.2.840.113549.1.1.5";
-static const u8 _rsa_sha1_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
-				       0xf7, 0x0d, 0x01, 0x01, 0x05 };
-
-static const _alg_id _rsa_sha1_alg = {
-	.alg_name = _rsa_sha1_name,
-	.alg_printable_oid = _rsa_sha1_printable_oid,
-	.alg_der_oid = _rsa_sha1_der_oid,
-	.alg_der_oid_len = sizeof(_rsa_sha1_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_rsa,
-};
-
-
 static const u8 _rsa_sha256_name[] = "sha256WithRSAEncryption";
 static const u8 _rsa_sha256_printable_oid[] = "1.2.840.113549.1.1.11";
 static const u8 _rsa_sha256_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
@@ -1885,23 +1817,6 @@ static const _alg_id _rsa_sha512_alg = {
 	.parse_sig = parse_sig_generic,
 	.parse_subjectpubkey = NULL,
 	.parse_algoid_params = parse_algoid_params_rsa,
-};
-
-
-static const u8 _dsa_sha1_name[] = "dsaWithSHA1";
-static const u8 _dsa_sha1_printable_oid[] = "1.3.14.3.2.27";
-static const u8 _dsa_sha1_der_oid[] = { 0x06, 0x05, 0x2b, 0x0e,
-					0x03, 0x02, 0x1b };
-
-static const _alg_id _dsa_sha1_alg = {
-	.alg_name = _dsa_sha1_name,
-	.alg_printable_oid = _dsa_sha1_printable_oid,
-	.alg_der_oid = _dsa_sha1_der_oid,
-	.alg_der_oid_len = sizeof(_dsa_sha1_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_generic,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_generic,
 };
 
 
@@ -2293,6 +2208,77 @@ out:
 	return ret;
 }
 
+
+static const u8 _gost4_name[] = "sig_gost3410-2012-256";
+static const u8 _gost4_printable_oid[] = "1.2.643.7.1.1.3.2";
+static const u8 _gost4_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
+				     0x03, 0x07, 0x01, 0x01,
+				     0x03, 0x02 };
+
+static const _alg_id _gost4_alg = {
+	.alg_name = _gost4_name,
+	.alg_printable_oid = _gost4_printable_oid,
+	.alg_der_oid = _gost4_der_oid,
+	.alg_der_oid_len = sizeof(_gost4_der_oid),
+	.alg_type = ALG_SIG,
+	.parse_sig = parse_sig_gost2012,
+	.parse_subjectpubkey = NULL,
+	.parse_algoid_params = parse_algoid_params_sig_gost_none,
+};
+
+
+static const u8 _gost5_name[] = "sig_gost3410-2012-512";
+static const u8 _gost5_printable_oid[] = "1.2.643.7.1.1.3.3";
+static const u8 _gost5_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
+				     0x03, 0x07, 0x01, 0x01,
+				     0x03, 0x03 };
+
+static const _alg_id _gost5_alg = {
+	.alg_name = _gost5_name,
+	.alg_printable_oid = _gost5_printable_oid,
+	.alg_der_oid = _gost5_der_oid,
+	.alg_der_oid_len = sizeof(_gost5_der_oid),
+	.alg_type = ALG_SIG,
+	.parse_sig = parse_sig_gost2012,
+	.parse_subjectpubkey = NULL,
+	.parse_algoid_params = parse_algoid_params_sig_gost_none,
+};
+
+static const u8 _gost6_name[] = "pub_gost3410-2012-256";
+static const u8 _gost6_printable_oid[] = "1.2.643.7.1.1.1.1";
+static const u8 _gost6_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
+				     0x03, 0x07, 0x01, 0x01,
+				     0x01, 0x01 };
+
+static const _alg_id _gost6_alg = {
+	.alg_name = _gost6_name,
+	.alg_printable_oid = _gost6_printable_oid,
+	.alg_der_oid = _gost6_der_oid,
+	.alg_der_oid_len = sizeof(_gost6_der_oid),
+	.alg_type = ALG_PUBKEY,
+	.parse_sig = NULL,
+	.parse_subjectpubkey = parse_subjectpubkey_gost256,
+	.parse_algoid_params = parse_algoid_params_pub_gost_r3410_2012_256,
+};
+
+
+static const u8 _gost7_name[] = "pub_gost3410-2012-512";
+static const u8 _gost7_printable_oid[] = "1.2.643.7.1.1.1.2";
+static const u8 _gost7_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
+				     0x03, 0x07, 0x01, 0x01,
+				     0x01, 0x02 };
+
+static const _alg_id _gost7_alg = {
+	.alg_name = _gost7_name,
+	.alg_printable_oid = _gost7_printable_oid,
+	.alg_der_oid = _gost7_der_oid,
+	.alg_der_oid_len = sizeof(_gost7_der_oid),
+	.alg_type = ALG_PUBKEY,
+	.parse_sig = NULL,
+	.parse_subjectpubkey = parse_subjectpubkey_gost512,
+	.parse_algoid_params = parse_algoid_params_pub_gost_r3410_2012_512,
+};
+
 static const u8 _rsassapss_name[] = "RSASSA-PSS";
 static const u8 _rsassapss_printable_oid[] = "1.2.840.113549.1.1.10";
 static const u8 _rsassapss_der_oid[] = { 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
@@ -2307,6 +2293,91 @@ static const _alg_id _rsassapss_alg = {
 	.parse_sig = parse_sig_generic,
 	.parse_subjectpubkey = NULL,
 	.parse_algoid_params = parse_algoid_params_rsassa_pss,
+};
+
+#ifdef TEMPORARY_BADALGS
+static const u8 _dsa_sha1_name[] = "dsaWithSHA1";
+static const u8 _dsa_sha1_printable_oid[] = "1.3.14.3.2.27";
+static const u8 _dsa_sha1_der_oid[] = { 0x06, 0x05, 0x2b, 0x0e,
+					0x03, 0x02, 0x1b };
+
+static const _alg_id _dsa_sha1_alg = {
+	.alg_name = _dsa_sha1_name,
+	.alg_printable_oid = _dsa_sha1_printable_oid,
+	.alg_der_oid = _dsa_sha1_der_oid,
+	.alg_der_oid_len = sizeof(_dsa_sha1_der_oid),
+	.alg_type = ALG_SIG,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = NULL,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+
+static const u8 _rsa_md2_name[] = "md2WithRSAEncryption";
+static const u8 _rsa_md2_printable_oid[] = "1.2.840.113549.1.1.2";
+static const u8 _rsa_md2_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
+				      0xf7, 0x0d, 0x01, 0x01, 0x02 };
+
+static const _alg_id _rsa_md2_alg = {
+	.alg_name = _rsa_md2_name,
+	.alg_printable_oid = _rsa_md2_printable_oid,
+	.alg_der_oid = _rsa_md2_der_oid,
+	.alg_der_oid_len = sizeof(_rsa_md2_der_oid),
+	.alg_type = ALG_SIG,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = NULL,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+
+static const u8 _rsa_md4_name[] = "md4WithRSAEncryption";
+static const u8 _rsa_md4_printable_oid[] = "1.2.840.113549.1.1.3";
+static const u8 _rsa_md4_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
+				      0xf7, 0x0d, 0x01, 0x01, 0x03 };
+
+static const _alg_id _rsa_md4_alg = {
+	.alg_name = _rsa_md4_name,
+	.alg_printable_oid = _rsa_md4_printable_oid,
+	.alg_der_oid = _rsa_md4_der_oid,
+	.alg_der_oid_len = sizeof(_rsa_md4_der_oid),
+	.alg_type = ALG_SIG,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = NULL,
+	.parse_algoid_params = parse_algoid_params_generic,
+};
+
+
+static const u8 _rsa_md5_name[] = "md5WithRSAEncryption";
+static const u8 _rsa_md5_printable_oid[] = "1.2.840.113549.1.1.4";
+static const u8 _rsa_md5_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
+				      0xf7, 0x0d, 0x01, 0x01, 0x04 };
+
+static const _alg_id _rsa_md5_alg = {
+	.alg_name = _rsa_md5_name,
+	.alg_printable_oid = _rsa_md5_printable_oid,
+	.alg_der_oid = _rsa_md5_der_oid,
+	.alg_der_oid_len = sizeof(_rsa_md5_der_oid),
+	.alg_type = ALG_SIG,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = NULL,
+	.parse_algoid_params = parse_algoid_params_rsa,
+};
+
+
+static const u8 _rsa_sha1_name[] = "sha1WithRSAEncryption";
+static const u8 _rsa_sha1_printable_oid[] = "1.2.840.113549.1.1.5";
+static const u8 _rsa_sha1_der_oid[] = {0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
+				       0xf7, 0x0d, 0x01, 0x01, 0x05 };
+
+static const _alg_id _rsa_sha1_alg = {
+	.alg_name = _rsa_sha1_name,
+	.alg_printable_oid = _rsa_sha1_printable_oid,
+	.alg_der_oid = _rsa_sha1_der_oid,
+	.alg_der_oid_len = sizeof(_rsa_sha1_der_oid),
+	.alg_type = ALG_SIG,
+	.parse_sig = parse_sig_generic,
+	.parse_subjectpubkey = NULL,
+	.parse_algoid_params = parse_algoid_params_rsa,
 };
 
 static const u8 _odd1_name[] = "oiw-sha-1WithRSAEncryption";
@@ -2407,77 +2478,6 @@ static const _alg_id _gost3_alg = {
 	.parse_sig = NULL,
 	.parse_subjectpubkey = parse_subjectpubkey_gost256,
 	.parse_algoid_params = parse_algoid_params_pub_gost_r3410_2001,
-};
-
-
-static const u8 _gost4_name[] = "sig_gost3410-2012-256";
-static const u8 _gost4_printable_oid[] = "1.2.643.7.1.1.3.2";
-static const u8 _gost4_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
-				     0x03, 0x07, 0x01, 0x01,
-				     0x03, 0x02 };
-
-static const _alg_id _gost4_alg = {
-	.alg_name = _gost4_name,
-	.alg_printable_oid = _gost4_printable_oid,
-	.alg_der_oid = _gost4_der_oid,
-	.alg_der_oid_len = sizeof(_gost4_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_gost2012,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_sig_gost_none,
-};
-
-
-static const u8 _gost5_name[] = "sig_gost3410-2012-512";
-static const u8 _gost5_printable_oid[] = "1.2.643.7.1.1.3.3";
-static const u8 _gost5_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
-				     0x03, 0x07, 0x01, 0x01,
-				     0x03, 0x03 };
-
-static const _alg_id _gost5_alg = {
-	.alg_name = _gost5_name,
-	.alg_printable_oid = _gost5_printable_oid,
-	.alg_der_oid = _gost5_der_oid,
-	.alg_der_oid_len = sizeof(_gost5_der_oid),
-	.alg_type = ALG_SIG,
-	.parse_sig = parse_sig_gost2012,
-	.parse_subjectpubkey = NULL,
-	.parse_algoid_params = parse_algoid_params_sig_gost_none,
-};
-
-static const u8 _gost6_name[] = "pub_gost3410-2012-256";
-static const u8 _gost6_printable_oid[] = "1.2.643.7.1.1.1.1";
-static const u8 _gost6_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
-				     0x03, 0x07, 0x01, 0x01,
-				     0x01, 0x01 };
-
-static const _alg_id _gost6_alg = {
-	.alg_name = _gost6_name,
-	.alg_printable_oid = _gost6_printable_oid,
-	.alg_der_oid = _gost6_der_oid,
-	.alg_der_oid_len = sizeof(_gost6_der_oid),
-	.alg_type = ALG_PUBKEY,
-	.parse_sig = NULL,
-	.parse_subjectpubkey = parse_subjectpubkey_gost256,
-	.parse_algoid_params = parse_algoid_params_pub_gost_r3410_2012_256,
-};
-
-
-static const u8 _gost7_name[] = "pub_gost3410-2012-512";
-static const u8 _gost7_printable_oid[] = "1.2.643.7.1.1.1.2";
-static const u8 _gost7_der_oid[] = { 0x06, 0x08, 0x2a, 0x85,
-				     0x03, 0x07, 0x01, 0x01,
-				     0x01, 0x02 };
-
-static const _alg_id _gost7_alg = {
-	.alg_name = _gost7_name,
-	.alg_printable_oid = _gost7_printable_oid,
-	.alg_der_oid = _gost7_der_oid,
-	.alg_der_oid_len = sizeof(_gost7_der_oid),
-	.alg_type = ALG_PUBKEY,
-	.parse_sig = NULL,
-	.parse_subjectpubkey = parse_subjectpubkey_gost512,
-	.parse_algoid_params = parse_algoid_params_pub_gost_r3410_2012_512,
 };
 
 
@@ -2892,29 +2892,29 @@ static const _alg_id *known_algs[] = {
 	&_ed448_alg,
 	&_x448_alg,
 	&_sm2_sm3_alg,
+	&_rsa_sha224_alg,
+	&_rsa_sha256_alg,
+	&_rsa_sha384_alg,
+	&_rsa_sha512_alg,
+	&_pkcs1_rsaEncryption_alg,
+	&_rsassapss_alg,
+	&_gost4_alg,
+	&_gost5_alg,
+	&_gost6_alg,
+	&_gost7_alg,
 #ifdef TEMPORARY_BADALGS
 	&_rsa_md2_alg,
 	&_rsa_md4_alg,
 	&_rsa_md5_alg,
 	&_rsa_sha1_alg,
-	&_rsa_sha224_alg,
-	&_rsa_sha256_alg,
-	&_rsa_sha384_alg,
-	&_rsa_sha512_alg,
+	&_rsa_ripemd160_alg,
 	&_dsa_sha1_alg,
-	&_pkcs1_rsaEncryption_alg,
-	&_rsassapss_alg,
 	&_odd1_alg,
 	&_odd2_alg,
 	&_odd3_alg,
 	&_gost1_alg,
 	&_gost2_alg,
 	&_gost3_alg,
-	&_gost4_alg,
-	&_gost5_alg,
-	&_gost6_alg,
-	&_gost7_alg,
-	&_rsa_ripemd160_alg,
 	&_weird1_alg,
 	&_weird2_alg,
 	&_weird3_alg,
@@ -3599,6 +3599,7 @@ out:
 	return ret;
 }
 
+
 /*
  * draft-deremin-rfc4491-bis-06 has the following on GOST public keys:
  *
@@ -3708,6 +3709,7 @@ static int parse_subjectpubkey_gost(const u8 *buf, u16 len, u16 exp_pub_len,
 out:
 	return ret;
 }
+
 
 /*@
   @ requires len >= 0;
@@ -3961,6 +3963,76 @@ out:
 	return ret;
 }
 
+#ifdef TEMPORARY_BADALGS
+/*
+ * The function below just skips the parameters it should parse.
+ * It s just here as a helper for bad algs we do not intend to
+ * support and should not be used for real purposes.
+ */
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires (param != \null) ==> \valid_read(param);
+  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (param == \null) ==> \result < 0;
+  @ ensures \result < 0 || \result == 0;
+  @ ensures \result == 0 ==> param->unparsed_param == 1;
+  @ assigns param->unparsed_param;
+  @*/
+static int parse_algoid_params_generic(const u8 *buf, u16 ATTRIBUTE_UNUSED len, alg_param *param)
+{
+	int ret;
+
+	if ((buf == NULL) || (param == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	param->unparsed_param = 1;
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires len >= 0;
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ ensures \result < 0 || \result == 0;
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ assigns \nothing;
+  @*/
+static int parse_subjectpubkey_generic(const u8 *buf, u16 len, alg_param ATTRIBUTE_UNUSED *param)
+{
+	u16 bs_hdr_len = 0, bs_data_len = 0;
+	int ret;
+
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
+			   &bs_hdr_len, &bs_data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*
+	 * We expect the bitstring data to contain at least the initial
+	 * octet encoding the number of unused bits in the final
+	 * subsequent octet of the bistring.
+	 * */
+	if (bs_data_len == 0) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
 /*
  * Used for parsing AlgorithmIdentifiter parameters for GOST R3410-2001 public
  * key. As described in RFC 4491:
@@ -4075,6 +4147,7 @@ static int parse_algoid_params_pub_gost_r3410_2001(const u8 *buf, u16 len, alg_p
 out:
 	return ret;
 }
+#endif
 
 /*
  * Used for parsing AlgorithmIdentifiter parameters for GOST R3410-2001 with 256
@@ -4159,40 +4232,6 @@ static int parse_algoid_params_sig_gost_none(const u8 *buf, u16 len,
 		ERROR_TRACE_APPEND(__LINE__);
 		break;
 	}
-
-out:
-	return ret;
-}
-
-
-#ifdef TEMPORARY_BADALGS
-/*
- * The function below just skips the parameters it should parse.
- * It s just here as a helper for bad algs we do not intend to
- * support and should not be used for real purposes.
- */
-/*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ requires (param != \null) ==> \valid_read(param);
-  @ ensures (buf == \null) ==> \result < 0;
-  @ ensures (param == \null) ==> \result < 0;
-  @ ensures \result < 0 || \result == 0;
-  @ ensures \result == 0 ==> param->unparsed_param == 1;
-  @ assigns param->unparsed_param;
-  @*/
-static int parse_algoid_params_generic(const u8 *buf, u16 ATTRIBUTE_UNUSED len, alg_param *param)
-{
-	int ret;
-
-	if ((buf == NULL) || (param == NULL)) {
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
-
-	param->unparsed_param = 1;
-	ret = 0;
 
 out:
 	return ret;
@@ -4372,8 +4411,6 @@ out:
 	return ret;
 }
 
-#endif
-
 /*@
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != NULL)) ==> \valid_read(buf + (0 .. (len - 1)));
@@ -4488,6 +4525,7 @@ static int parse_x509_AlgorithmIdentifier(const u8 *buf, u16 len,
 	buf += oid_len;
 	param_len = data_len - oid_len;
 
+#ifdef TEMPORARY_BADALGS
 	/*@ assert talg->parse_algoid_params \in {
 		  parse_algoid_params_generic, parse_algoid_params_ecdsa_with,
 		  parse_algoid_params_ecPublicKey, parse_algoid_params_rsa,
@@ -4505,6 +4543,21 @@ static int parse_x509_AlgorithmIdentifier(const u8 *buf, u16 len,
 		  parse_algoid_params_pub_gost_r3410_2012_512,
 		  parse_algoid_params_sig_gost_none,
 		  parse_algoid_params_rsassa_pss; @*/
+#else
+	/*@ assert talg->parse_algoid_params \in {
+		  parse_algoid_params_generic, parse_algoid_params_ecdsa_with,
+		  parse_algoid_params_ecPublicKey, parse_algoid_params_rsa,
+		  parse_algoid_params_sm2, parse_algoid_params_eddsa,
+		  parse_algoid_params_pub_gost_r3410_2012_256,
+		  parse_algoid_params_pub_gost_r3410_2012_512,
+		  parse_algoid_params_sig_gost_none }; @*/
+	/*@ calls parse_algoid_params_generic, parse_algoid_params_ecdsa_with,
+		  parse_algoid_params_ecPublicKey, parse_algoid_params_rsa,
+		  parse_algoid_params_sm2, parse_algoid_params_eddsa,
+		  parse_algoid_params_pub_gost_r3410_2012_256,
+		  parse_algoid_params_pub_gost_r3410_2012_512,
+		  parse_algoid_params_sig_gost_none; @*/
+#endif
 	ret = talg->parse_algoid_params(buf, param_len, param);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
@@ -4916,6 +4969,7 @@ out:
 	return ret;
 }
 
+#ifdef TEMPORARY_LAXIST_DIRECTORY_STRING
 /*
  * Teletex string is not supposed to be supported and there is no good
  * defintiion of allowed charset. At the moment, we perform the check
@@ -4947,6 +5001,7 @@ static int check_universal_string(const u8 ATTRIBUTE_UNUSED *buf,
 {
 	return -__LINE__;
 }
+#endif
 
 /*@
   @ requires len >= 0;
@@ -5330,6 +5385,7 @@ out:
 	return ret;
 }
 
+#ifdef TEMPORARY_LAXIST_EMAILADDRESS_WITH_UTF8_ENCODING
 /*@
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
@@ -5388,6 +5444,7 @@ static int parse_utf8_string(const u8 *buf, u16 len, u16 lb, u16 ub)
 out:
 	return ret;
 }
+#endif
 
 /*
  *
@@ -11505,7 +11562,6 @@ out:
 }
 
 
-#ifdef TEMPORARY_BADALGS
 /*@
   @ requires len >= 0;
   @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
@@ -11547,44 +11603,6 @@ static int parse_sig_generic(const u8 *buf, u16 len, u16 *eaten)
 out:
 	return ret;
 }
-
-/*@
-  @ requires len >= 0;
-  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
-  @ ensures \result < 0 || \result == 0;
-  @ ensures (len == 0) ==> \result < 0;
-  @ ensures (buf == \null) ==> \result < 0;
-  @ assigns \nothing;
-  @*/
-static int parse_subjectpubkey_generic(const u8 *buf, u16 len, alg_param ATTRIBUTE_UNUSED *param)
-{
-	u16 bs_hdr_len = 0, bs_data_len = 0;
-	int ret;
-
-	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_BIT_STRING,
-			   &bs_hdr_len, &bs_data_len);
-	if (ret) {
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
-
-	/*
-	 * We expect the bitstring data to contain at least the initial
-	 * octet encoding the number of unused bits in the final
-	 * subsequent octet of the bistring.
-	 * */
-	if (bs_data_len == 0) {
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
-
-	ret = 0;
-
-out:
-	return ret;
-}
-#endif
 
 /*
  * All version of GOST signature algorithms (GOST R34.10-94, -2001 and -2012)
@@ -11633,6 +11651,7 @@ out:
 	return ret;
 }
 
+#ifdef TEMPORARY_BADALGS
 /* Handle GOST R34.10-94 signature parsing */
 /*@
   @ requires len >= 0;
@@ -11666,6 +11685,7 @@ static int parse_sig_gost2001(const u8 *buf, u16 len, u16 *eaten)
 {
 	return parse_sig_gost_generic(buf, len, eaten);
 }
+#endif
 
 /* Handle GOST R34.10-2012 signature parsing */
 /*@
@@ -12110,6 +12130,7 @@ static int parse_x509_signatureValue(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 		goto out;
 	}
 
+#ifdef TEMPORARY_BADALGS
 	/*@ assert sig_alg->parse_sig \in {
 		  parse_sig_ecdsa, parse_sig_generic,
 		  parse_sig_ed448, parse_sig_ed25519,
@@ -12119,6 +12140,15 @@ static int parse_x509_signatureValue(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 		  parse_sig_ed448, parse_sig_ed25519,
 		  parse_sig_gost94, parse_sig_gost2001,
 		  parse_sig_gost2012; @*/
+#else
+	/*@ assert sig_alg->parse_sig \in {
+		  parse_sig_ecdsa, parse_sig_generic,
+		  parse_sig_ed448, parse_sig_ed25519,
+		  parse_sig_gost2012 }; @*/
+	/*@ calls parse_sig_ecdsa, parse_sig_generic,
+		  parse_sig_ed448, parse_sig_ed25519,
+		  parse_sig_gost2012; @*/
+#endif
 	ret = sig_alg->parse_sig(buf, len, eaten);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
