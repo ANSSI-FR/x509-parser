@@ -40,7 +40,6 @@ TIMEOUT:=15
 
 frama-c:
 	frama-c-gui src/x509-parser.c -machdep x86_64 \
-		    -instantiate \
 		    -warn-left-shift-negative \
 		    -warn-right-shift-negative \
 		    -warn-signed-downcast \
@@ -77,7 +76,6 @@ frama-c:
 		    -wp-no-init-const \
 		    -wp-par $(JOBS) \
 		    -wp-steps 100000 -pp-annot \
-		    -wp-split -wp-literals \
 		    -wp-timeout $(TIMEOUT) -save $(SESSION) \
 		    -kernel-msg-key pp
 
