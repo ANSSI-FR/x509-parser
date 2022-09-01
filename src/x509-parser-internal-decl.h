@@ -130,7 +130,7 @@ static const _hash_alg _##TTalg##_hash_alg = {               \
 	.alg_printable_oid = _##TTalg##_hash_printable_oid,  \
 	.alg_der_oid = _##TTalg##_hash_der_oid,              \
 	.alg_der_oid_len = sizeof(_##TTalg##_hash_der_oid),  \
-	.hash_id = XXtype,                                   \
+	.hash_id = (XXtype),				     \
 }
 
 DECL_HASH_ALG(md2, "MD2", "1.2.840.113549.2.2", P99_PROTECT({ 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x02 }), HASH_ALG_MD2);
@@ -231,18 +231,18 @@ static const _mgf _mgf1_alg = {
  * Elliptic curves
  ********************************************************************/
 
-#define DECL_CURVE(TTcurve, UUname, VVoid, WWoidbuf, XXtype, YYbitlen) \
+#define DECL_CURVE(TTcurve, UUname, VVoid, WWoidbuf, XXtype, YYbitlen)    \
 static const u8 _##TTcurve##_curve_name[] = UUname;                       \
 static const u8 _##TTcurve##_curve_printable_oid[] = VVoid;               \
 static const u8 _##TTcurve##_curve_der_oid[] = WWoidbuf;                  \
 									  \
-static const _curve _curve_##TTcurve = {                                   \
+static const _curve _curve_##TTcurve = {                                  \
 	.crv_name = _##TTcurve##_curve_name,                              \
 	.crv_printable_oid = _##TTcurve##_curve_printable_oid,            \
 	.crv_der_oid = _##TTcurve##_curve_der_oid,                        \
 	.crv_der_oid_len = sizeof(_##TTcurve##_curve_der_oid),            \
-	.crv_order_bit_len = YYbitlen,                                    \
-	.crv_id = XXtype,                                                 \
+	.crv_order_bit_len = (YYbitlen),				  \
+	.crv_id = (XXtype),						  \
 }
 
 DECL_CURVE(Curve25519, "Curve25519", "1.3.6.1.4.1.11591.15.1", P99_PROTECT({ 0x06, 0x09, 0x2B, 0x06, 0x01, 0x04, 0x01, 0xDA, 0x47, 0x0F, 0x01 }), CURVE_WEI25519, 256);
@@ -376,10 +376,10 @@ static const _sig_alg _##TTalg##_sig_alg = {                \
 	.alg_printable_oid = _##TTalg##_sig_printable_oid,  \
 	.alg_der_oid = _##TTalg##_sig_der_oid,              \
 	.alg_der_oid_len = sizeof(_##TTalg##_sig_der_oid),  \
-	.sig_id = SSsig,                                    \
-	.hash_id = HHhash,                                  \
-	.parse_sig = YYparse_sig,                           \
-	.parse_algoid_sig_params = ZZparse_algoid,          \
+	.sig_id = (SSsig),				    \
+	.hash_id = (HHhash),				    \
+	.parse_sig = (YYparse_sig),			    \
+	.parse_algoid_sig_params = (ZZparse_algoid),	    \
 }
 
 /*
@@ -545,9 +545,9 @@ static const _pubkey_alg _##TTalg##_pubkey_alg = {            \
 	.alg_printable_oid = _##TTalg##_pubkey_printable_oid, \
 	.alg_der_oid = _##TTalg##_pubkey_der_oid,             \
 	.alg_der_oid_len = sizeof(_##TTalg##_pubkey_der_oid), \
-	.pubkey_id = XXtype,                                  \
-	.parse_pubkey = YYparse_pubkey,                       \
-	.parse_algoid_pubkey_params = ZZparse_algoid,         \
+	.pubkey_id = (XXtype),				      \
+	.parse_pubkey = (YYparse_pubkey),		      \
+	.parse_algoid_pubkey_params = (ZZparse_algoid),	      \
 }
 
 /*
@@ -630,7 +630,7 @@ static const _gost94_pub_params _##EEparams##_ParamSet = {                  \
 	.params_printable_oid = _##EEparams##_gost_94_params_printable_oid, \
 	.params_der_oid = _##EEparams##_gost_94_params_der_oid,             \
 	.params_der_oid_len = sizeof(_##EEparams##_gost_94_params_der_oid), \
-	.params_id = AAid,                                                  \
+	.params_id = (AAid),						    \
 }
 
 DECL_GOST94_PARAMS(GostR3410_94_Test,           GOST94_PARAMS_TEST	    , "GostR3410_94_TestParamSet",            "1.2.643.2.2.32.0", P99_PROTECT({ 0x06, 0x07, 0x2A, 0x85, 0x03, 0x02, 0x02, 0x20, 0x00 }));
