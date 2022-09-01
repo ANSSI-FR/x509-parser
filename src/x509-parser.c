@@ -5434,7 +5434,7 @@ static int check_numeric_string(const u8 *buf, u16 len)
 	for (rbytes = 0; rbytes < len; rbytes++) {
 		c = buf[rbytes];
 
-		if ((c < '0' && c > '9')) {
+		if ((c < '0') || (c > '9')) {
 			ret = -__LINE__;
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
