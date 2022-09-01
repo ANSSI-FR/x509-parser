@@ -3680,6 +3680,8 @@ static int parse_algoid_pubkey_params_gost_r3410_94(cert_parsing_ctx *ctx,
 			goto out;
 		}
 
+		remain -= oid_len;
+
 		if (remain) {
 			ret = -__LINE__;
 			ERROR_TRACE_APPEND(__LINE__);
