@@ -13554,13 +13554,7 @@ static int parse_x509_signatureValue(cert_parsing_ctx *ctx,
 	u16 saved_off = off;
 	int ret;
 
-	if ((cert == NULL) || (len == 0) || (cert == NULL) || (eaten == NULL)) {
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
-
-	if (sig_alg == NULL) {
+	if ((cert == NULL) || (len == 0) || (sig_alg == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
