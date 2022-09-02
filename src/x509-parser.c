@@ -118,7 +118,7 @@ static int _extract_complex_tag(const u8 *buf, u16 len, u32 *tag_num, u16 *eaten
 		len = 4;
 	}
 
-	/*@
+	/*@ loop unroll len;
 	  @ loop invariant 0 <= rbytes <= len;
 	  @ loop invariant t <= (((u32)1 << (u32)(7*(rbytes))) - 1);
 	  @ loop invariant \forall integer x ; 0 <= x < rbytes ==>
@@ -703,7 +703,7 @@ static int _parse_arc(const u8 *buf, u16 len, u32 *arc_val, u16 *eaten)
 		len = 4;
 	}
 
-	/*@
+	/*@ loop unroll len;
 	  @ loop invariant 0 <= rbytes <= len;
 	  @ loop invariant av <= (((u32)1 << (u32)(7*(rbytes))) - 1);
 	  @ loop invariant \forall integer x ; 0 <= x < rbytes ==>
@@ -1383,7 +1383,7 @@ static _hash_alg const * find_hash_by_oid(const u8 *buf, u16 len)
 		goto out;
 	}
 
-	/*@
+	/*@ loop unroll NUM_KNOWN_HASHES ;
 	  @ loop invariant 0 <= k <= NUM_KNOWN_HASHES;
 	  @ loop invariant found == NULL;
 	  @ loop invariant (cur != NULL) ==> \valid_read(cur);
@@ -2056,6 +2056,7 @@ static _curve const * find_curve_by_oid(const u8 *buf, u16 len)
 	}
 
 	/*@
+	  @ loop unroll NUM_KNOWN_CURVES;
 	  @ loop invariant 0 <= k <= NUM_KNOWN_CURVES;
 	  @ loop invariant found == NULL;
 	  @ loop assigns cur, found, k;
@@ -4756,12 +4757,14 @@ static const _sig_alg * find_sig_alg_by_oid(const u8 *buf, u16 len)
 	if ((buf == NULL) || (len == 0)) {
 		goto out;
 	}
-
-	/*@
+		
+	/*@ 
+	  @ loop unroll NUM_KNOWN_SIG_ALGS;
 	  @ loop invariant 0 <= k <= NUM_KNOWN_SIG_ALGS;
 	  @ loop invariant found == NULL;
 	  @ loop assigns cur, found, k;
 	  @ loop variant (NUM_KNOWN_SIG_ALGS - k);
+	 
 	  @*/
 	for (k = 0; k < NUM_KNOWN_SIG_ALGS; k++) {
 		int ret;
@@ -4805,7 +4808,7 @@ static const _pubkey_alg * find_pubkey_alg_by_oid(const u8 *buf, u16 len)
 		goto out;
 	}
 
-	/*@
+	/*@ loop unroll NUM_KNOWN_PUBKEY_ALGS;
 	  @ loop invariant 0 <= k <= NUM_KNOWN_PUBKEY_ALGS;
 	  @ loop invariant found == NULL;
 	  @ loop assigns cur, found, k;
@@ -6624,7 +6627,7 @@ static const _name_oid * find_dn_by_oid(const u8 *buf, u16 len)
 		goto out;
 	}
 
-	/*@
+	/*@ loop unroll NUM_KNOWN_DN_OIDS ;
 	  @ loop invariant 0 <= k <= NUM_KNOWN_DN_OIDS;
 	  @ loop invariant found == NULL;
 	  @ loop assigns cur, found, k;
@@ -10603,7 +10606,7 @@ static const _kp_oid * find_kp_by_oid(const u8 *buf, u16 len)
 		goto out;
 	}
 
-	/*@
+	/*@ loop unroll NUM_KNOWN_KP_OIDS ;
 	  @ loop invariant 0 <= k <= NUM_KNOWN_KP_OIDS;
 	  @ loop invariant found == NULL;
 	  @ loop assigns cur, found, k;
@@ -11465,7 +11468,7 @@ static _ext_oid const * find_ext_by_oid(const u8 *buf, u16 len)
 		goto out;
 	}
 
-	/*@
+	/*@ loop unroll NUM_KNOWN_EXT_OIDS ;
 	  @ loop invariant 0 <= k <= NUM_KNOWN_EXT_OIDS;
 	  @ loop invariant found == NULL;
 	  @ loop assigns cur, found, k;
@@ -11868,7 +11871,7 @@ static int parse_x509_Extensions(cert_parsing_ctx *ctx,
 	}
 
 	/* Initialize list of already seen extensions */
-	/*@
+	/*@ loop unroll MAX_EXT_NUM_PER_CERT;
 	  @ loop assigns i, parsed_oid_list[0 .. (MAX_EXT_NUM_PER_CERT - 1)];
 	  @ loop invariant (i < MAX_EXT_NUM_PER_CERT) ==> \valid(&parsed_oid_list[i]);
 	  @ loop variant (MAX_EXT_NUM_PER_CERT - i);

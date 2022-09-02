@@ -39,45 +39,21 @@ TIMEOUT:=15
 # See https://bts.frama-c.com/view.php?id=2206
 
 frama-c:
-	frama-c-gui src/x509-parser.c -machdep x86_64 \
+	frama-c src/x509-parser.c -machdep x86_64  -pp-annot \
 		    -warn-left-shift-negative \
 		    -warn-right-shift-negative \
 		    -warn-signed-downcast \
 		    -warn-signed-overflow \
 		    -warn-unsigned-downcast \
 		    -warn-unsigned-overflow \
-		    -rte \
 		    -eva \
-		    -wp-dynamic \
-		    -eva-slevel 1 \
-		    -eva-slevel-function="_extract_complex_tag:100, \
-				      _parse_arc:100, \
-				      parse_UTCTime:100, \
-				      find_dn_by_oid:100, \
-				      find_kp_by_oid:100, \
-				      find_curve_by_oid:100, \
-				      find_pubkey_alg_by_oid:200, \
-				      find_sig_alg_by_oid:200, \
-				      find_hash_by_oid:200, \
-				      find_ext_by_oid:200, \
-				      parse_AccessDescription:400, \
-				      parse_x509_Extension:400, \
-				      parse_x509_subjectPublicKeyInfo:400, \
-				      parse_x509_Extensions:400, \
-				      bufs_differ:200, \
-				      parse_x509_tbsCertificate:400, \
-				      parse_x509_tbsCert_sig_AlgorithmIdentifier:100, \
-				      parse_x509_pubkey_AlgorithmIdentifier:100, \
-				      parse_x509_cert:100", \
-		    -eva-warn-undefined-pointer-comparison none \
-		    -then \
-		    -wp \
+		    -wp-dynamic -eva-slevel 3\
+		    -eva-warn-undefined-pointer-comparison none\
+		    -then -wp -wp-steps 100000\
 		    -wp-dynamic \
 		    -wp-no-init-const \
 		    -wp-par $(JOBS) \
-		    -wp-steps 100000 -pp-annot \
-		    -wp-timeout $(TIMEOUT) -save $(SESSION) \
-		    -kernel-msg-key pp
+		    -wp-timeout $(TIMEOUT) -save $(SESSION) 
 
 frama-c-gui:
 	frama-c-gui -load $(SESSION)
