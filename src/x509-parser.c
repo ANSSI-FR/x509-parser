@@ -3681,6 +3681,8 @@ static int parse_algoid_pubkey_params_gost_r3410_94(cert_parsing_ctx *ctx,
 			goto out;
 		}
 
+		remain -= oid_len;
+
 		if (remain) {
 			ret = -__LINE__;
 			ERROR_TRACE_APPEND(__LINE__);
@@ -5437,7 +5439,7 @@ static int check_numeric_string(const u8 *buf, u16 len)
 	for (rbytes = 0; rbytes < len; rbytes++) {
 		c = buf[rbytes];
 
-		if ((c < '0' && c > '9')) {
+		if ((c < '0') || (c > '9')) {
 			ret = -__LINE__;
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
@@ -13557,13 +13559,7 @@ static int parse_x509_signatureValue(cert_parsing_ctx *ctx,
 	u16 saved_off = off;
 	int ret;
 
-	if ((cert == NULL) || (len == 0) || (cert == NULL) || (eaten == NULL)) {
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
-
-	if (sig_alg == NULL) {
+	if ((cert == NULL) || (len == 0) || (sig_alg == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
