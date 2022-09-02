@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 1:
-			printf("Invalid sequence for cert #%d at offset %d\n",
+			printf("Invalid sequence for cert #%d at offset %ld\n",
 				num_v3_certs + num_not_v3, offset);
 			more = 0;
 			break;

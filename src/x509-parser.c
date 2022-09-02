@@ -1536,7 +1536,8 @@ static int parse_algoid_sig_params_rsassa_pss(cert_parsing_ctx *ctx,
 {
 	u16 remain, hdr_len = 0, data_len = 0, oid_len = 0;
 	u16 int_hdr_len = 0, int_data_len = 0;
-	u16 attr_hdr_len = 0, attr_data_len = 0, eaten = 0, salt_len = 0;
+	u16 attr_hdr_len = 0, attr_data_len = 0, eaten = 0;
+	u8 salt_len = 0;
 	const u8 *buf = cert + off;
 	_hash_alg const *hash = NULL;
 	_mgf const *mgf = NULL;
