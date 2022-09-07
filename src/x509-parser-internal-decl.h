@@ -447,6 +447,9 @@ DECL_SIG_ALG(gost_R3411_94_R3410_94  , SIG_ALG_GOSTR3410_94      , HASH_ALG_GOST
 DECL_SIG_ALG(gost_R3410_2012_256     , SIG_ALG_GOSTR3410_2012_256, HASH_ALG_STREEBOG256 , parse_sig_gost2012_256, parse_algoid_sig_params_none                , "sig_gost3410-2012-256"                       , "1.2.643.7.1.1.3.2"         , P99_PROTECT({ 0x06, 0x08, 0x2a, 0x85, 0x03, 0x07, 0x01, 0x01, 0x03, 0x02 }));
 DECL_SIG_ALG(gost_R3410_2012_512     , SIG_ALG_GOSTR3410_2012_512, HASH_ALG_STREEBOG512 , parse_sig_gost2012_512, parse_algoid_sig_params_none                , "sig_gost3410-2012-512"                       , "1.2.643.7.1.1.3.3"         , P99_PROTECT({ 0x06, 0x08, 0x2a, 0x85, 0x03, 0x07, 0x01, 0x01, 0x03, 0x03 }));
 DECL_SIG_ALG(bign_with_hbelt         , SIG_ALG_BIGN              , HASH_ALG_HBELT       , parse_sig_bign        , parse_algoid_sig_params_none                , "bign (STB 34.101.45-2013) using hbelt hash"  , "1.2.112.0.2.0.34.101.45.12", P99_PROTECT({ 0x06, 0x09, 0x2a, 0x70, 0x00, 0x02, 0x00, 0x22, 0x65, 0x2d, 0x0c }));
+DECL_SIG_ALG(bign_with_bash256       , SIG_ALG_BIGN              , HASH_ALG_BASH256     , parse_sig_bign        , parse_algoid_sig_params_none                , "bign (STB 34.101.45-2013) using BASH256"     , "1.2.112.0.2.0.34.101.45.13", P99_PROTECT({ 0x06, 0x09, 0x2a, 0x70, 0x00, 0x02, 0x00, 0x22, 0x65, 0x2d, 0x0d }));
+DECL_SIG_ALG(bign_with_bash384       , SIG_ALG_BIGN              , HASH_ALG_BASH384     , parse_sig_bign        , parse_algoid_sig_params_none                , "bign (STB 34.101.45-2013) using BASH384"     , "1.2.112.0.2.0.34.101.45.14", P99_PROTECT({ 0x06, 0x09, 0x2a, 0x70, 0x00, 0x02, 0x00, 0x22, 0x65, 0x2d, 0x0e }));
+DECL_SIG_ALG(bign_with_bash512       , SIG_ALG_BIGN              , HASH_ALG_BASH512     , parse_sig_bign        , parse_algoid_sig_params_none                , "bign (STB 34.101.45-2013) using BASH512"     , "1.2.112.0.2.0.34.101.45.15", P99_PROTECT({ 0x06, 0x09, 0x2a, 0x70, 0x00, 0x02, 0x00, 0x22, 0x65, 0x2d, 0x0f }));
 DECL_SIG_ALG(bign_with_hspec         , SIG_ALG_BIGN              , HASH_ALG_UNKNOWN     , parse_sig_bign        , parse_algoid_sig_params_bign_with_hspec     , "bign (STB 34.101.45-2013) w/ given hash func", "1.2.112.0.2.0.34.101.45.11", P99_PROTECT({ 0x06, 0x09, 0x2a, 0x70, 0x00, 0x02, 0x00, 0x22, 0x65, 0x2d, 0x0b }));
 DECL_SIG_ALG(monkeysphere            , SIG_ALG_MONKEYSPHERE      , HASH_ALG_UNKNOWN     , parse_sig_monkey      , parse_algoid_sig_params_none                , "unknown OID from The Monkeysphere Project"   , "1.3.6.1.4.1.37210.1.1"     , P99_PROTECT({ 0x06, 0x0a, 0x2b, 0x06, 0x01, 0x04, 0x01, 0x82, 0xa2, 0x5a, 0x01, 0x01 }));
 
@@ -505,6 +508,9 @@ static const _sig_alg *known_sig_algs[] = {
 	&_gost_R3411_94_R3410_94_sig_alg,
 
 	&_bign_with_hbelt_sig_alg,
+	&_bign_with_bash256_sig_alg,
+	&_bign_with_bash384_sig_alg,
+	&_bign_with_bash512_sig_alg,
 	&_bign_with_hspec_sig_alg,
 
 	&_monkeysphere_sig_alg,
