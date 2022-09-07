@@ -659,7 +659,6 @@ typedef struct {
 
 	    /* SAN */
 	    int has_san;
-	    int san_empty;
 	    int san_critical;
 
 	    /* Basic constraints */

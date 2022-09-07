@@ -9713,7 +9713,6 @@ out:
   @ ensures (ctx == \null) ==> \result < 0;
   @
   @ assigns ctx->has_san,
-	    ctx->san_empty,
 	    ctx->san_critical;
   @*/
 static int parse_ext_SAN(cert_parsing_ctx *ctx,
@@ -9722,7 +9721,7 @@ static int parse_ext_SAN(cert_parsing_ctx *ctx,
 {
 	u16 data_len = 0, hdr_len = 0, remain = 0, eaten = 0;
 	const u8 *buf = cert + off;
-	int ret, san_empty, empty_gen_name;
+	int ret, empty_gen_name;
 
 	if ((cert == NULL) || (len == 0) || (ctx == NULL)) {
 		ret = -__LINE__;
@@ -9759,8 +9758,6 @@ static int parse_ext_SAN(cert_parsing_ctx *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
-
-	san_empty = (remain == 0);
 
 	/*@
 	  @ loop assigns ret, buf, remain, eaten, empty_gen_name;
@@ -9820,7 +9817,6 @@ static int parse_ext_SAN(cert_parsing_ctx *ctx,
 	 * useful info.
 	 */
 	ctx->has_san = 1;
-	ctx->san_empty = san_empty;
 	ctx->san_critical = critical;
 
 	ret = 0;
@@ -11909,7 +11905,7 @@ static int parse_x509_Extensions(cert_parsing_ctx *ctx,
 	 * that is marked as critical."
 	 */
 	if (ctx->empty_subject) {
-		if (ctx->san_empty) {
+		if (!ctx->has_san) {
 			ret = -__LINE__;
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
