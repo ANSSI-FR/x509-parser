@@ -181,7 +181,10 @@ typedef enum {
 	HASH_ALG_GOSTR3411_94 = 23,
 	HASH_ALG_STREEBOG256  = 24,
 	HASH_ALG_STREEBOG512  = 25,
-	HASH_ALG_HBELT        = 26
+	HASH_ALG_HBELT        = 26,
+	HASH_ALG_BASH256      = 27,
+	HASH_ALG_BASH384      = 28,
+	HASH_ALG_BASH512      = 29
 } hash_alg_id;
 
 
