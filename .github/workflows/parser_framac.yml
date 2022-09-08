@@ -1,0 +1,27 @@
+name: parser frama-c
+
+# Run this workflow every time a new commit pushed to your repository
+on: push
+
+jobs:
+  framac:
+    runs-on: ubuntu-latest
+    container:
+      image: framac/frama-c:${{ matrix.release }}
+      volumes:
+        - /home/runner:/__w/workflow/workflow/build
+    strategy:
+      fail-fast: false
+      matrix:
+        release: ["21.1", "22.0"]
+    timeout-minutes: 600
+    steps:
+      # Checkout repository
+      - name: checkout repository
+        uses: actions/checkout@v2
+      # Run actions
+      - name: parser framac
+        shell: bash
+        run: |
+          make frama-c
+        continue-on-error: false
