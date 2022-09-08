@@ -1951,9 +1951,8 @@ out:
 
 /*
  * When Alg OID is bign-with-hspec (1.2.112.0.2.0.34.101.45.11), we expect the
- * the parameters to contain the OID of the hash function. Note that we do not
- * have any certificate at that point to test that code (and validate that
- * the hash OID is not followed by a NULL for instance)
+ * the parameters to directly contain the OID of the hash function. Nothing else
+ * would be valid.
  */
 /*@
   @ requires ((int)off + (int)len) <= 65535;
@@ -1973,10 +1972,10 @@ out:
 static int parse_algoid_sig_params_bign_with_hspec(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
 					      const u8 *cert, u16 off, u16 len)
 {
-	u16 remain, hdr_len = 0, data_len = 0;
 	const u8 *buf = cert + off;
 	const _hash_alg *hash;
 	u16 oid_len = 0;
+	u16 remain;
 	int ret;
 
 	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
@@ -1992,27 +1991,16 @@ static int parse_algoid_sig_params_bign_with_hspec(cert_parsing_ctx ATTRIBUTE_UN
 	ctx->tbs_sig_alg_oid_params_start = off;
 	ctx->tbs_sig_alg_oid_params_len = len;
 
-	/* Check we are dealing with a valid sequence */
-	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
-			   &hdr_len, &data_len);
-	if (ret) {
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
+	remain = len;
 
-	buf += hdr_len;
-	remain = data_len;
-
-	/*
-	 * In the sequence, we should find an OID for a known hash
-	 * function ...
-	 */
+	/* Let's see if we have on OID here ... */
 	ret = parse_OID(buf, remain, &oid_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
+	/* ... for a known hash function */
 	hash = find_hash_by_oid(buf, oid_len);
 	if (hash == NULL) {
 		ret = -__LINE__;
