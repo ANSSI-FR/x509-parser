@@ -8,8 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: framac/frama-c:${{ matrix.release }}
-      volumes:
-        - /home/runner:/__w/workflow/workflow/build
+        #volumes:
+        #- /home/runner:/__w/workflow/workflow/build
     strategy:
       fail-fast: false
       matrix:
