@@ -1969,7 +1969,7 @@ out:
 	    ctx->tbs_sig_alg_oid_params_len,
 	    ctx->hash_alg;
   @*/
-static int parse_algoid_sig_params_bign_with_hspec(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+static int parse_algoid_sig_params_bign_with_hspec(cert_parsing_ctx *ctx,
 					      const u8 *cert, u16 off, u16 len)
 {
 	const u8 *buf = cert + off;
@@ -2859,7 +2859,7 @@ static inline int parse_pubkey_gostr3410_2012_512(cert_parsing_ctx *ctx,
 	    ctx->spki_alg_params.bign.bign_raw_y_pub_off,
 	    ctx->spki_alg_params.bign.bign_raw_y_pub_len;
   @*/
-static int parse_pubkey_bign(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+static int parse_pubkey_bign(cert_parsing_ctx *ctx,
 			const u8 *cert, u16 off, u16 len)
 {
 	u16 order_ceil_len, remain, hdr_len = 0, data_len = 0;
@@ -3499,7 +3499,7 @@ static int parse_algoid_pubkey_params_ea_rsa(cert_parsing_ctx *ctx,
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
 		}
-		bit_len = (buf[2] << 8) + buf[3];
+		bit_len = ((u16)buf[2] << 8) + ((u16)buf[3]);
 
 		break;
 
@@ -4415,10 +4415,10 @@ out:
   @
   @ assigns *p_start_off, *p_len, *q_start_off, *q_len, *g_start_off, *g_len;
   @*/
-int parse_algoid_dsa_export_params(const u8 *buf, u16 len,
-				   u16 *p_start_off, u16 *p_len,
-				   u16 *q_start_off, u16 *q_len,
-				   u16 *g_start_off, u16 *g_len)
+static int parse_algoid_dsa_export_params(const u8 *buf, u16 len,
+					  u16 *p_start_off, u16 *p_len,
+					  u16 *q_start_off, u16 *q_len,
+					  u16 *g_start_off, u16 *g_len)
 {
 	u16 remain = 0;
 	u16 hdr_len = 0;
@@ -4614,8 +4614,8 @@ out:
   @
   @ assigns *pub_start_off, *pub_len;
   @*/
-int parse_pubkey_dsa_export_pub(const u8 *buf, u16 len,
-				u16 *pub_start_off, u16 *pub_len)
+static int parse_pubkey_dsa_export_pub(const u8 *buf, u16 len,
+				       u16 *pub_start_off, u16 *pub_len)
 {
 	u16 remain;
 	u16 hdr_len = 0;
@@ -6981,7 +6981,7 @@ out:
   @
   @ assigns \nothing;
   @*/
-u8 compute_decimal(u8 d, u8 u)
+static u8 compute_decimal(u8 d, u8 u)
 {
 	return (d - 0x30) * 10 + (u - 0x30);
 }
@@ -7143,7 +7143,7 @@ out:
   @
   @ assigns \nothing;
   @*/
-u16 compute_year(u8 d1, u8 d2, u8 d3, u8 d4)
+static u16 compute_year(u8 d1, u8 d2, u8 d3, u8 d4)
 {
 	return ((u16)d1 - (u16)0x30) * 1000 +
 	       ((u16)d2 - (u16)0x30) * 100 +
@@ -8177,7 +8177,7 @@ out:
   @
   @ assigns \nothing;
   @*/
-static int parse_ext_AIA(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+static int parse_ext_AIA(cert_parsing_ctx *ctx,
 			 const u8 *cert, u16 off, u16 len, int critical)
 {
 	u16 hdr_len = 0, data_len = 0, remain;
@@ -9459,7 +9459,7 @@ out:
   @
   @ assigns \nothing;
   @*/
-static int parse_ext_certPolicies(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+static int parse_ext_certPolicies(cert_parsing_ctx *ctx,
 				  const u8 *cert, u16 off, u16 len,
 				  int ATTRIBUTE_UNUSED critical)
 {
