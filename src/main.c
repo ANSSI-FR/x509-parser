@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
 
 	printf("%d/%d (%.2f%%) valid X.509v3 certificate(s) (and %d non-v3 certs)\n",
 		num_v3_certs_ok, num_v3_certs,
-		((float)(100*num_v3_certs_ok) / ((float)num_v3_certs)),
+		((double)(100*num_v3_certs_ok) / ((double)num_v3_certs)),
 		num_not_v3);
 
 out:
