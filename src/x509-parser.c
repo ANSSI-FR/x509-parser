@@ -118,7 +118,7 @@ static int _extract_complex_tag(const u8 *buf, u16 len, u32 *tag_num, u16 *eaten
 		len = 4;
 	}
 
-	/*@ loop unroll len;
+	/*@ loop unroll 4;
 	  @ loop invariant 0 <= rbytes <= len;
 	  @ loop invariant t <= (((u32)1 << (u32)(7*(rbytes))) - 1);
 	  @ loop invariant \forall integer x ; 0 <= x < rbytes ==>
@@ -703,7 +703,7 @@ static int _parse_arc(const u8 *buf, u16 len, u32 *arc_val, u16 *eaten)
 		len = 4;
 	}
 
-	/*@ loop unroll len;
+	/*@ loop unroll 4;
 	  @ loop invariant 0 <= rbytes <= len;
 	  @ loop invariant av <= (((u32)1 << (u32)(7*(rbytes))) - 1);
 	  @ loop invariant \forall integer x ; 0 <= x < rbytes ==>

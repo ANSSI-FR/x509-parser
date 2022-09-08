@@ -47,7 +47,7 @@ frama-c:
 		    -warn-unsigned-downcast \
 		    -warn-unsigned-overflow \
 		    -eva \
-		    -wp-dynamic -eva-slevel 3\
+		    -wp-dynamic -eva-slevel 1\
 		    -eva-warn-undefined-pointer-comparison none\
 		    -then -wp -wp-steps 100000\
 		    -wp-dynamic \
