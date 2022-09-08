@@ -88,11 +88,11 @@ debug: clean all
 # If the user has not overriden the CFLAGS, we add the usual gcc/clang
 # flags to produce binaries compatible with hardening technologies.
 ifndef USER_DEFINED_CFLAGS
-BIN_CFLAGS  ?= $(CFLAGS) $(FPIE_CFLAG)
-LIB_CFLAGS  ?= $(CFLAGS) $(FPIC_CFLAG) -ffreestanding
+BIN_CFLAGS  ?= $(CFLAGS) $(FPIE_CFLAG) $(EXTRA_CFLAGS)
+LIB_CFLAGS  ?= $(CFLAGS) $(FPIC_CFLAG) -ffreestanding $(EXTRA_LDLAGS)
 else
-BIN_CFLAGS  ?= $(USER_DEFINED_CFLAGS)
-LIB_CFLAGS  ?= $(USER_DEFINED_CFLAGS)
+BIN_CFLAGS  ?= $(USER_DEFINED_CFLAGS) $(EXTRA_CFLAGS)
+LIB_CFLAGS  ?= $(USER_DEFINED_CFLAGS) $(EXTRA_LDFLAGS)
 endif
 
 ifndef USER_DEFINED_LDFLAGS

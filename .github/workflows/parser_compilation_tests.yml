@@ -20,7 +20,7 @@ jobs:
       - name: parser tests
         env:
           CC: ${{ matrix.cc }}
-          CFLAGS: ${{ matrix.optflags }}
+          EXTRA_CFLAGS: ${{ matrix.optflags }}
         shell: bash
         run: |
           # Compilation tests of all cases
