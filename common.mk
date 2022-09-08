@@ -67,6 +67,28 @@ CFLAGS ?= $(WARNING_CFLAGS) -pedantic -fno-builtin -std=c99 \
 	  -D_FORTIFY_SOURCE=2 $(STACK_PROT_FLAG) -O3
 LDFLAGS ?=
 
+# Do we have a C++ compiler instead of a C compiler?
+GPP := $(shell $(CROSS_COMPILE)$(CC) -v 2>&1 | grep g++)
+CLANGPP := $(shell echo $(CROSS_COMPILE)$(CC) | grep clang++)
+
+# g++ case
+ifneq ($(GPP),)
+CFLAGS := $(patsubst -std=c99, -std=c++2a, $(CFLAGS))
+CFLAGS += -Wno-deprecated
+# Remove C++ unused pedantic flags
+CFLAGS := $(patsubst -Wstrict-prototypes,,$(CFLAGS))
+CFLAGS := $(patsubst -Wjump-misses-init,,$(CFLAGS))
+CFLAGS := $(patsubst -Wduplicated-branches,,$(CFLAGS))
+# Exlicitly remove missing field initializers as we
+# use them for context zeroization
+CFLAGS += -Wno-missing-field-initializers
+endif
+# clang++ case
+ifneq ($(CLANGPP),)
+CFLAGS := $(patsubst -std=c99, -std=c++2a, $(CFLAGS))
+CFLAGS += -Wno-deprecated -Wno-c++98-c++11-c++14-c++17-compat-pedantic -Wno-old-style-cast -Wno-zero-as-null-pointer-constant -Wno-c++98-compat-pedantic
+endif
+
 # Default AR and RANLIB if not overriden by user
 AR ?= ar
 RANLIB ?= ranlib

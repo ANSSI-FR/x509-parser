@@ -384,8 +384,8 @@ static const _sig_alg _##TTalg##_sig_alg = {                \
 	.alg_der_oid_len = sizeof(_##TTalg##_sig_der_oid),  \
 	.sig_id = (SSsig),				    \
 	.hash_id = (HHhash),				    \
-	.parse_sig = (YYparse_sig),			    \
 	.parse_algoid_sig_params = (ZZparse_algoid),	    \
+	.parse_sig = (YYparse_sig),			    \
 }
 
 /*
@@ -558,8 +558,8 @@ static const _pubkey_alg _##TTalg##_pubkey_alg = {            \
 	.alg_der_oid = _##TTalg##_pubkey_der_oid,             \
 	.alg_der_oid_len = sizeof(_##TTalg##_pubkey_der_oid), \
 	.pubkey_id = (XXtype),				      \
-	.parse_pubkey = (YYparse_pubkey),		      \
 	.parse_algoid_pubkey_params = (ZZparse_algoid),	      \
+	.parse_pubkey = (YYparse_pubkey),		      \
 }
 
 /*

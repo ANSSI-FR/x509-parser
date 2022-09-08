@@ -226,7 +226,7 @@ static int get_identifier(const u8 *buf, u16 len,
 	}
 
 	/* See 8.1.2.3 */
-	c = (buf[0] >> 6) & 0x03; /* Extract class from 2 MSB */
+	c = (tag_class)((buf[0] >> 6) & 0x03); /* Extract class from 2 MSB */
 	p = (buf[0] >> 5) & 0x01; /* Extract P/C bit */
 	t = buf[0] & 0x1f;        /* Extract tag number from 6 LSB */
 	rbytes = 1;
@@ -505,7 +505,7 @@ typedef enum {
 static int parse_id_len(const u8 *buf, u16 len, tag_class exp_class,
 			u32 exp_type, u16 *parsed, u16 *content_len)
 {
-	tag_class c = 0;
+	tag_class c = (tag_class)0;
 	u8 p;
 	u32 t = 0;
 	u16 cur_parsed = 0;

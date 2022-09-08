@@ -1,0 +1,28 @@
+name: parser
+
+# Run this workflow every time a new commit pushed to your repository
+on: push
+
+jobs:
+  compilation_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      #max-parallel: 10
+      matrix:
+        cc: [gcc, clang, g++, clang++]
+        optflags: ["-O3", "-O2", "-O1"]
+    steps:
+      # Checkout repository
+      - name: checkout repository
+        uses: actions/checkout@v2
+      # Run actions
+      # parser compilation tests
+      - name: librbg tests
+        env:
+          CC: ${{ matrix.cc }}
+        shell: bash
+        run: |
+          # Compilation tests of all cases
+          #
+          make
+        continue-on-error: false

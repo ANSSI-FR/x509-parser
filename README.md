@@ -1,3 +1,5 @@
+[![compilation](https://github.com/ANSSI-FR/x509-parser/actions/workflows/parser_compilation_tests.yml/badge.svg)](https://github.com/ANSSI-FR/x509-parser/actions/workflows/parser_compilation_tests.yml)
+
 # x509-parser project
 
 ## Copyright and license
