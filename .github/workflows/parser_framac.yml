@@ -13,7 +13,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        release: ["21.1", "22.0"]
+        #release: ["21.1", "22.0"]
+        release: ["25.0"]
     timeout-minutes: 600
     steps:
       # Checkout repository
