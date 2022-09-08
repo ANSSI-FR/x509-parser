@@ -95,6 +95,12 @@ BIN_CFLAGS  ?= $(USER_DEFINED_CFLAGS)
 LIB_CFLAGS  ?= $(USER_DEFINED_CFLAGS)
 endif
 
+ifndef USER_DEFINED_LDFLAGS
+BIN_LDFLAGS ?= $(LDFLAGS) $(FPIE_LDFLAGS)
+else
+BIN_LDFLAGS ?= $(LDFLAGS)
+endif
+
 # Do we have a C++ compiler instead of a C compiler?
 GPP := $(shell $(CROSS_COMPILE)$(CC) -v 2>&1 | grep g++)
 CLANGPP := $(shell echo $(CROSS_COMPILE)$(CC) | grep clang++)
@@ -128,8 +134,4 @@ BIN_CFLAGS := $(patsubst -std=c99, -std=c++2a, $(BIN_CFLAGS))
 BIN_CFLAGS += -Wno-deprecated -Wno-c++98-c++11-c++14-c++17-compat-pedantic -Wno-old-style-cast -Wno-zero-as-null-pointer-constant -Wno-c++98-compat-pedantic
 endif
 
-ifndef USER_DEFINED_LDFLAGS
-BIN_LDFLAGS ?= $(LDFLAGS) $(FPIE_LDFLAGS)
-else
-BIN_LDFLAGS ?= $(LDFLAGS)
-endif
+
