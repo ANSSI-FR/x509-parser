@@ -3499,7 +3499,7 @@ static int parse_algoid_pubkey_params_ea_rsa(cert_parsing_ctx *ctx,
 			ERROR_TRACE_APPEND(__LINE__);
 			goto out;
 		}
-		bit_len = ((u16)buf[2] << 8) + ((u16)buf[3]);
+		bit_len = (u16)((buf[2] << 8) + buf[3]);
 
 		break;
 
@@ -9558,7 +9558,7 @@ out:
   @
   @ assigns \nothing;
   @*/
-static int parse_ext_policyMapping(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+static int parse_ext_policyMapping(cert_parsing_ctx *ctx,
 				   const u8 *cert, u16 off, u16 len,
 				   int critical)
 {
@@ -9830,7 +9830,7 @@ out:
   @
   @ assigns \nothing;
   @*/
-static int parse_ext_IAN(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+static int parse_ext_IAN(cert_parsing_ctx *ctx,
 			 const u8 *cert, u16 off, u16 len,
 			 int ATTRIBUTE_UNUSED critical)
 {
@@ -9944,7 +9944,7 @@ out:
   @
   @ assigns \nothing;
   @*/
-static int parse_ext_subjectDirAttr(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+static int parse_ext_subjectDirAttr(cert_parsing_ctx *ctx,
 				    const u8 *cert, u16 off, u16 len,
 				    int critical)
 {
@@ -10405,7 +10405,7 @@ out:
   @
   @ assigns \nothing;
   @*/
-static int parse_ext_policyConstraints(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+static int parse_ext_policyConstraints(cert_parsing_ctx *ctx,
 				       const u8 *cert, u16 off, u16 len,
 				       int critical)
 {
@@ -10644,7 +10644,7 @@ out:
   @
   @ assigns ctx->has_eku;
   @*/
-static int parse_ext_EKU(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+static int parse_ext_EKU(cert_parsing_ctx *ctx,
 			 const u8 *cert, u16 off, u16 len,
 			 int critical)
 {
@@ -11093,7 +11093,7 @@ out:
   @ assigns \nothing;
   @*/
 #define MAX_INHIBITANYPOLICY 64
-static int parse_ext_inhibitAnyPolicy(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+static int parse_ext_inhibitAnyPolicy(cert_parsing_ctx *ctx,
 				      const u8 *cert, u16 off, u16 len,
 				      int critical)
 {
@@ -11188,7 +11188,7 @@ static const u8 _ext_oid_inhibitAnyPolicy[] =  { 0x06, 0x03, 0x55, 0x1d, 0x36 };
   @
   @ assigns \nothing;
   @*/
-static int parse_ext_bad_oid(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
+static int parse_ext_bad_oid(cert_parsing_ctx *ctx,
 			     const u8 *cert, u16 ATTRIBUTE_UNUSED off, u16 len,
 			     int ATTRIBUTE_UNUSED critical)
 {
@@ -12797,9 +12797,9 @@ out:
   @
   @ assigns *eaten, *bs_data_start_off, *bs_data_len;
   @*/
-int parse_sig_rsa_helper(const u8 *buf, u16 len,
-			 u16 *bs_data_start_off, u16 *bs_data_len,
-			 u16 *eaten)
+static int parse_sig_rsa_helper(const u8 *buf, u16 len,
+			        u16 *bs_data_start_off, u16 *bs_data_len,
+			        u16 *eaten)
 {
 	u16 hdr_len = 0, data_len = 0;
 	int ret;

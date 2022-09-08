@@ -115,7 +115,7 @@ LIB_CFLAGS := $(patsubst -Wjump-misses-init,,$(LIB_CFLAGS))
 LIB_CFLAGS := $(patsubst -Wduplicated-branches,,$(LIB_CFLAGS))
 # Exlicitly remove missing field initializers as we
 # use them for context zeroization
-LIB_CFLAGS += -Wno-missing-field-initializers
+LIB_CFLAGS += -Wno-missing-field-initializers -Wno-switch-enum
 BIN_CFLAGS := $(patsubst -std=c99, -std=c++2a, $(BIN_CFLAGS))
 BIN_CFLAGS += -Wno-deprecated
 # Remove C++ unused pedantic flags
@@ -124,14 +124,16 @@ BIN_CFLAGS := $(patsubst -Wjump-misses-init,,$(BIN_CFLAGS))
 BIN_CFLAGS := $(patsubst -Wduplicated-branches,,$(BIN_CFLAGS))
 # Exlicitly remove missing field initializers as we
 # use them for context zeroization
-BIN_CFLAGS += -Wno-missing-field-initializers
+BIN_CFLAGS += -Wno-missing-field-initializers -Wno-switch-enum
 endif
 # clang++ case
 ifneq ($(CLANGPP),)
 LIB_CFLAGS := $(patsubst -std=c99, -std=c++2a, $(LIB_CFLAGS))
 LIB_CFLAGS += -Wno-deprecated -Wno-c++98-c++11-c++14-c++17-compat-pedantic -Wno-old-style-cast -Wno-zero-as-null-pointer-constant -Wno-c++98-compat-pedantic
+LIB_CFLAGS += -Wno-missing-field-initializers -Wno-switch-enum
 BIN_CFLAGS := $(patsubst -std=c99, -std=c++2a, $(BIN_CFLAGS))
 BIN_CFLAGS += -Wno-deprecated -Wno-c++98-c++11-c++14-c++17-compat-pedantic -Wno-old-style-cast -Wno-zero-as-null-pointer-constant -Wno-c++98-compat-pedantic
+BIN_CFLAGS += -Wno-missing-field-initializers -Wno-switch-enum
 endif
 
 
