@@ -28,7 +28,8 @@ clean:
 #####################################################################
 
 SESSION:=frama-c-rte-val-wp.session
-JOBS:=$(shell nproc)
+NPROC:=$(shell nproc)
+JOBS:=$(shell echo $$(( $(NPROC) * 2 )))
 TIMEOUT:=15
 
 # "-val-warn-undefined-pointer-comparison none" is to deal with the
