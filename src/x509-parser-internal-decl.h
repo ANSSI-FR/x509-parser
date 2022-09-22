@@ -31,7 +31,7 @@ typedef struct {
 	const u8 *alg_name;
 	const u8 *alg_printable_oid;
 	const u8 *alg_der_oid;
-	const u8 alg_der_oid_len;
+	const u32 alg_der_oid_len;
 	hash_alg_id hash_id;
 } _hash_alg;
 
@@ -39,7 +39,7 @@ typedef struct {
 	const u8 *alg_name;
 	const u8 *alg_printable_oid;
 	const u8 *alg_der_oid;
-	const u8 alg_der_oid_len;
+	const u32 alg_der_oid_len;
 	const mgf_alg_id mgf_id;
 } _mgf;
 
@@ -47,70 +47,70 @@ typedef struct {
 	const _hash_alg *hash;
 	const _mgf *mgf;
 	const _hash_alg *mgf_hash;
-	u8 salt_len;
-	u8 trailer_field;
+	u32 salt_len;
+	u32 trailer_field;
 } _rsassa_pss;
 
 typedef struct {
 	const u8 *crv_name;
 	const u8 *crv_printable_oid;
 	const u8 *crv_der_oid;
-	const u8 crv_der_oid_len;
-	const u16 crv_order_bit_len;
+	const u32 crv_der_oid_len;
+	const u32 crv_order_bit_len;
 	curve_id crv_id;
 } _curve;
 
 /* Signature and sig alg parameters parsing functions */
-static int parse_sig_ed448(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len, u16 *eaten);
-static int parse_sig_ed25519(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len, u16 *eaten);
-static int parse_sig_ecdsa(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len, u16 *eaten);
-static int parse_sig_sm2(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len, u16 *eaten);
-static int parse_sig_dsa(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len, u16 *eaten);
-static int parse_sig_rsa(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len, u16 *eaten);
-static int parse_sig_gost94(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len, u16 *eaten);
-static int parse_sig_gost2001(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len, u16 *eaten);
-static int parse_sig_gost2012_512(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len, u16 *eaten);
-static int parse_sig_gost2012_256(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len, u16 *eaten);
-static int parse_sig_bign(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len, u16 *eaten);
-static int parse_sig_monkey(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len, u16 *eaten);
+static int parse_sig_ed448(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len, u32 *eaten);
+static int parse_sig_ed25519(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len, u32 *eaten);
+static int parse_sig_ecdsa(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len, u32 *eaten);
+static int parse_sig_sm2(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len, u32 *eaten);
+static int parse_sig_dsa(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len, u32 *eaten);
+static int parse_sig_rsa(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len, u32 *eaten);
+static int parse_sig_gost94(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len, u32 *eaten);
+static int parse_sig_gost2001(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len, u32 *eaten);
+static int parse_sig_gost2012_512(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len, u32 *eaten);
+static int parse_sig_gost2012_256(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len, u32 *eaten);
+static int parse_sig_bign(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len, u32 *eaten);
+static int parse_sig_monkey(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len, u32 *eaten);
 
-static int parse_algoid_sig_params_ecdsa_with(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_sig_params_ecdsa_with_specified(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_sig_params_sm2(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_sig_params_eddsa(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_sig_params_rsa(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_sig_params_rsassa_pss(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_sig_params_none(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 ATTRIBUTE_UNUSED len);
-static int parse_algoid_sig_params_bign_with_hspec(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
+static int parse_algoid_sig_params_ecdsa_with(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_sig_params_ecdsa_with_specified(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_sig_params_sm2(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_sig_params_eddsa(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_sig_params_rsa(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_sig_params_rsassa_pss(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_sig_params_none(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 ATTRIBUTE_UNUSED len);
+static int parse_algoid_sig_params_bign_with_hspec(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
 
 /* subject public key and spki params parsing functions */
-static int parse_pubkey_ed448(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_pubkey_x448(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_pubkey_ed25519(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_pubkey_x25519(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_pubkey_ec(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_pubkey_rsa(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_pubkey_gostr3410_94(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_pubkey_gostr3410_2001(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_pubkey_gostr3410_2012_256(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_pubkey_gostr3410_2012_512(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_pubkey_dsa(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_pubkey_bign(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
+static int parse_pubkey_ed448(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_pubkey_x448(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_pubkey_ed25519(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_pubkey_x25519(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_pubkey_ec(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_pubkey_rsa(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_pubkey_gostr3410_94(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_pubkey_gostr3410_2001(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_pubkey_gostr3410_2012_256(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_pubkey_gostr3410_2012_512(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_pubkey_dsa(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_pubkey_bign(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
 
-static int parse_algoid_pubkey_params_ecPublicKey(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_pubkey_params_ed25519(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_pubkey_params_ed448(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_pubkey_params_x25519(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_pubkey_params_x448(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_pubkey_params_rsa(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_pubkey_params_gost_r3410_2012_256(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_pubkey_params_gost_r3410_2012_512(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_pubkey_params_gost_r3410_2001(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_pubkey_params_gost_r3410_94(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_pubkey_params_dsa(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 len);
-static int parse_algoid_pubkey_params_ea_rsa(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 ATTRIBUTE_UNUSED len);
-static int parse_algoid_pubkey_params_none(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 ATTRIBUTE_UNUSED len);
-static int parse_algoid_pubkey_params_bign(cert_parsing_ctx *ctx, const u8 *cert, u16 off, u16 ATTRIBUTE_UNUSED len);
+static int parse_algoid_pubkey_params_ecPublicKey(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_pubkey_params_ed25519(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_pubkey_params_ed448(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_pubkey_params_x25519(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_pubkey_params_x448(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_pubkey_params_rsa(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_pubkey_params_gost_r3410_2012_256(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_pubkey_params_gost_r3410_2012_512(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_pubkey_params_gost_r3410_2001(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_pubkey_params_gost_r3410_94(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_pubkey_params_dsa(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_pubkey_params_ea_rsa(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 ATTRIBUTE_UNUSED len);
+static int parse_algoid_pubkey_params_none(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 ATTRIBUTE_UNUSED len);
+static int parse_algoid_pubkey_params_bign(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 ATTRIBUTE_UNUSED len);
 
 
 
@@ -363,13 +363,13 @@ typedef struct {
 	const u8 *alg_name;
 	const u8 *alg_printable_oid;
 	const u8 *alg_der_oid;
-	const u8 alg_der_oid_len;
+	const u32 alg_der_oid_len;
 
 	sig_alg_id sig_id;
 	hash_alg_id hash_id;
 
-	int (*parse_algoid_sig_params)(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx, const u8 *cert, u16 off, u16 len);
-	int (*parse_sig)(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx, const u8 *cert, u16 off, u16 len, u16 *eaten);
+	int (*parse_algoid_sig_params)(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx, const u8 *cert, u32 off, u32 len);
+	int (*parse_sig)(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx, const u8 *cert, u32 off, u32 len, u32 *eaten);
 } _sig_alg;
 
 #define DECL_SIG_ALG(TTalg, SSsig, HHhash, YYparse_sig, ZZparse_algoid, UUname, VVoid, WWoidbuf) \
@@ -539,12 +539,12 @@ typedef struct {
 	const u8 *alg_name;
 	const u8 *alg_printable_oid;
 	const u8 *alg_der_oid;
-	const u8 alg_der_oid_len;
+	const u32 alg_der_oid_len;
 
 	spki_alg_id pubkey_id;
 
-	int (*parse_algoid_pubkey_params)(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx, const u8 *cert, u16 off, u16 len);
-	int (*parse_pubkey)(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx, const u8 *cert, u16 off, u16 len);
+	int (*parse_algoid_pubkey_params)(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx, const u8 *cert, u32 off, u32 len);
+	int (*parse_pubkey)(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx, const u8 *cert, u32 off, u32 len);
 } _pubkey_alg;
 
 #define DECL_PUBKEY_ALG(TTalg, XXtype, YYparse_pubkey, ZZparse_algoid, UUname, VVoid, WWoidbuf) \
@@ -627,7 +627,7 @@ typedef struct {
 	const u8 *params_name;
 	const u8 *params_printable_oid;
 	const u8 *params_der_oid;
-	const u8 params_der_oid_len;
+	const u32 params_der_oid_len;
 
 	_gost94_pub_params_id params_id;
 } _gost94_pub_params;

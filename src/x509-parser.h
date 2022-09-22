@@ -149,10 +149,11 @@ typedef enum {
 
 /*
  * Max allowed buffer size for ASN.1 structures. Also note that
- * the type used for length in the whole code is an u16, so it
- * is pointless to set something higher than 65535.
+ * the type used for length in the whole code is an u32, so it
+ * is pointless to set something higher than 2^32 - 1
  */
-#define ASN1_MAX_BUFFER_SIZE 65534
+#define MAX_UINT32 (0xffffffffUL)
+#define ASN1_MAX_BUFFER_SIZE (MAX_UINT32)
 
 typedef enum {
 	HASH_ALG_UNKNOWN      =  0,
@@ -317,45 +318,45 @@ typedef enum {
  */
 typedef struct { /* SPKI_ALG_ECPUBKEY */
 	curve_id curve;
-	u16 curve_order_bit_len;
+	u32 curve_order_bit_len;
 
 	int compression; /* 0x04: none, 0x02/0x03: compression w/ even/odd y */
-	u16 ecc_raw_x_off;
-	u16 ecc_raw_x_len;
-	u16 ecc_raw_y_off; /* meaningful only if compression is 0x04 */
-	u16 ecc_raw_y_len; /* meaningful only if compression is 0x04, 0 otherwise */
+	u32 ecc_raw_x_off;
+	u32 ecc_raw_x_len;
+	u32 ecc_raw_y_off; /* meaningful only if compression is 0x04 */
+	u32 ecc_raw_y_len; /* meaningful only if compression is 0x04, 0 otherwise */
 } spki_ecpubkey_params;
 
 typedef struct { /* SPKI_ALG_ED25519 */
 	curve_id curve;
-	u16 curve_order_bit_len;
+	u32 curve_order_bit_len;
 
-	u16 ed25519_raw_pub_off;
-	u16 ed25519_raw_pub_len;
+	u32 ed25519_raw_pub_off;
+	u32 ed25519_raw_pub_len;
 } spki_ed25519_params;
 
 typedef struct { /* SPKI_ALG_ED448 */
 	curve_id curve;
-	u16 curve_order_bit_len;
+	u32 curve_order_bit_len;
 
-	u16 ed448_raw_pub_off;
-	u16 ed448_raw_pub_len;
+	u32 ed448_raw_pub_off;
+	u32 ed448_raw_pub_len;
 } spki_ed448_params;
 
 typedef struct { /* SPKI_ALG_X25519 */
 	curve_id curve;
-	u16 curve_order_bit_len;
+	u32 curve_order_bit_len;
 
-	u16 x25519_raw_pub_off;
-	u16 x25519_raw_pub_len;
+	u32 x25519_raw_pub_off;
+	u32 x25519_raw_pub_len;
 } spki_x25519_params;
 
 typedef struct { /* SPKI_ALG_X448 */
 	curve_id curve;
-	u16 curve_order_bit_len;
+	u32 curve_order_bit_len;
 
-	u16 x448_raw_pub_off;
-	u16 x448_raw_pub_len;
+	u32 x448_raw_pub_off;
+	u32 x448_raw_pub_len;
 } spki_x448_params;
 
 typedef struct { /* SPKI_ALG_RSA */
@@ -364,63 +365,63 @@ typedef struct { /* SPKI_ALG_RSA */
 	 * Otherwise, it is left to 0 when not advertised (cannot be 0 when
 	 * advertised)
 	 */
-	u16 rsa_advertised_bit_len;
+	u32 rsa_advertised_bit_len;
 
-	u16 rsa_raw_modulus_off; /* modulus */
-	u16 rsa_raw_modulus_len;
-	u16 rsa_raw_pub_exp_off; /* public exponent */
-	u16 rsa_raw_pub_exp_len;
+	u32 rsa_raw_modulus_off; /* modulus */
+	u32 rsa_raw_modulus_len;
+	u32 rsa_raw_pub_exp_off; /* public exponent */
+	u32 rsa_raw_pub_exp_len;
 } spki_rsa_params;
 
 typedef struct { /* For SPKI_ALG_DSA */
-	u16 dsa_raw_pub_off; /* public key */
-	u16 dsa_raw_pub_len;
-	u16 dsa_raw_p_off; /* group modulus */
-	u16 dsa_raw_p_len;
-	u16 dsa_raw_q_off; /* subgroup order */
-	u16 dsa_raw_q_len;
-	u16 dsa_raw_g_off; /* subgroup generator */
-	u16 dsa_raw_g_len;
+	u32 dsa_raw_pub_off; /* public key */
+	u32 dsa_raw_pub_len;
+	u32 dsa_raw_p_off; /* group modulus */
+	u32 dsa_raw_p_len;
+	u32 dsa_raw_q_off; /* subgroup order */
+	u32 dsa_raw_q_len;
+	u32 dsa_raw_g_off; /* subgroup generator */
+	u32 dsa_raw_g_len;
 } spki_dsa_params;
 
 /* RFC 4357, RFC 4491 */
 typedef struct { /* SPKI_ALG_GOSTR3410_94 */
-	u16 gost94_raw_pub_off;
-	u16 gost94_raw_pub_len;
+	u32 gost94_raw_pub_off;
+	u32 gost94_raw_pub_len;
 	_gost94_pub_params_id gost94_params_id;
 } spki_gost94_params;
 
 /* RFC 4491 */
 typedef struct { /* SPKI_ALG_GOSTR3410_2001 */
 	curve_id curve; /* publicKeyParamSet  in GOST parlance */
-	u16 curve_order_bit_len;
+	u32 curve_order_bit_len;
 
-	u16 gost2001_raw_x_pub_off; /* X */
-	u16 gost2001_raw_x_pub_len; /* MUST be 32 */
-	u16 gost2001_raw_y_pub_off; /* Y */
-	u16 gost2001_raw_y_pub_len; /* MUST be 32 */
+	u32 gost2001_raw_x_pub_off; /* X */
+	u32 gost2001_raw_x_pub_len; /* MUST be 32 */
+	u32 gost2001_raw_y_pub_off; /* Y */
+	u32 gost2001_raw_y_pub_len; /* MUST be 32 */
 } spki_gost2001_params;
 
 /* draft-deremin-rfc4491-bis-06 */
 typedef struct { /* SPKI_ALG_GOSTR3410_2012_256 */
 	curve_id curve; /* publicKeyParamSet in GOST parlance */
-	u16 curve_order_bit_len;
+	u32 curve_order_bit_len;
 
-	u16 gost2012_256_raw_x_pub_off; /* X */
-	u16 gost2012_256_raw_x_pub_len; /* MUST be 32 */
-	u16 gost2012_256_raw_y_pub_off; /* Y */
-	u16 gost2012_256_raw_y_pub_len; /* MUST be 32 */
+	u32 gost2012_256_raw_x_pub_off; /* X */
+	u32 gost2012_256_raw_x_pub_len; /* MUST be 32 */
+	u32 gost2012_256_raw_y_pub_off; /* Y */
+	u32 gost2012_256_raw_y_pub_len; /* MUST be 32 */
 } spki_gost2012_256_params;
 
 /* draft-deremin-rfc4491-bis-06 */
 typedef struct { /* SPKI_ALG_GOSTR3410_2012_512 */
 	curve_id curve; /* publicKeyParamSet  in GOST parlance */
-	u16 curve_order_bit_len;
+	u32 curve_order_bit_len;
 
-	u16 gost2012_512_raw_x_pub_off; /* X */
-	u16 gost2012_512_raw_x_pub_len; /* MUST be 64 */
-	u16 gost2012_512_raw_y_pub_off; /* Y */
-	u16 gost2012_512_raw_y_pub_len; /* MUST be 64 */
+	u32 gost2012_512_raw_x_pub_off; /* X */
+	u32 gost2012_512_raw_x_pub_len; /* MUST be 64 */
+	u32 gost2012_512_raw_y_pub_off; /* Y */
+	u32 gost2012_512_raw_y_pub_len; /* MUST be 64 */
 } spki_gost2012_512_params;
 
 /*
@@ -431,7 +432,7 @@ typedef spki_rsa_params spki_ea_rsa_params; /* SPKI_ALG_EA_RSA */
 
 typedef struct { /* SPKI_ALG_BIGN_PUBKEY */
 	curve_id curve;
-	u16 curve_order_bit_len;
+	u32 curve_order_bit_len;
 
 	/*
 	 * BIGN pubkey is a bitstring encoding the public point on
@@ -440,15 +441,15 @@ typedef struct { /* SPKI_ALG_BIGN_PUBKEY */
 	 * For ease of use, we provide offset and length of
 	 * each coordinates.
 	 */
-	u16 bign_raw_x_pub_off;
-	u16 bign_raw_x_pub_len;
-	u16 bign_raw_y_pub_off;
-	u16 bign_raw_y_pub_len;
+	u32 bign_raw_x_pub_off;
+	u32 bign_raw_x_pub_len;
+	u32 bign_raw_y_pub_off;
+	u32 bign_raw_y_pub_len;
 } spki_bign_params;
 
 typedef struct { /* SPKI_ALG_AVEST */
-	u16 avest_raw_pub_off;
-	u16 avest_raw_pub_len;
+	u32 avest_raw_pub_off;
+	u32 avest_raw_pub_len;
 } spki_avest_params;
 
 /* we have only 2 different certs with that spki. */
@@ -485,15 +486,15 @@ typedef union {
  */
 
 typedef struct { /* SIG_ALG_DSA */
-	u16 r_raw_off;
-	u16 r_raw_len; /* depends on hash alg output size */
-	u16 s_raw_off;
-	u16 s_raw_len; /* depends on hash alg output size */
+	u32 r_raw_off;
+	u32 r_raw_len; /* depends on hash alg output size */
+	u32 s_raw_off;
+	u32 s_raw_len; /* depends on hash alg output size */
 } sig_dsa_params;
 
 typedef struct { /* SIG_ALG_RSA_SSA_PSS */
-	u16 sig_raw_off;
-	u16 sig_raw_len;
+	u32 sig_raw_off;
+	u32 sig_raw_len;
 
 	mgf_alg_id mgf_alg;
 	hash_alg_id mgf_hash_alg;
@@ -502,77 +503,77 @@ typedef struct { /* SIG_ALG_RSA_SSA_PSS */
 } sig_rsa_ssa_pss_params;
 
 typedef struct { /* SIG_ALG_RSA_PKCS1_V1_5 */
-	u16 sig_raw_off;
-	u16 sig_raw_len;
+	u32 sig_raw_off;
+	u32 sig_raw_len;
 } sig_rsa_pkcs1_v1_5_params;
 
 typedef sig_rsa_pkcs1_v1_5_params sig_rsa_9796_2_pad_params; /* SIG_ALG_RSA_9796_2_PAD */
 typedef sig_rsa_pkcs1_v1_5_params sig_belgian_rsa_params; /* SIG_ALG_BELGIAN_RSA */
 
 typedef struct { /* SIG_ALG_ED25519 */
-	u16 r_raw_off;
-	u16 r_raw_len; /* expects 32 */
-	u16 s_raw_off;
-	u16 s_raw_len; /* expects 32 */
+	u32 r_raw_off;
+	u32 r_raw_len; /* expects 32 */
+	u32 s_raw_off;
+	u32 s_raw_len; /* expects 32 */
 } sig_ed25519_params;
 
 typedef struct { /* SIG_ALG_ED448 */
-	u16 r_raw_off;
-	u16 r_raw_len; /* expects 57 */
-	u16 s_raw_off;
-	u16 s_raw_len; /* expects 57 */
+	u32 r_raw_off;
+	u32 r_raw_len; /* expects 57 */
+	u32 s_raw_off;
+	u32 s_raw_len; /* expects 57 */
 } sig_ed448_params;
 
 typedef struct { /* SIG_ALG_SM2 */
-	u16 r_raw_off;
-	u16 r_raw_len; /* expects 32 */
-	u16 s_raw_off;
-	u16 s_raw_len; /* expects 32 */
+	u32 r_raw_off;
+	u32 r_raw_len; /* expects 32 */
+	u32 s_raw_off;
+	u32 s_raw_len; /* expects 32 */
 } sig_sm2_params;
 
 typedef struct { /* SIG_ALG_GOSTR3410_2012_256 */
-	u16 r_raw_off;
-	u16 r_raw_len;  /* expect 32 */
-	u16 s_raw_off;
-	u16 s_raw_len;  /* expect 32 */
+	u32 r_raw_off;
+	u32 r_raw_len;  /* expect 32 */
+	u32 s_raw_off;
+	u32 s_raw_len;  /* expect 32 */
 } sig_gost_r3410_2012_256_params;
 
 typedef struct { /* SIG_ALG_GOSTR3410_2012_512 */
-	u16 r_raw_off;
-	u16 r_raw_len;  /* expect 64 */
-	u16 s_raw_off;
-	u16 s_raw_len;  /* expect 64 */
+	u32 r_raw_off;
+	u32 r_raw_len;  /* expect 64 */
+	u32 s_raw_off;
+	u32 s_raw_len;  /* expect 64 */
 } sig_gost_r3410_2012_512_params;
 
 typedef struct { /* SIG_ALG_GOSTR3410_2001 */
-	u16 r_raw_off;
-	u16 r_raw_len;  /* expect 32 */
-	u16 s_raw_off;
-	u16 s_raw_len;  /* expect 32 */
+	u32 r_raw_off;
+	u32 r_raw_len;  /* expect 32 */
+	u32 s_raw_off;
+	u32 s_raw_len;  /* expect 32 */
 } sig_gost_r3410_2001_params;
 
 typedef struct { /* SIG_ALG_GOSTR3410_94 */
-	u16 r_raw_off;
-	u16 r_raw_len; /* expect 32 */
-	u16 s_raw_off;
-	u16 s_raw_len; /* expect 32 */
+	u32 r_raw_off;
+	u32 r_raw_len; /* expect 32 */
+	u32 s_raw_off;
+	u32 s_raw_len; /* expect 32 */
 } sig_gost_r3410_94_params;
 
 typedef struct { /* SIG_ALG_BIGN */
-	u16 sig_raw_off;
-	u16 sig_raw_len; /* depends on curve */
+	u32 sig_raw_off;
+	u32 sig_raw_len; /* depends on curve */
 } sig_bign_params;
 
 typedef struct { /* SIG_ALG_ECDSA */
-	u16 r_raw_off;
-	u16 r_raw_len; /* depends on curve */
-	u16 s_raw_off;
-	u16 s_raw_len; /* depends on curve */
+	u32 r_raw_off;
+	u32 r_raw_len; /* depends on curve */
+	u32 s_raw_off;
+	u32 s_raw_len; /* depends on curve */
 } sig_ecdsa_params;
 
 typedef struct { /* SIG_ALG_MONKEYSPHERE */
-	u16 sig_raw_off;
-	u16 sig_raw_len;
+	u32 sig_raw_off;
+	u32 sig_raw_len;
 } sig_monkeysphere_params;
 
 typedef union {
@@ -596,49 +597,49 @@ typedef union {
 
 typedef struct {
 	/* tbcCertificate */
-	u16 tbs_start;
-	u16 tbs_len;
+	u32 tbs_start;
+	u32 tbs_len;
 
 	/* Version */
 	int version;
 
 	/* Serial */
-	u16 serial_start;
-	u16 serial_len;
+	u32 serial_start;
+	u32 serial_len;
 
 	/* inner sig alg (tbsCertificate.signature) */
-	u16 tbs_sig_alg_start;
-	u16 tbs_sig_alg_len;
-	u16 tbs_sig_alg_oid_start; /* OID for sig alg */
-	u16 tbs_sig_alg_oid_len;
-	u16 tbs_sig_alg_oid_params_start; /* params for sig alg */
-	u16 tbs_sig_alg_oid_params_len;
+	u32 tbs_sig_alg_start;
+	u32 tbs_sig_alg_len;
+	u32 tbs_sig_alg_oid_start; /* OID for sig alg */
+	u32 tbs_sig_alg_oid_len;
+	u32 tbs_sig_alg_oid_params_start; /* params for sig alg */
+	u32 tbs_sig_alg_oid_params_len;
 
 	/* Issuer */
-	u16 issuer_start;
-	u16 issuer_len;
+	u32 issuer_start;
+	u32 issuer_len;
 
 	/* Validity */
 	u64 not_before;
 	u64 not_after;
 
 	/* Subject */
-	u16 subject_start;
-	u16 subject_len;
+	u32 subject_start;
+	u32 subject_len;
 	int empty_subject;
 
 	/* 1 if subject and issuer fields are binary equal */
 	int subject_issuer_identical;
 
 	/* SubjectPublicKeyInfo */
-	u16 spki_start;
-	u16 spki_len;
-	u16 spki_alg_oid_start;
-	u16 spki_alg_oid_len;
-	u16 spki_alg_oid_params_start;
-	u16 spki_alg_oid_params_len;
-	u16 spki_pub_key_start;
-	u16 spki_pub_key_len;
+	u32 spki_start;
+	u32 spki_len;
+	u32 spki_alg_oid_start;
+	u32 spki_alg_oid_len;
+	u32 spki_alg_oid_params_start;
+	u32 spki_alg_oid_params_len;
+	u32 spki_pub_key_start;
+	u32 spki_pub_key_len;
 	spki_alg_id spki_alg;
 	spki_params spki_alg_params;
 
@@ -646,19 +647,19 @@ typedef struct {
 
 	    /* SKI related info, if present */
 	    int has_ski;
-	    u16 ski_start;
-	    u16 ski_len;
+	    u32 ski_start;
+	    u32 ski_len;
 
 	    /* AKI related info, if present */
 	    int has_aki;
 	    int aki_has_keyIdentifier;
-	    u16 aki_keyIdentifier_start;
-	    u16 aki_keyIdentifier_len;
+	    u32 aki_keyIdentifier_start;
+	    u32 aki_keyIdentifier_len;
 	    int aki_has_generalNames_and_serial;
-	    u16 aki_generalNames_start;
-	    u16 aki_generalNames_len;
-	    u16 aki_serial_start;
-	    u16 aki_serial_len;
+	    u32 aki_generalNames_start;
+	    u32 aki_generalNames_len;
+	    u32 aki_serial_start;
+	    u32 aki_serial_len;
 
 	    /* SAN */
 	    int has_san;
@@ -686,15 +687,15 @@ typedef struct {
 
 
 	/* signature alg */
-	u16 sig_alg_start; /* outer sig alg */
-	u16 sig_alg_len;
+	u32 sig_alg_start; /* outer sig alg */
+	u32 sig_alg_len;
 	sig_alg_id sig_alg; /* ID of signature alg */
 	hash_alg_id hash_alg;
 	sig_params sig_alg_params; /* depends on sig_alg */
 
 	/* raw signature value */
-	u16 sig_start;
-	u16 sig_len;
+	u32 sig_start;
+	u32 sig_len;
 } cert_parsing_ctx;
 
 /*
@@ -702,7 +703,7 @@ typedef struct {
  * 'len' must exactly match the size of the certificate
  * in the buffer 'buf' (i.e. nothing is expected behind).
  */
-int parse_x509_cert(cert_parsing_ctx *ctx, const u8 *buf, u16 len);
+int parse_x509_cert(cert_parsing_ctx *ctx, const u8 *buf, u32 len);
 
 /*
  * This wrapper around parse_x509_cert() does not expect the buffer
@@ -713,6 +714,6 @@ int parse_x509_cert(cert_parsing_ctx *ctx, const u8 *buf, u16 len);
  * A value of 1 is returned in 'remain' if the buffer does not
  * start with a sequence.
  */
-int parse_x509_cert_relaxed(cert_parsing_ctx *ctx, const u8 *buf, u16 len, u16 *eaten);
+int parse_x509_cert_relaxed(cert_parsing_ctx *ctx, const u8 *buf, u32 len, u32 *eaten);
 
 #endif /* __X509_PARSER_H__ */

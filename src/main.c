@@ -10,27 +10,29 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <fcntl.h>
-#include "x509-parser.h"
 #include <unistd.h>
+#include "x509-parser.h"
 
 static void usage(char *argv0)
 {
 	printf("Usage: %s file.der\n", argv0);
 }
 
+
 int main(int argc, char *argv[])
 {
-	u8 buf[ASN1_MAX_BUFFER_SIZE];
-	cert_parsing_ctx ctx;
-	off_t pos, offset = 0;
 	char *path = argv[1];
-	u16 rem, copied, eaten;
-	int ret, eof = 0;
-	int fd, num_v3_certs, num_v3_certs_ok, num_not_v3;
-	int more;
+	cert_parsing_ctx ctx;
+	struct stat st;
+	off_t fsize, offset, remain;
+	u32 eaten, to_be_parsed;
+	u8 *buf, *ptr;;
+	int ret;
+	int fd;
+	int num_v3_certs, num_v3_certs_ok, num_not_v3;
 
 	if (argc != 2) {
 		usage(argv[0]);
@@ -41,77 +43,78 @@ int main(int argc, char *argv[])
 	fd = open(path, O_RDONLY);
 	if (fd == -1) {
 		printf("Unable to open input file %s\n", path);
-		return -1;
+		ret = -1;
+		goto out;
 	}
 
+	/* Get size of the file */
+	ret = fstat(fd, &st);
+	if (ret) {
+		printf("fstat() failed on file %s\n", path);
+		ret = -1;
+		goto out;
+	}
+	fsize = st.st_size;
+	// printf("File size if %llu\n", fsize);
+
+	/* mmap the file */
+	ptr = mmap(0, fsize, PROT_READ, MAP_SHARED, fd, 0);
+
+	/* Initialize stat values */
 	num_not_v3 = 0;
 	num_v3_certs = 0;
 	num_v3_certs_ok = 0;
-	more = 1;
-	while (more) {
-		pos = lseek(fd, offset, SEEK_SET);
-		if (pos == (off_t)-1) {
-			printf("lseek failed %s\n", path);
-			ret = -1;
-			goto out;
-		}
-		rem = ASN1_MAX_BUFFER_SIZE;
-		copied = 0;
-		while (rem) {
-			ret = (int)read(fd, buf + copied, rem);
-			if (ret <= 0) {
-				if (copied == 0) {
-					eof = 1;
-				}
-				break;
-			} else {
-				rem -= (u16)ret;
-				copied += (u16)ret;
-			}
-		}
 
-		if (eof) {
-			break;
-		}
-
-		eaten = 0;
+	remain = fsize;
+	buf = ptr;
+	offset = 0;
+	while (remain) {
 		memset(&ctx, 0, sizeof(ctx));
-		ret = parse_x509_cert_relaxed(&ctx, buf, copied, &eaten);
+
+		/* parser expect u32 and has limits on size */
+		to_be_parsed = ASN1_MAX_BUFFER_SIZE;
+		if (to_be_parsed > remain) {
+			to_be_parsed = remain;
+		}
+		eaten = 0;
+
+		/* We limit our calls to parser to  */
+		ret = parse_x509_cert_relaxed(&ctx, buf, to_be_parsed, &eaten);
+
 #ifdef ERROR_TRACE_ENABLE
-		printf("- %05d %ld %d %s\n", -ret, offset, eaten, path);
+		printf("- %05d %llu %lu %s\n", -ret, offset, eaten, path);
 #endif
 		switch (ret) {
 		case 0:
 			num_v3_certs_ok += 1;
 			num_v3_certs += 1;
-			offset += eaten;
-			more = 1;
 			break;
 
 		case 1:
 			printf("Invalid sequence for cert #%d at offset %ld\n",
 				num_v3_certs + num_not_v3, offset);
-			more = 0;
+			ret = -1;
+			goto out;
 			break;
 
 		case X509_PARSER_ERROR_VERSION_NOT_3:
 		case X509_PARSER_ERROR_VERSION_ABSENT:
 		case X509_PARSER_ERROR_VERSION_UNEXPECTED_LENGTH:
 			num_not_v3 += 1;
-			offset += eaten;
-			more = 1;
 			break;
 
 		default:
 			num_v3_certs += 1;
-			offset += eaten;
-			more = 1;
 			break;
 		}
-	}
-	close(fd);
 
-	ret = 0;
+		offset += eaten;
+		buf += eaten;
+		remain -= eaten;
+	}
+
+	ret = munmap(ptr, fsize);
+	close(fd);
 
 	printf("%d/%d (%.2f%%) valid X.509v3 certificate(s) (and %d non-v3 certs)\n",
 		num_v3_certs_ok, num_v3_certs,

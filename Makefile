@@ -30,7 +30,7 @@ clean:
 SESSION:=frama-c-rte-val-wp.session
 NPROC:=$(shell nproc)
 JOBS:=$(shell echo $$(( $(NPROC) * 2 )))
-TIMEOUT:=15
+TIMEOUT:=20
 
 # "-val-warn-undefined-pointer-comparison none" is to deal with the
 # checks (\pointer_comparable( - ,  - )) otherwise added by EVA before
