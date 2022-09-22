@@ -12361,25 +12361,26 @@ out:
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, cert+(..));
+  @ requires \separated(eaten, cert+(..), params);
   @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
   @
   @ assigns *eaten,
-	    ctx->sig_alg_params.monkeysphere.sig_raw_off,
-	    ctx->sig_alg_params.monkeysphere.sig_raw_len;
+	    params->monkeysphere.sig_raw_off,
+	    params->monkeysphere.sig_raw_len;
   @*/
-static int parse_sig_monkey(cert_parsing_ctx *ctx,
+static int parse_sig_monkey(sig_params *params,
 			    const u8 *cert, u32 off, u32 len, u32 *eaten)
 {
 	u32 remain, hdr_len = 0, data_len = 0;
 	const u8 *buf = cert  + off;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
+	if ((params == NULL) || (cert == NULL) || (len == 0)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -12426,8 +12427,8 @@ static int parse_sig_monkey(cert_parsing_ctx *ctx,
 	 * In practice, the sig contains an ASCII string: 'use OpenPGP' in the
 	 * certificate we have. XXX Revisit later.
 	 */
-	ctx->sig_alg_params.monkeysphere.sig_raw_off = off;
-	ctx->sig_alg_params.monkeysphere.sig_raw_len = remain;
+	params->monkeysphere.sig_raw_off = off;
+	params->monkeysphere.sig_raw_len = remain;
 
 	*eaten = hdr_len + data_len;
 
@@ -12522,27 +12523,28 @@ out:
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, cert+(..), ctx);
+  @ requires \separated(eaten, cert+(..), params);
   @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
   @
   @ assigns *eaten,
-	    ctx->sig_alg_params.gost_r3410_94.r_raw_off,
-	    ctx->sig_alg_params.gost_r3410_94.r_raw_len,
-	    ctx->sig_alg_params.gost_r3410_94.s_raw_off,
-	    ctx->sig_alg_params.gost_r3410_94.s_raw_len;
+	    params->gost_r3410_94.r_raw_off,
+	    params->gost_r3410_94.r_raw_len,
+	    params->gost_r3410_94.s_raw_off,
+	    params->gost_r3410_94.s_raw_len;
   @*/
-static int parse_sig_gost94(cert_parsing_ctx *ctx,
+static int parse_sig_gost94(sig_params *params,
 			    const u8 *cert, u32 off, u32 len, u32 *eaten)
 {
 	u32 r_start_off = 0, r_len = 0, s_start_off = 0, s_len = 0;
 	const u8 *buf =  cert + off;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+	if ((params == NULL) || (cert == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -12559,10 +12561,10 @@ static int parse_sig_gost94(cert_parsing_ctx *ctx,
 
 	/*@ assert *eaten <= len; */
 
-	ctx->sig_alg_params.gost_r3410_94.r_raw_off = off + r_start_off;
-	ctx->sig_alg_params.gost_r3410_94.r_raw_len = r_len;
-	ctx->sig_alg_params.gost_r3410_94.s_raw_off = off + s_start_off;
-	ctx->sig_alg_params.gost_r3410_94.s_raw_len = s_len;
+	params->gost_r3410_94.r_raw_off = off + r_start_off;
+	params->gost_r3410_94.r_raw_len = r_len;
+	params->gost_r3410_94.s_raw_off = off + s_start_off;
+	params->gost_r3410_94.s_raw_len = s_len;
 	ret = 0;
 
 out:
@@ -12574,27 +12576,28 @@ out:
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, cert+(..), ctx);
+  @ requires \separated(eaten, cert+(..), params);
   @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
   @
   @ assigns *eaten,
-	    ctx->sig_alg_params.gost_r3410_2001.r_raw_off,
-	    ctx->sig_alg_params.gost_r3410_2001.r_raw_len,
-	    ctx->sig_alg_params.gost_r3410_2001.s_raw_off,
-	    ctx->sig_alg_params.gost_r3410_2001.s_raw_len;
+	    params->gost_r3410_2001.r_raw_off,
+	    params->gost_r3410_2001.r_raw_len,
+	    params->gost_r3410_2001.s_raw_off,
+	    params->gost_r3410_2001.s_raw_len;
   @*/
-static int parse_sig_gost2001(cert_parsing_ctx *ctx,
+static int parse_sig_gost2001(sig_params *params,
 			      const u8 *cert, u32 off, u32 len, u32 *eaten)
 {
 	u32 r_start_off = 0, r_len = 0, s_start_off = 0, s_len = 0;
 	const u8 *buf =  cert + off;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+	if ((params == NULL) || (cert == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -12611,10 +12614,10 @@ static int parse_sig_gost2001(cert_parsing_ctx *ctx,
 
 	/*@ assert *eaten <= len; */
 
-	ctx->sig_alg_params.gost_r3410_2001.r_raw_off = off + r_start_off;
-	ctx->sig_alg_params.gost_r3410_2001.r_raw_len = r_len;
-	ctx->sig_alg_params.gost_r3410_2001.s_raw_off = off + s_start_off;
-	ctx->sig_alg_params.gost_r3410_2001.s_raw_len = s_len;
+	params->gost_r3410_2001.r_raw_off = off + r_start_off;
+	params->gost_r3410_2001.r_raw_len = r_len;
+	params->gost_r3410_2001.s_raw_off = off + s_start_off;
+	params->gost_r3410_2001.s_raw_len = s_len;
 	ret = 0;
 
 out:
@@ -12626,25 +12629,26 @@ out:
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, cert+(..), ctx);
+  @ requires \separated(eaten, cert+(..), params);
   @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
   @
   @ assigns *eaten,
-	    ctx->sig_alg_params.bign.sig_raw_off,
-	    ctx->sig_alg_params.bign.sig_raw_len;
+	    params->bign.sig_raw_off,
+	    params->bign.sig_raw_len;
   @*/
-static int parse_sig_bign(cert_parsing_ctx *ctx,
+static int parse_sig_bign(sig_params *params,
 			  const u8 *cert, u32 off, u32 len, u32 *eaten)
 {
 	u32 remain, hdr_len = 0, data_len = 0;
 	const u8 *buf = cert + off;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+	if ((params == NULL) || (cert == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -12687,8 +12691,8 @@ static int parse_sig_bign(cert_parsing_ctx *ctx,
 	off += 1;
 	remain = data_len - 1;
 
-	ctx->sig_alg_params.bign.sig_raw_off = off;
-	ctx->sig_alg_params.bign.sig_raw_len = remain;
+	params->bign.sig_raw_off = off;
+	params->bign.sig_raw_len = remain;
 	*eaten = hdr_len + data_len;
 	ret = 0;
 
@@ -12701,27 +12705,28 @@ out:
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, cert+(..), ctx);
+  @ requires \separated(eaten, cert+(..), params);
   @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
   @
   @ assigns *eaten,
-	    ctx->sig_alg_params.gost_r3410_2012_256.r_raw_off,
-	    ctx->sig_alg_params.gost_r3410_2012_256.r_raw_len,
-	    ctx->sig_alg_params.gost_r3410_2012_256.s_raw_off,
-	    ctx->sig_alg_params.gost_r3410_2012_256.s_raw_len;
+	    params->gost_r3410_2012_256.r_raw_off,
+	    params->gost_r3410_2012_256.r_raw_len,
+	    params->gost_r3410_2012_256.s_raw_off,
+	    params->gost_r3410_2012_256.s_raw_len;
   @*/
-static int parse_sig_gost2012_256(cert_parsing_ctx *ctx,
+static int parse_sig_gost2012_256(sig_params *params,
 				  const u8 *cert, u32 off, u32 len, u32 *eaten)
 {
 	u32 r_start_off = 0, r_len = 0, s_start_off = 0, s_len = 0;
 	const u8 *buf =  cert + off;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+	if ((params == NULL) || (cert == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -12738,10 +12743,10 @@ static int parse_sig_gost2012_256(cert_parsing_ctx *ctx,
 
 	/*@ assert *eaten <= len; */
 
-	ctx->sig_alg_params.gost_r3410_2012_256.r_raw_off = off + r_start_off;
-	ctx->sig_alg_params.gost_r3410_2012_256.r_raw_len = r_len;
-	ctx->sig_alg_params.gost_r3410_2012_256.s_raw_off = off + s_start_off;
-	ctx->sig_alg_params.gost_r3410_2012_256.s_raw_len = s_len;
+	params->gost_r3410_2012_256.r_raw_off = off + r_start_off;
+	params->gost_r3410_2012_256.r_raw_len = r_len;
+	params->gost_r3410_2012_256.s_raw_off = off + s_start_off;
+	params->gost_r3410_2012_256.s_raw_len = s_len;
 	ret = 0;
 
 out:
@@ -12752,27 +12757,28 @@ out:
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, cert+(..), ctx);
+  @ requires \separated(eaten, cert+(..), params);
   @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
   @
   @ assigns *eaten,
-	    ctx->sig_alg_params.gost_r3410_2012_512.r_raw_off,
-	    ctx->sig_alg_params.gost_r3410_2012_512.r_raw_len,
-	    ctx->sig_alg_params.gost_r3410_2012_512.s_raw_off,
-	    ctx->sig_alg_params.gost_r3410_2012_512.s_raw_len;
+	    params->gost_r3410_2012_512.r_raw_off,
+	    params->gost_r3410_2012_512.r_raw_len,
+	    params->gost_r3410_2012_512.s_raw_off,
+	    params->gost_r3410_2012_512.s_raw_len;
   @*/
-static int parse_sig_gost2012_512(cert_parsing_ctx *ctx,
+static int parse_sig_gost2012_512(sig_params *params,
 				  const u8 *cert, u32 off, u32 len, u32 *eaten)
 {
 	u32 r_start_off = 0, r_len = 0, s_start_off = 0, s_len = 0;
 	const u8 *buf =  cert + off;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+	if ((params == NULL) || (cert == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -12789,10 +12795,10 @@ static int parse_sig_gost2012_512(cert_parsing_ctx *ctx,
 
 	/*@ assert *eaten <= len; */
 
-	ctx->sig_alg_params.gost_r3410_2012_512.r_raw_off = off + r_start_off;
-	ctx->sig_alg_params.gost_r3410_2012_512.r_raw_len = r_len;
-	ctx->sig_alg_params.gost_r3410_2012_512.s_raw_off = off + s_start_off;
-	ctx->sig_alg_params.gost_r3410_2012_512.s_raw_len = s_len;
+	params->gost_r3410_2012_512.r_raw_off = off + r_start_off;
+	params->gost_r3410_2012_512.r_raw_len = r_len;
+	params->gost_r3410_2012_512.s_raw_off = off + s_start_off;
+	params->gost_r3410_2012_512.s_raw_len = s_len;
 	ret = 0;
 
 out:
@@ -13006,35 +13012,36 @@ out:
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, cert+(..), ctx);
+  @ requires \separated(eaten, cert+(..), params);
   @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
   @
   @ assigns *eaten,
-	    ctx->sig_alg_params.ed448.r_raw_off,
-	    ctx->sig_alg_params.ed448.r_raw_len,
-	    ctx->sig_alg_params.ed448.s_raw_off,
-	    ctx->sig_alg_params.ed448.s_raw_len;
+	    params->ed448.r_raw_off,
+	    params->ed448.r_raw_len,
+	    params->ed448.s_raw_off,
+	    params->ed448.s_raw_len;
   @*/
-static int parse_sig_ed448(cert_parsing_ctx *ctx,
+static int parse_sig_ed448(sig_params *params,
 			   const u8 *cert, u32 off, u32 len, u32 *eaten)
 {
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+	if ((params == NULL) || (cert == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
 	ret = parse_sig_eddsa(cert, off, len, ED448_SIG_LEN,
-			      &ctx->sig_alg_params.ed448.r_raw_off,
-			      &ctx->sig_alg_params.ed448.r_raw_len,
-			      &ctx->sig_alg_params.ed448.s_raw_off,
-			      &ctx->sig_alg_params.ed448.s_raw_len,
+			      &params->ed448.r_raw_off,
+			      &params->ed448.r_raw_len,
+			      &params->ed448.s_raw_off,
+			      &params->ed448.s_raw_len,
 			      eaten);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
@@ -13052,35 +13059,36 @@ out:
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, cert+(..), ctx);
+  @ requires \separated(eaten, cert+(..), params);
   @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
   @
   @ assigns *eaten,
-	    ctx->sig_alg_params.ed25519.r_raw_off,
-	    ctx->sig_alg_params.ed25519.r_raw_len,
-	    ctx->sig_alg_params.ed25519.s_raw_off,
-	    ctx->sig_alg_params.ed25519.s_raw_len;
+	    params->ed25519.r_raw_off,
+	    params->ed25519.r_raw_len,
+	    params->ed25519.s_raw_off,
+	    params->ed25519.s_raw_len;
   @*/
-static int parse_sig_ed25519(cert_parsing_ctx *ctx,
+static int parse_sig_ed25519(sig_params *params,
 			     const u8 *cert, u32 off, u32 len, u32 *eaten)
 {
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+	if ((params == NULL) || (cert == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
 	ret = parse_sig_eddsa(cert, off, len, ED25519_SIG_LEN,
-			      &ctx->sig_alg_params.ed25519.r_raw_off,
-			      &ctx->sig_alg_params.ed25519.r_raw_len,
-			      &ctx->sig_alg_params.ed25519.s_raw_off,
-			      &ctx->sig_alg_params.ed25519.s_raw_len,
+			      &params->ed25519.r_raw_off,
+			      &params->ed25519.r_raw_len,
+			      &params->ed25519.s_raw_off,
+			      &params->ed25519.s_raw_len,
 			      eaten);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
@@ -13296,27 +13304,28 @@ out:
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, cert+(..), ctx);
+  @ requires \separated(eaten, cert+(..), params);
   @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
   @
   @ assigns *eaten,
-	    ctx->sig_alg_params.ecdsa.r_raw_off,
-	    ctx->sig_alg_params.ecdsa.r_raw_len,
-	    ctx->sig_alg_params.ecdsa.s_raw_off,
-	    ctx->sig_alg_params.ecdsa.s_raw_len;
+	    params->ecdsa.r_raw_off,
+	    params->ecdsa.r_raw_len,
+	    params->ecdsa.s_raw_off,
+	    params->ecdsa.s_raw_len;
   @*/
-static int parse_sig_ecdsa(cert_parsing_ctx *ctx,
+static int parse_sig_ecdsa(sig_params *params,
 			   const u8 *cert, u32 off, u32 len, u32 *eaten)
 {
 	u32 r_start_off = 0, r_len= 0, s_start_off = 0, s_len = 0;
 	const u8 *buf =  cert + off;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+	if ((params == NULL) || (cert == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -13333,10 +13342,10 @@ static int parse_sig_ecdsa(cert_parsing_ctx *ctx,
 
 	/*@ assert *eaten <= len; */
 
-	ctx->sig_alg_params.ecdsa.r_raw_off = off + r_start_off;
-	ctx->sig_alg_params.ecdsa.r_raw_len = r_len;
-	ctx->sig_alg_params.ecdsa.s_raw_off = off + s_start_off;
-	ctx->sig_alg_params.ecdsa.s_raw_len = s_len;
+	params->ecdsa.r_raw_off = off + r_start_off;
+	params->ecdsa.r_raw_len = r_len;
+	params->ecdsa.s_raw_off = off + s_start_off;
+	params->ecdsa.s_raw_len = s_len;
 	ret = 0;
 
 out:
@@ -13351,27 +13360,28 @@ out:
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, cert+(..), ctx);
+  @ requires \separated(eaten, cert+(..), params);
   @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
   @
   @ assigns *eaten,
-	    ctx->sig_alg_params.sm2.r_raw_off,
-	    ctx->sig_alg_params.sm2.r_raw_len,
-	    ctx->sig_alg_params.sm2.s_raw_off,
-	    ctx->sig_alg_params.sm2.s_raw_len;
+	    params->sm2.r_raw_off,
+	    params->sm2.r_raw_len,
+	    params->sm2.s_raw_off,
+	    params->sm2.s_raw_len;
   @*/
-static int parse_sig_sm2(cert_parsing_ctx *ctx,
+static int parse_sig_sm2(sig_params *params,
 			 const u8 *cert, u32 off, u32 len, u32 *eaten)
 {
 	u32 r_start_off = 0, r_len = 0, s_start_off = 0, s_len = 0;
 	const u8 *buf = cert + off;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+	if ((params == NULL) || (cert == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -13388,10 +13398,10 @@ static int parse_sig_sm2(cert_parsing_ctx *ctx,
 
 	/*@ assert *eaten <= len; */
 
-	ctx->sig_alg_params.sm2.r_raw_off = off + r_start_off;
-	ctx->sig_alg_params.sm2.r_raw_len = r_len;
-	ctx->sig_alg_params.sm2.s_raw_off = off + s_start_off;
-	ctx->sig_alg_params.sm2.s_raw_len = s_len;
+	params->sm2.r_raw_off = off + r_start_off;
+	params->sm2.r_raw_len = r_len;
+	params->sm2.s_raw_off = off + s_start_off;
+	params->sm2.s_raw_len = s_len;
 	ret = 0;
 
 out:
@@ -13400,39 +13410,33 @@ out:
 
 
 /*
- * Handle both parsing of RSA PKCS#1 v1.5 and RSASSA PSS signatures structures,
- * i.e. the opaque content of the bitstring.
+ * Handle parsing of RSA PKCS#1 v1.5 signature structure i.e. the opaque
+ * content of the bitstring.
  */
 /*@
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
-  @ requires \initialized(&(ctx->sig_alg));
   @ requires \valid(eaten);
-  @ requires \separated(eaten, cert+(..), ctx);
+  @ requires \separated(eaten, cert+(..), params);
   @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
   @
   @ assigns *eaten,
-	    ctx->sig_alg_params.rsa_ssa_pss.sig_raw_off,
-	    ctx->sig_alg_params.rsa_ssa_pss.sig_raw_len,
-	    ctx->sig_alg_params.rsa_pkcs1_v1_5.sig_raw_off,
-	    ctx->sig_alg_params.rsa_pkcs1_v1_5.sig_raw_len,
-	    ctx->sig_alg_params.rsa_9796_2_pad.sig_raw_off,
-	    ctx->sig_alg_params.rsa_9796_2_pad.sig_raw_len,
-	    ctx->sig_alg_params.belgian_rsa.sig_raw_off,
-	    ctx->sig_alg_params.belgian_rsa.sig_raw_len;
+	    params->rsa_pkcs1_v1_5.sig_raw_off,
+	    params->rsa_pkcs1_v1_5.sig_raw_len;
   @*/
-static int parse_sig_rsa(cert_parsing_ctx *ctx,
-			 const u8 *cert, u32 off, u32 len, u32 *eaten)
+static int parse_sig_rsa_pkcs1_v15(sig_params *params,
+				   const u8 *cert, u32 off, u32 len, u32 *eaten)
 {
 	u32 bs_data_start_off = 0, bs_data_len = 0;
 	const u8 *buf = cert + off;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+	if ((params == NULL) || (cert == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -13455,59 +13459,215 @@ static int parse_sig_rsa(cert_parsing_ctx *ctx,
 	 * bitstring, i.e. usually the raw big endian encoded integer value (no
 	 * ASN.1 integer encoding) corresponding to the signature.
 	 */
-	switch (ctx->sig_alg) {
-	case SIG_ALG_RSA_SSA_PSS:
-		ctx->sig_alg_params.rsa_ssa_pss.sig_raw_off = off + bs_data_start_off;
-		ctx->sig_alg_params.rsa_ssa_pss.sig_raw_len = bs_data_len;
-		break;
-	case SIG_ALG_RSA_PKCS1_V1_5:
-		ctx->sig_alg_params.rsa_pkcs1_v1_5.sig_raw_off = off + bs_data_start_off;
-		ctx->sig_alg_params.rsa_pkcs1_v1_5.sig_raw_len = bs_data_len;
-		break;
-	case SIG_ALG_RSA_9796_2_PAD:
-		ctx->sig_alg_params.rsa_9796_2_pad.sig_raw_off = off + bs_data_start_off;
-		ctx->sig_alg_params.rsa_9796_2_pad.sig_raw_len = bs_data_len;
-		break;
-	case  SIG_ALG_BELGIAN_RSA:
-		ctx->sig_alg_params.belgian_rsa.sig_raw_off = off + bs_data_start_off;
-		ctx->sig_alg_params.belgian_rsa.sig_raw_len = bs_data_len;
-		break;
-	default:
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-		break;
-	}
+	params->rsa_pkcs1_v1_5.sig_raw_off = off + bs_data_start_off;
+	params->rsa_pkcs1_v1_5.sig_raw_len = bs_data_len;
 
 out:
 	return ret;
 }
 
+/*
+ * Handle parsing of RSASSA PSS signature structure i.e. the opaque
+ * content of the bitstring.
+ */
 /*@
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires \valid(eaten);
-  @ requires \separated(eaten, cert+(..), ctx);
+  @ requires \separated(eaten, cert+(..), params);
   @
   @ ensures \result <= 0;
   @ ensures (\result == 0) ==> (*eaten <= len);
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
   @
   @ assigns *eaten,
-	    ctx->sig_alg_params.dsa.r_raw_off,
-	    ctx->sig_alg_params.dsa.r_raw_len,
-	    ctx->sig_alg_params.dsa.s_raw_off,
-	    ctx->sig_alg_params.dsa.s_raw_len;
+	    params->rsa_ssa_pss.sig_raw_off,
+	    params->rsa_ssa_pss.sig_raw_len;
   @*/
-static int parse_sig_dsa(cert_parsing_ctx *ctx,
+static int parse_sig_rsa_ssa_pss(sig_params *params,
+				 const u8 *cert, u32 off, u32 len, u32 *eaten)
+{
+	u32 bs_data_start_off = 0, bs_data_len = 0;
+	const u8 *buf = cert + off;
+	int ret;
+
+	if ((params == NULL) || (cert == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = parse_sig_rsa_helper(buf, len,
+				   &bs_data_start_off, &bs_data_len,
+				   eaten);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert *eaten <= len; */
+
+	/*
+	 * We can now record start and length of data carried in the signature
+	 * bitstring, i.e. usually the raw big endian encoded integer value (no
+	 * ASN.1 integer encoding) corresponding to the signature.
+	 */
+	params->rsa_ssa_pss.sig_raw_off = off + bs_data_start_off;
+	params->rsa_ssa_pss.sig_raw_len = bs_data_len;
+
+out:
+	return ret;
+}
+
+/*
+ * Handle parsing of 9796 pad 2 signature structure i.e. the opaque
+ * content of the bitstring.
+ */
+/*@
+  @ requires ((u64)off + (u64)len) <= MAX_UINT32;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires ((u64)off + (u64)len) <= MAX_UINT32;
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, cert+(..), params);
+  @
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    params->rsa_9796_2_pad.sig_raw_off,
+	    params->rsa_9796_2_pad.sig_raw_len;
+  @*/
+static int parse_sig_rsa_9796_2_pad(sig_params *params,
+				    const u8 *cert, u32 off, u32 len, u32 *eaten)
+{
+	u32 bs_data_start_off = 0, bs_data_len = 0;
+	const u8 *buf = cert + off;
+	int ret;
+
+	if ((params == NULL) || (cert == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = parse_sig_rsa_helper(buf, len,
+				   &bs_data_start_off, &bs_data_len,
+				   eaten);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert *eaten <= len; */
+
+	/*
+	 * We can now record start and length of data carried in the signature
+	 * bitstring, i.e. usually the raw big endian encoded integer value (no
+	 * ASN.1 integer encoding) corresponding to the signature.
+	 */
+	params->rsa_9796_2_pad.sig_raw_off = off + bs_data_start_off;
+	params->rsa_9796_2_pad.sig_raw_len = bs_data_len;
+
+out:
+	return ret;
+}
+
+/*
+ * Handle parsing of belgian rsa signature structure i.e. the opaque
+ * content of the bitstring.
+ */
+/*@
+  @ requires ((u64)off + (u64)len) <= MAX_UINT32;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires ((u64)off + (u64)len) <= MAX_UINT32;
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, cert+(..), params);
+  @
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    params->belgian_rsa.sig_raw_off,
+	    params->belgian_rsa.sig_raw_len;
+  @*/
+static int parse_sig_rsa_belgian(sig_params *params,
+				 const u8 *cert, u32 off, u32 len, u32 *eaten)
+{
+	u32 bs_data_start_off = 0, bs_data_len = 0;
+	const u8 *buf = cert + off;
+	int ret;
+
+	if ((params == NULL) || (cert == NULL) || (eaten == NULL)) {
+		ret = -__LINE__;
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert \valid_read(buf + (0 .. len - 1)); */
+
+	ret = parse_sig_rsa_helper(buf, len,
+				   &bs_data_start_off, &bs_data_len,
+				   eaten);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
+
+	/*@ assert *eaten <= len; */
+
+	/*
+	 * We can now record start and length of data carried in the signature
+	 * bitstring, i.e. usually the raw big endian encoded integer value (no
+	 * ASN.1 integer encoding) corresponding to the signature.
+	 */
+	params->belgian_rsa.sig_raw_off = off + bs_data_start_off;
+	params->belgian_rsa.sig_raw_len = bs_data_len;
+
+out:
+	return ret;
+}
+
+
+
+/*@
+  @ requires ((u64)off + (u64)len) <= MAX_UINT32;
+  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, cert+(..), params);
+  @
+  @ ensures \result <= 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (len == 0) ==> \result < 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
+  @
+  @ assigns *eaten,
+	    params->dsa.r_raw_off,
+	    params->dsa.r_raw_len,
+	    params->dsa.s_raw_off,
+	    params->dsa.s_raw_len;
+  @*/
+static int parse_sig_dsa(sig_params *params,
 			 const u8 *cert, u32 off, u32 len, u32 *eaten)
 {
 	u32 r_start_off = 0, r_len=0, s_start_off = 0, s_len = 0;
 	const u8 *buf = cert + off;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (eaten == NULL)) {
+	if ((params == NULL) || (cert == NULL) || (eaten == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -13524,10 +13684,10 @@ static int parse_sig_dsa(cert_parsing_ctx *ctx,
 
 	/*@ assert *eaten <= len; */
 
-	ctx->sig_alg_params.dsa.r_raw_off = off + r_start_off;
-	ctx->sig_alg_params.dsa.r_raw_len = r_len;
-	ctx->sig_alg_params.dsa.s_raw_off = off + s_start_off;
-	ctx->sig_alg_params.dsa.s_raw_len = s_len;
+	params->dsa.r_raw_off = off + r_start_off;
+	params->dsa.r_raw_len = r_len;
+	params->dsa.s_raw_off = off + s_start_off;
+	params->dsa.s_raw_len = s_len;
 	ret = 0;
 
 out:
@@ -13578,7 +13738,10 @@ static int parse_x509_signatureValue(cert_parsing_ctx *ctx,
 		  parse_sig_ecdsa,
 		  parse_sig_sm2,
 		  parse_sig_dsa,
-		  parse_sig_rsa,
+		  parse_sig_rsa_pkcs1_v15,
+		  parse_sig_rsa_ssa_pss,
+		  parse_sig_rsa_9796_2_pad,
+		  parse_sig_rsa_belgian,
 		  parse_sig_gost94,
 		  parse_sig_gost2001,
 		  parse_sig_gost2012_512,
@@ -13590,14 +13753,17 @@ static int parse_x509_signatureValue(cert_parsing_ctx *ctx,
 		  parse_sig_ecdsa,
 		  parse_sig_sm2,
 		  parse_sig_dsa,
-		  parse_sig_rsa,
+		  parse_sig_rsa_pkcs1_v15,
+		  parse_sig_rsa_ssa_pss,
+		  parse_sig_rsa_9796_2_pad,
+		  parse_sig_rsa_belgian,
 		  parse_sig_gost94,
 		  parse_sig_gost2001,
 		  parse_sig_gost2012_512,
 		  parse_sig_gost2012_256,
 		  parse_sig_bign,
 		  parse_sig_monkey; @*/
-	ret = sig_alg->parse_sig(ctx, cert, off, len, eaten);
+	ret = sig_alg->parse_sig(&(ctx->sig_alg_params), cert, off, len, eaten);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
