@@ -77,14 +77,14 @@ static int parse_sig_gost2012_256(sig_params *params, const u8 *cert, u32 off, u
 static int parse_sig_bign(sig_params *params, const u8 *cert, u32 off, u32 len, u32 *eaten);
 static int parse_sig_monkey(sig_params *params, const u8 *cert, u32 off, u32 len, u32 *eaten);
 
-static int parse_algoid_sig_params_ecdsa_with(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
-static int parse_algoid_sig_params_ecdsa_with_specified(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
-static int parse_algoid_sig_params_sm2(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
-static int parse_algoid_sig_params_eddsa(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
-static int parse_algoid_sig_params_rsa(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
-static int parse_algoid_sig_params_rsassa_pss(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
-static int parse_algoid_sig_params_none(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 ATTRIBUTE_UNUSED len);
-static int parse_algoid_sig_params_bign_with_hspec(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_sig_params_ecdsa_with(sig_params *params, hash_alg_id *hash_alg, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_sig_params_ecdsa_with_specified(sig_params *params, hash_alg_id *hash_alg, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_sig_params_sm2(sig_params *params, hash_alg_id *hash_alg, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_sig_params_eddsa(sig_params *params, hash_alg_id *hash_alg, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_sig_params_rsa(sig_params *params, hash_alg_id *hash_alg, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_sig_params_rsassa_pss(sig_params *params, hash_alg_id *hash_alg, const u8 *cert, u32 off, u32 len);
+static int parse_algoid_sig_params_none(sig_params *params, hash_alg_id *hash_alg, const u8 *cert, u32 off, u32 ATTRIBUTE_UNUSED len);
+static int parse_algoid_sig_params_bign_with_hspec(sig_params *params, hash_alg_id *hash_alg, const u8 *cert, u32 off, u32 len);
 
 /* subject public key and spki params parsing functions */
 static int parse_pubkey_ed448(cert_parsing_ctx *ctx, const u8 *cert, u32 off, u32 len);
@@ -371,7 +371,7 @@ typedef struct {
 	sig_alg_id sig_id;
 	hash_alg_id hash_id;
 
-	int (*parse_algoid_sig_params)(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx, const u8 *cert, u32 off, u32 len);
+	int (*parse_algoid_sig_params)(sig_params *params, hash_alg_id *hash_alg, const u8 *cert, u32 off, u32 len);
 	int (*parse_sig)(sig_params *params, const u8 *cert, u32 off, u32 len, u32 *eaten);
 } _sig_alg;
 

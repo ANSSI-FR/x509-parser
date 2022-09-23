@@ -1529,28 +1529,28 @@ out:
 /*@
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
-  @ requires ((ctx != \null)) ==> \valid(ctx);
-  @ requires \separated(ctx, cert+(..));
+  @ requires ((params != \null)) ==> \valid(params);
+  @ requires ((hash_alg != \null)) ==> \valid(hash_alg);
+  @ requires \separated(params, hash_alg, cert+(..));
   @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
-  @ ensures (ctx == \null) ==> \result < 0;
-  @ ensures (\result == 0) ==> \initialized(&ctx->tbs_sig_alg_oid_params_start) &&
-	    \initialized(&ctx->tbs_sig_alg_oid_params_len) &&
-	    \initialized(&ctx->hash_alg) &&
-	    \initialized(&ctx->sig_alg_params.rsa_ssa_pss.mgf_alg) &&
-	    \initialized(&ctx->sig_alg_params.rsa_ssa_pss.mgf_hash_alg) &&
-	    \initialized(&ctx->sig_alg_params.rsa_ssa_pss.salt_len) &&
-	    \initialized(&ctx->sig_alg_params.rsa_ssa_pss.trailer_field);
+  @ ensures (params == \null) ==> \result < 0;
+  @ ensures (hash_alg == \null) ==> \result < 0;
+  @ ensures (\result == 0) ==> \initialized(hash_alg) &&
+	    \initialized(&params->rsa_ssa_pss.mgf_alg) &&
+	    \initialized(&params->rsa_ssa_pss.mgf_hash_alg) &&
+	    \initialized(&params->rsa_ssa_pss.salt_len) &&
+	    \initialized(&params->rsa_ssa_pss.trailer_field);
   @
-  @ assigns ctx->tbs_sig_alg_oid_params_start, ctx->tbs_sig_alg_oid_params_len,
-	    ctx->hash_alg, ctx->sig_alg_params.rsa_ssa_pss.mgf_alg,
-	    ctx->sig_alg_params.rsa_ssa_pss.mgf_hash_alg,
-	    ctx->sig_alg_params.rsa_ssa_pss.salt_len,
-	    ctx->sig_alg_params.rsa_ssa_pss.trailer_field;
+  @ assigns *hash_alg,
+	    params->rsa_ssa_pss.mgf_alg,
+	    params->rsa_ssa_pss.mgf_hash_alg,
+	    params->rsa_ssa_pss.salt_len,
+	    params->rsa_ssa_pss.trailer_field;
   @*/
-static int parse_algoid_sig_params_rsassa_pss(cert_parsing_ctx *ctx,
+static int parse_algoid_sig_params_rsassa_pss(sig_params *params, hash_alg_id *hash_alg,
 					      const u8 *cert, u32 off, u32 len)
 {
 	u32 remain, hdr_len = 0, data_len = 0, oid_len = 0;
@@ -1564,20 +1564,13 @@ static int parse_algoid_sig_params_rsassa_pss(cert_parsing_ctx *ctx,
 	u8 trailer_field = 0;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
+	if ((params == NULL) || (hash_alg == NULL) || (cert == NULL) || (len == 0)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
 	/*@ assert \valid_read(buf + (0 .. len - 1)); */
-
-	/*
-	 * If parsing goes ok, then we will have verified that nothing remains
-	 * behind, i.e. that 'len' is indeed the length of the parameters.
-	 */
-	ctx->tbs_sig_alg_oid_params_start = off;
-	ctx->tbs_sig_alg_oid_params_len = len;
 
 	/* Check we are dealing with a valid sequence */
 	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
@@ -1625,7 +1618,7 @@ static int parse_algoid_sig_params_rsassa_pss(cert_parsing_ctx *ctx,
 	}
 
 	/* Record the hash algorithm we just learnt */
-	ctx->hash_alg = hash->hash_id;
+	*hash_alg = hash->hash_id;
 
 	/*****************************************************************
 	 * maskGenAlgorithm   [1] MaskGenAlgorithm   DEFAULT mgf1SHA1,   *
@@ -1711,8 +1704,8 @@ static int parse_algoid_sig_params_rsassa_pss(cert_parsing_ctx *ctx,
 	}
 
 	/* Record the MGF and associated MGF hash alg */
-	ctx->sig_alg_params.rsa_ssa_pss.mgf_alg = mgf->mgf_id;
-	ctx->sig_alg_params.rsa_ssa_pss.mgf_hash_alg = mgf_hash->hash_id;
+	params->rsa_ssa_pss.mgf_alg = mgf->mgf_id;
+	params->rsa_ssa_pss.mgf_hash_alg = mgf_hash->hash_id;
 
 	/*****************************************************************
 	 * saltLength         [2] INTEGER            DEFAULT 20,         *
@@ -1763,7 +1756,7 @@ static int parse_algoid_sig_params_rsassa_pss(cert_parsing_ctx *ctx,
 	}
 
 	/* Record the salt_len */
-	ctx->sig_alg_params.rsa_ssa_pss.salt_len = salt_len;
+	params->rsa_ssa_pss.salt_len = salt_len;
 
 	/*****************************************************************
 	 * trailerField       [3] TrailerField    DEFAULT trailerFieldBC *
@@ -1830,7 +1823,7 @@ static int parse_algoid_sig_params_rsassa_pss(cert_parsing_ctx *ctx,
 	}
 
 	/* Record trailer field */
-	ctx->sig_alg_params.rsa_ssa_pss.trailer_field = trailer_field;
+	params->rsa_ssa_pss.trailer_field = trailer_field;
 
 	if (remain) {
 		ret = -__LINE__;
@@ -1849,18 +1842,19 @@ out:
 /*@
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
-  @ requires ((ctx != \null)) ==> \valid(ctx);
-  @ requires \separated(ctx, cert+(..));
+  @ requires ((params != \null)) ==> \valid(params);
+  @ requires ((hash_alg != \null)) ==> \valid(hash_alg);
+  @ requires \separated(params, hash_alg, cert+(..));
   @
   @ ensures \result < 0 || \result == 0;
   @ ensures (cert == \null) ==> \result < 0;
-  @ ensures (ctx == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
+  @ ensures (hash_alg == \null) ==> \result < 0;
   @
-  @ assigns ctx->tbs_sig_alg_oid_params_start,
-	    ctx->tbs_sig_alg_oid_params_len;
+  @ assigns \nothing;
   @*/
-static int parse_algoid_sig_params_ecdsa_with(cert_parsing_ctx *ctx,
-					      const u8 *cert, u32 off, u32 len)
+static int parse_algoid_sig_params_ecdsa_with(sig_params *params, hash_alg_id *hash_alg,
+					      const u8 *cert, u32 ATTRIBUTE_UNUSED off, u32 len)
 {
 	int ret;
 
@@ -1883,7 +1877,7 @@ static int parse_algoid_sig_params_ecdsa_with(cert_parsing_ctx *ctx,
 	 * requirement.
 	 */
 
-	if ((ctx == NULL) || (cert == NULL)) {
+	if ((params == NULL) || (hash_alg == NULL) || (cert == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -1895,9 +1889,6 @@ static int parse_algoid_sig_params_ecdsa_with(cert_parsing_ctx *ctx,
 	} else {
 		ret = 0;
 	}
-
-	ctx->tbs_sig_alg_oid_params_start = off;
-	ctx->tbs_sig_alg_oid_params_len = len;
 
 out:
 	return ret;
@@ -1911,41 +1902,34 @@ out:
 /*@
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
-  @ requires ((ctx != \null)) ==> \valid(ctx);
-  @ requires \separated(ctx, cert+(..));
+  @ requires ((params != \null)) ==> \valid(params);
+  @ requires ((hash_alg != \null)) ==> \valid(hash_alg);
+  @ requires \separated(params, hash_alg, cert+(..));
   @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
-  @ ensures (ctx == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
+  @ ensures (hash_alg == \null) ==> \result < 0;
   @
-  @ assigns ctx->tbs_sig_alg_oid_params_start,
-	    ctx->tbs_sig_alg_oid_params_len,
-	    ctx->hash_alg;
+  @ assigns *hash_alg;
   @*/
-static int parse_algoid_sig_params_ecdsa_with_specified(cert_parsing_ctx *ctx,
-					      const u8 *cert, u32 off, u32 len)
+static int parse_algoid_sig_params_ecdsa_with_specified(sig_params *params, hash_alg_id *hash_alg,
+							const u8 *cert, u32 off, u32 len)
 {
 	const u8 *buf = cert + off;
 	const _hash_alg *hash = NULL;
 	u32 parsed = 0;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
+	if ((params == NULL) || (hash_alg == NULL) || (cert == NULL) || (len == 0)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	ctx->tbs_sig_alg_oid_params_start = off;
-	ctx->tbs_sig_alg_oid_params_len = len;
-
 	/*@ assert \valid_read(buf + (0 .. len - 1)); */
 
-	/*
-	 * If parsing goes ok, then we will have verified that nothing remains
-	 * behind, i.e. that 'len' is indeed the length of the parameters.
-	 */
 	ret = parse_HashAlgorithm(buf, len, &hash, &parsed);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
@@ -1961,7 +1945,7 @@ static int parse_algoid_sig_params_ecdsa_with_specified(cert_parsing_ctx *ctx,
 	}
 
 	/* Record the hash algorithm we just learnt */
-	ctx->hash_alg = hash->hash_id;
+	*hash_alg = hash->hash_id;
 
 out:
 	return ret;
@@ -1976,20 +1960,20 @@ out:
 /*@
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
-  @ requires ((ctx != \null)) ==> \valid(ctx);
-  @ requires \separated(ctx, cert+(..));
+  @ requires ((params != \null)) ==> \valid(params);
+  @ requires ((hash_alg != \null)) ==> \valid(hash_alg);
+  @ requires \separated(params, hash_alg, cert+(..));
   @
   @ ensures \result < 0 || \result == 0;
   @ ensures (len == 0) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
-  @ ensures (ctx == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
+  @ ensures (hash_alg == \null) ==> \result < 0;
   @
-  @ assigns ctx->tbs_sig_alg_oid_params_start,
-	    ctx->tbs_sig_alg_oid_params_len,
-	    ctx->hash_alg;
+  @ assigns *hash_alg;
   @*/
-static int parse_algoid_sig_params_bign_with_hspec(cert_parsing_ctx ATTRIBUTE_UNUSED *ctx,
-					      const u8 *cert, u32 off, u32 len)
+static int parse_algoid_sig_params_bign_with_hspec(sig_params *params, hash_alg_id *hash_alg,
+						   const u8 *cert, u32 off, u32 len)
 {
 	const u8 *buf = cert + off;
 	const _hash_alg *hash;
@@ -1997,18 +1981,11 @@ static int parse_algoid_sig_params_bign_with_hspec(cert_parsing_ctx ATTRIBUTE_UN
 	u32 remain;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (len == 0)) {
+	if ((params == NULL) || (hash_alg == NULL) || (cert == NULL) || (len == 0)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
-
-	/*
-	 * If parsing goes ok, then we will have verified that nothing remains
-	 * behind, i.e. that 'len' is indeed the length of the parameters.
-	 */
-	ctx->tbs_sig_alg_oid_params_start = off;
-	ctx->tbs_sig_alg_oid_params_len = len;
 
 	remain = len;
 
@@ -2037,7 +2014,7 @@ static int parse_algoid_sig_params_bign_with_hspec(cert_parsing_ctx ATTRIBUTE_UN
 	}
 
 	/* Record the hash algorithm we just learnt */
-	ctx->hash_alg = hash->hash_id;
+	*hash_alg = hash->hash_id;
 	ret = 0;
 
 out:
@@ -3040,35 +3017,31 @@ out:
 /*@
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
-  @ requires \separated(cert+(..), ctx);
+  @ requires ((params != \null)) ==> \valid(params);
+  @ requires ((hash_alg != \null)) ==> \valid(hash_alg);
+  @ requires \separated(cert+(..), params, hash_alg);
   @
-  @ ensures (cert == \null) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
+  @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
+  @ ensures (hash_alg == \null) ==> \result < 0;
   @
-  @ assigns ctx->tbs_sig_alg_oid_params_start,
-	    ctx->tbs_sig_alg_oid_params_len;
+  @ assigns \nothing;
   @*/
-static int parse_algoid_sig_params_sm2(cert_parsing_ctx *ctx,
+static int parse_algoid_sig_params_sm2(sig_params *params, hash_alg_id *hash_alg,
 				       const u8 *cert, u32 off, u32 len)
 {
 	const u8 *buf = cert + off;
 	u32 parsed = 0;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL)) {
+	if ((params == NULL) || (hash_alg == NULL) || (cert == NULL)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
 	/*@ assert \valid_read(buf + (0 .. len - 1)); */
-
-	/*
-	 * If parsing goes ok, then we will have verified that nothing remains
-	 * behind, i.e. that 'len' is indeed the length of the parameters.
-	 */
-	ctx->tbs_sig_alg_oid_params_start = off;
-	ctx->tbs_sig_alg_oid_params_len = len;
 
 	switch (len) {
 	case 0:
@@ -3098,28 +3071,28 @@ out:
 /*@
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
-  @ requires \separated(cert+(..), ctx);
+  @ requires ((params != \null)) ==> \valid(params);
+  @ requires ((hash_alg != \null)) ==> \valid(hash_alg);
+  @ requires \separated(cert+(..), params, hash_alg);
   @
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
+  @ ensures (hash_alg == \null) ==> \result < 0;
   @ ensures (len != 0) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
   @
-  @ assigns ctx->tbs_sig_alg_oid_params_start,
-	    ctx->tbs_sig_alg_oid_params_len;
+  @ assigns \nothing;
   @*/
-static int parse_algoid_sig_params_eddsa(cert_parsing_ctx *ctx,
-					      const u8 *cert, u32 off, u32 len)
+static int parse_algoid_sig_params_eddsa(sig_params *params, hash_alg_id *hash_alg,
+					 const u8 *cert, u32 ATTRIBUTE_UNUSED off, u32 len)
 {
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL) || (len != 0)) {
+	if ((params == NULL) || (hash_alg == NULL) || (cert == NULL) || (len != 0)) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
-
-	ctx->tbs_sig_alg_oid_params_start = off;
-	ctx->tbs_sig_alg_oid_params_len = len;
 
 	ret = 0;
 
@@ -3135,13 +3108,11 @@ out:
   @ ensures (len != 0) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
   @
-  @ assigns ctx->spki_alg_oid_params_start,
-	    ctx->spki_alg_oid_params_len,
-	    ctx->spki_alg_params.ed448.curve,
+  @ assigns ctx->spki_alg_params.ed448.curve,
 	    ctx->spki_alg_params.ed448.curve_order_bit_len;
   @*/
 static int parse_algoid_pubkey_params_ed448(cert_parsing_ctx *ctx,
-					      const u8 *cert, u32 off, u32 len)
+					    const u8 *cert, u32 ATTRIBUTE_UNUSED off, u32 len)
 {
 	int ret;
 
@@ -3151,8 +3122,6 @@ static int parse_algoid_pubkey_params_ed448(cert_parsing_ctx *ctx,
 		goto out;
 	}
 
-	ctx->spki_alg_oid_params_start = off;
-	ctx->spki_alg_oid_params_len = len;
 	ctx->spki_alg_params.ed448.curve = CURVE_WEI448;
 	ctx->spki_alg_params.ed448.curve_order_bit_len = 448;
 
@@ -3171,13 +3140,11 @@ out:
   @ ensures (len != 0) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
   @
-  @ assigns ctx->spki_alg_oid_params_start,
-	    ctx->spki_alg_oid_params_len,
-	    ctx->spki_alg_params.x448.curve,
+  @ assigns ctx->spki_alg_params.x448.curve,
 	    ctx->spki_alg_params.x448.curve_order_bit_len;
   @*/
 static int parse_algoid_pubkey_params_x448(cert_parsing_ctx *ctx,
-					      const u8 *cert, u32 off, u32 len)
+					      const u8 *cert, u32 ATTRIBUTE_UNUSED off, u32 len)
 {
 	int ret;
 
@@ -3187,8 +3154,6 @@ static int parse_algoid_pubkey_params_x448(cert_parsing_ctx *ctx,
 		goto out;
 	}
 
-	ctx->spki_alg_oid_params_start = off;
-	ctx->spki_alg_oid_params_len = len;
 	ctx->spki_alg_params.x448.curve = CURVE_WEI448;
 	ctx->spki_alg_params.x448.curve_order_bit_len = 448;
 
@@ -3207,13 +3172,11 @@ out:
   @ ensures (len != 0) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
   @
-  @ assigns ctx->spki_alg_oid_params_start,
-	    ctx->spki_alg_oid_params_len,
-	    ctx->spki_alg_params.ed25519.curve,
+  @ assigns ctx->spki_alg_params.ed25519.curve,
 	    ctx->spki_alg_params.ed25519.curve_order_bit_len;
   @*/
 static int parse_algoid_pubkey_params_ed25519(cert_parsing_ctx *ctx,
-					      const u8 *cert, u32 off, u32 len)
+					      const u8 *cert, u32 ATTRIBUTE_UNUSED off, u32 len)
 {
 	int ret;
 
@@ -3223,8 +3186,6 @@ static int parse_algoid_pubkey_params_ed25519(cert_parsing_ctx *ctx,
 		goto out;
 	}
 
-	ctx->spki_alg_oid_params_start = off;
-	ctx->spki_alg_oid_params_len = len;
 	ctx->spki_alg_params.ed25519.curve = CURVE_WEI25519;
 	ctx->spki_alg_params.ed25519.curve_order_bit_len = 256;
 
@@ -3243,13 +3204,11 @@ out:
   @ ensures (len != 0) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
   @
-  @ assigns ctx->spki_alg_oid_params_start,
-	    ctx->spki_alg_oid_params_len,
-	    ctx->spki_alg_params.x25519.curve,
+  @ assigns ctx->spki_alg_params.x25519.curve,
 	    ctx->spki_alg_params.x25519.curve_order_bit_len;
   @*/
 static int parse_algoid_pubkey_params_x25519(cert_parsing_ctx *ctx,
-					      const u8 *cert, u32 off, u32 len)
+					      const u8 *cert, u32 ATTRIBUTE_UNUSED off, u32 len)
 {
 	int ret;
 
@@ -3259,8 +3218,6 @@ static int parse_algoid_pubkey_params_x25519(cert_parsing_ctx *ctx,
 		goto out;
 	}
 
-	ctx->spki_alg_oid_params_start = off;
-	ctx->spki_alg_oid_params_len = len;
 	ctx->spki_alg_params.x25519.curve = CURVE_WEI25519;
 	ctx->spki_alg_params.x25519.curve_order_bit_len = 256;
 
@@ -3951,21 +3908,19 @@ out:
 /*@
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
-  @ requires \separated(cert+(..), ctx);
   @
   @ ensures \result < 0 || \result == 0;
   @ ensures (cert == \null) ==> \result < 0;
   @
   @ assigns \nothing;
   @*/
-static int _parse_algoid_params_none(cert_parsing_ctx *ctx,
-				     const u8 *cert, u32 off, u32 len)
+static int _parse_algoid_params_none(const u8 *cert, u32 off, u32 len)
 {
 	const u8 *buf = cert + off;
 	u32 parsed = 0;
 	int ret;
 
-	if ((ctx == NULL) || (cert == NULL)) {
+	if (cert == NULL) {
 		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
@@ -3996,27 +3951,33 @@ out:
 /*@
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
-  @ requires \separated(cert+(..), ctx);
+  @ requires ((params != \null)) ==> \valid(params);
+  @ requires ((hash_alg != \null)) ==> \valid(hash_alg);
+  @ requires \separated(cert+(..), params, hash_alg);
   @
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
+  @ ensures (hash_alg == \null) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
   @
-  @ assigns ctx->tbs_sig_alg_oid_params_start,
-	    ctx->tbs_sig_alg_oid_params_len;
+  @ assigns \nothing;
   @*/
-static int parse_algoid_sig_params_none(cert_parsing_ctx *ctx,
+static int parse_algoid_sig_params_none(sig_params *params, hash_alg_id *hash_alg,
 					const u8 *cert, u32 off, u32 len)
 {
 	int ret;
 
-	ret = _parse_algoid_params_none(ctx, cert, off, len);
-	if (ret) {
+	if ((params == NULL) || (hash_alg == NULL)) {
+		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	ctx->tbs_sig_alg_oid_params_start = off;
-	ctx->tbs_sig_alg_oid_params_len = len;
+	ret = _parse_algoid_params_none(cert, off, len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
 out:
 	return ret;
@@ -4027,25 +3988,28 @@ out:
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
   @ requires \separated(cert+(..), ctx);
   @
+  @ ensures (ctx == \null) ==> \result < 0;
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
   @
-  @ assigns ctx->spki_alg_oid_params_start,
-	    ctx->spki_alg_oid_params_len;
+  @ assigns \nothing;
   @*/
 static int parse_algoid_pubkey_params_none(cert_parsing_ctx *ctx,
 					   const u8 *cert, u32 off, u32 len)
 {
 	int ret;
 
-	ret = _parse_algoid_params_none(ctx, cert, off, len);
-	if (ret) {
+	if (ctx == NULL) {
+		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	ctx->spki_alg_oid_params_start = off;
-	ctx->spki_alg_oid_params_len = len;
+	ret = _parse_algoid_params_none(cert, off, len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
 out:
 	return ret;
@@ -4062,26 +4026,18 @@ out:
  */
 /*@
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
-  @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
-  @ requires \separated(cert+(..), ctx);
+  @ requires (len > 0) ==> \valid_read(cert + (off .. (off + len - 1)));
   @
   @ ensures (cert == \null) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
   @
   @ assigns \nothing;
   @*/
-static int _parse_algoid_params_rsa(cert_parsing_ctx *ctx,
-				    const u8 *cert, u32 off, u32 len)
+static int _parse_algoid_params_rsa(const u8 *cert, u32 off, u32 len)
 {
 	const u8 *buf = cert + off;
 	u32 parsed = 0;
 	int ret;
-
-	if ((ctx == NULL) || (cert == NULL)) {
-		ret = -__LINE__;
-		ERROR_TRACE_APPEND(__LINE__);
-		goto out;
-	}
 
 	/*@ assert (len > 0) ==> \valid_read(buf + (0 .. len - 1)); */
 
@@ -4118,27 +4074,33 @@ out:
 /*@
   @ requires ((u64)off + (u64)len) <= MAX_UINT32;
   @ requires ((len > 0) && (cert != \null)) ==> \valid_read(cert + (off .. (off + len - 1)));
-  @ requires \separated(cert+(..), ctx);
+  @ requires ((params != \null)) ==> \valid(params);
+  @ requires ((hash_alg != \null)) ==> \valid(hash_alg);
+  @ requires \separated(cert+(..), params, hash_alg);
   @
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (params == \null) ==> \result < 0;
+  @ ensures (hash_alg == \null) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
   @
-  @ assigns ctx->tbs_sig_alg_oid_params_start,
-	    ctx->tbs_sig_alg_oid_params_len;
+  @ assigns \nothing;
   @*/
-static int parse_algoid_sig_params_rsa(cert_parsing_ctx *ctx,
+static int parse_algoid_sig_params_rsa(sig_params *params, hash_alg_id *hash_alg,
 				       const u8 *cert, u32 off, u32 len)
 {
 	int ret;
 
-	ret = _parse_algoid_params_rsa(ctx, cert, off, len);
-	if (ret) {
+	if ((cert == NULL) || (params == NULL) || (hash_alg == NULL)) {
+		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	ctx->tbs_sig_alg_oid_params_start = off;
-	ctx->tbs_sig_alg_oid_params_len = len;
+	ret = _parse_algoid_params_rsa(cert, off, len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
 out:
 	return ret;
@@ -4150,24 +4112,27 @@ out:
   @ requires \separated(cert+(..), ctx);
   @
   @ ensures (cert == \null) ==> \result < 0;
+  @ ensures (ctx == \null) ==> \result < 0;
   @ ensures \result < 0 || \result == 0;
   @
-  @ assigns ctx->spki_alg_oid_params_start,
-	    ctx->spki_alg_oid_params_len;
+  @ assigns \nothing;
   @*/
 static int parse_algoid_pubkey_params_rsa(cert_parsing_ctx *ctx,
 					const u8 *cert, u32 off, u32 len)
 {
 	int ret;
 
-	ret = _parse_algoid_params_rsa(ctx, cert, off, len);
-	if (ret) {
+	if ((ctx == NULL) || (cert == NULL)) {
+		ret = -__LINE__;
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
 
-	ctx->spki_alg_oid_params_start = off;
-	ctx->spki_alg_oid_params_len = len;
+	ret = _parse_algoid_params_rsa(cert, off, len);
+	if (ret) {
+		ERROR_TRACE_APPEND(__LINE__);
+		goto out;
+	}
 
 out:
 	return ret;
@@ -4984,11 +4949,18 @@ static int parse_x509_tbsCert_sig_AlgorithmIdentifier(cert_parsing_ctx *ctx,
 		  parse_algoid_sig_params_rsassa_pss,
 		  parse_algoid_sig_params_none,
 		  parse_algoid_sig_params_bign_with_hspec; @*/
-	ret = talg->parse_algoid_sig_params(ctx, cert, off, param_len);
+	ret = talg->parse_algoid_sig_params(&ctx->sig_alg_params, &ctx->hash_alg, cert, off, param_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	/*
+	 * parsing went ok; we have verified that nothing remains behind, i.e.
+	 * that 'param_len' was indeed the length of the parameters.
+	 */
+	ctx->tbs_sig_alg_oid_params_start = off;
+	ctx->tbs_sig_alg_oid_params_len = param_len;
 
 	/*@ assert \exists integer i ; 0 <= i < NUM_KNOWN_SIG_ALGS && talg == known_sig_algs[i]; */
 	*alg = talg;
@@ -5117,6 +5089,10 @@ static int parse_x509_pubkey_AlgorithmIdentifier(cert_parsing_ctx *ctx,
 		ERROR_TRACE_APPEND(__LINE__);
 		goto out;
 	}
+
+	ctx->spki_alg_oid_params_start = off;
+	ctx->spki_alg_oid_params_len = param_len;
+
 	/*@ assert talg->parse_algoid_pubkey_params == parse_algoid_pubkey_params_bign ==> \initialized(&(ctx->spki_alg_params.bign.curve_order_bit_len)); */
 	/*@ assert talg->parse_algoid_pubkey_params == parse_algoid_pubkey_params_bign ==> \initialized(&(ctx->spki_alg_params.bign.curve)); */
 	/*@ assert talg->parse_algoid_pubkey_params == parse_algoid_pubkey_params_ecPublicKey ==> \initialized(&(ctx->spki_alg_params.ecpubkey.curve_order_bit_len)); */
