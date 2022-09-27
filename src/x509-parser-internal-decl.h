@@ -611,7 +611,7 @@ static const _pubkey_alg *known_pubkey_algs[] = {
 	&_bign_pubkey_alg,
 
 	&_weird_rsa_pub_1_pubkey_alg,
-	&_weird_rsa_pub_1_pubkey_alg,
+	&_weird_rsa_pub_2_pubkey_alg,
 	&_dsa_pubkey_pubkey_alg,
 	&_ea_rsa_pubkey_alg,
 };
