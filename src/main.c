@@ -21,7 +21,6 @@ static void usage(char *argv0)
 	printf("Usage: %s file.der\n", argv0);
 }
 
-
 int main(int argc, char *argv[])
 {
 	char *path = argv[1];
@@ -47,15 +46,19 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	/* Get size of the file */
+	/*
+	 * Get size of the file. Note: fstat and mmap uses off_t and size_t
+	 * types which can be 32-bits (additionally, off_t is a signed int).
+	 * As specified in man pages, we use -D_FILE_OFFSET_BITS=64 to have
+	 * those on 64 bits.
+	 */
 	ret = fstat(fd, &st);
 	if (ret) {
-		printf("fstat() failed on file %s\n", path);
+		printf("fstat() on file %s falied with err %d\n", path, ret);
 		ret = -1;
 		goto out;
 	}
 	fsize = st.st_size;
-	// printf("File size if %llu\n", fsize);
 
 	/* mmap the file */
 	ptr = mmap(0, fsize, PROT_READ, MAP_SHARED, fd, 0);
@@ -71,7 +74,11 @@ int main(int argc, char *argv[])
 	while (remain) {
 		memset(&ctx, 0, sizeof(ctx));
 
-		/* parser expect u32 and has limits on size */
+		/*
+		 * File may be larger than 4GB but parser expects u32
+		 * and has limits on size for individual elements to be
+		 * parsed.
+		 */
 		to_be_parsed = ASN1_MAX_BUFFER_SIZE;
 		if (to_be_parsed > remain) {
 			to_be_parsed = remain;
@@ -82,10 +89,11 @@ int main(int argc, char *argv[])
 		ret = parse_x509_cert_relaxed(&ctx, buf, to_be_parsed, &eaten);
 
 #ifdef ERROR_TRACE_ENABLE
-		printf("- %05d %llu %lu %s\n", -ret, offset, eaten, path);
+		printf("- %05d off %llu eaten %lu file %s\n", -ret, offset, eaten, path);
 #endif
 		switch (ret) {
 		case 0:
+			// printf("offset %llu %d\n", offset, eaten);
 			num_v3_certs_ok += 1;
 			num_v3_certs += 1;
 			break;

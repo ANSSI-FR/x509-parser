@@ -12,7 +12,7 @@ include common.mk
 all: $(LIBS) $(EXEC)
 
 $(BUILD_DIR)/x509-parser: src/main.c build/x509-parser.o
-	$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) $^ -o $@
+	$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) -D_FILE_OFFSET_BITS=64 $^ -o $@
 
 build/x509-parser.o: src/x509-parser.c src/x509-parser.h src/x509-parser-internal-decl.h
 	@mkdir -p  $(BUILD_DIR)
