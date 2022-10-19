@@ -28,8 +28,7 @@
  */
 int parse_x509_cert_relaxed(cert_parsing_ctx *ctx, const u8 *buf, u32 len, u32 *eaten)
 {
-	u32 seq_data_len = 0;
-	u32 rbytes = 0;
+	u32 hdr_len = 0, data_len = 0;
 	int ret;
 
 	if ((ctx == NULL) || (buf == NULL) || (len == 0) || (eaten == NULL)) {
@@ -43,7 +42,7 @@ int parse_x509_cert_relaxed(cert_parsing_ctx *ctx, const u8 *buf, u32 len, u32 *
 	 * the length of the data it contains.
 	 */
 	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
-			   &rbytes, &seq_data_len);
+			   &hdr_len, &data_len);
 	if (ret) {
 		ret = 1;
 		ERROR_TRACE_APPEND(X509_FILE_LINE_NUM_ERR);
@@ -51,10 +50,62 @@ int parse_x509_cert_relaxed(cert_parsing_ctx *ctx, const u8 *buf, u32 len, u32 *
 	}
 
 	/* Certificate has that exact length */
-	*eaten = rbytes + seq_data_len;
+	*eaten = hdr_len + data_len;
 
 	/* Parse it */
-	ret = parse_x509_cert(ctx, buf, rbytes + seq_data_len);
+	ret = parse_x509_cert(ctx, buf, hdr_len + data_len);
+	if (ret) {
+		ERROR_TRACE_APPEND(X509_FILE_LINE_NUM_ERR);
+		goto out;
+	}
+
+	ret = 0;
+
+out:
+	return ret;
+}
+
+/*@
+  @ requires ((len > 0) && (buf != \null)) ==> \valid_read(buf + (0 .. (len - 1)));
+  @ requires \valid(eaten);
+  @ requires \separated(eaten, buf+(..), ctx);
+  @
+  @ ensures \result <= 1;
+  @ ensures (eaten == \null) ==> \result < 0;
+  @ ensures (buf == \null) ==> \result < 0;
+  @ ensures (\result == 0) ==> (*eaten <= len);
+  @ ensures (\result == 0) ==> (*eaten > 0);
+  @
+  @ assigns *eaten, *ctx;
+ */
+int parse_x509_crl_relaxed(crl_parsing_ctx *ctx, const u8 *buf, u32 len, u32 *eaten)
+{
+	u32 hdr_len = 0, data_len = 0;
+	int ret;
+
+	if ((ctx == NULL) || (buf == NULL) || (len == 0) || (eaten == NULL)) {
+		ret = -X509_FILE_LINE_NUM_ERR;
+		ERROR_TRACE_APPEND(X509_FILE_LINE_NUM_ERR);
+		goto out;
+	}
+
+	/*
+	 * Parse beginning of buffer to verify it's a sequence and get
+	 * the length of the data it contains.
+	 */
+	ret = parse_id_len(buf, len, CLASS_UNIVERSAL, ASN1_TYPE_SEQUENCE,
+			   &hdr_len, &data_len);
+	if (ret) {
+		ret = 1;
+		ERROR_TRACE_APPEND(X509_FILE_LINE_NUM_ERR);
+		goto out;
+	}
+
+	/* CRL has that exact length */
+	*eaten = hdr_len + data_len;
+
+	/* Parse it */
+	ret = parse_x509_crl(ctx, buf, hdr_len + data_len);
 	if (ret) {
 		ERROR_TRACE_APPEND(X509_FILE_LINE_NUM_ERR);
 		goto out;
@@ -460,6 +511,14 @@ int main(int argc, char *argv[]) {
 		ret |= parse_x509_cert(&cert_ctx, buf, len);
 	}
 
+	{ /* parse_x509_crl */
+		crl_parsing_ctx crl_ctx;
+
+		Frama_C_make_unknown(&crl_ctx, sizeof(crl_ctx));
+		rand_buf_or_null(main_buf, main_buf_len, &buf, &len);
+		ret |= parse_x509_crl(&crl_ctx, buf, len);
+	}
+
 	{ /* parse_x509_cert_relaxed() */
 		cert_parsing_ctx cert_ctx;
 		u32 eaten;
@@ -468,6 +527,16 @@ int main(int argc, char *argv[]) {
 		Frama_C_make_unknown(&eaten, sizeof(eaten));
 		rand_buf_or_null(main_buf, main_buf_len, &buf, &len);
 		ret |= parse_x509_cert_relaxed(&cert_ctx, buf, len, &eaten);
+	}
+
+	{ /* parse_x509_crl_relaxed() */
+		crl_parsing_ctx crl_ctx;
+		u32 eaten;
+
+		Frama_C_make_unknown(&crl_ctx, sizeof(crl_ctx));
+		Frama_C_make_unknown(&eaten, sizeof(eaten));
+		rand_buf_or_null(main_buf, main_buf_len, &buf, &len);
+		ret |= parse_x509_crl_relaxed(&crl_ctx, buf, len, &eaten);
 	}
 
 	return ret;
@@ -480,6 +549,7 @@ int main(int argc, char *argv[]) {
 int main(int argc, char *argv[]) {
 	u8 buf[ASN1_MAX_BUFFER_SIZE];
 	cert_parsing_ctx cert_ctx;
+	crl_parsing_ctx crl_ctx;
 	u32 len;
 	int ret = 0;
 
@@ -488,7 +558,8 @@ int main(int argc, char *argv[]) {
 	len = __ikos_nondet_uint();
 	__ikos_assume(len <= ASN1_MAX_BUFFER_SIZE);
 
-	ret = parse_x509_cert(&cert_ctx, buf, len);
+	ret  = parse_x509_cert(&cert_ctx, buf, len);
+	ret |= parse_x509_crl(&crl_ctx, buf, len);
 
 	return ret;
 }

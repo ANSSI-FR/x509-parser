@@ -8,7 +8,8 @@ BUILD_DIR ?= ./build
 OBJS_DIR ?= ./
 EXEC = $(BUILD_DIR)/x509-parser
 LIBS = $(BUILD_DIR)/x509-parser.a $(BUILD_DIR)/x509-parser.so
-OBJS = $(OBJS_DIR)/x509-parser.o $(OBJS_DIR)/x509-cert-parser.o \
+OBJS = $(OBJS_DIR)/x509-parser.o \
+       $(OBJS_DIR)/x509-cert-parser.o $(OBJS_DIR)/x509-crl-parser.o \
        $(OBJS_DIR)/x509-common.o $(OBJS_DIR)/x509-utils.o
 HEADERS = $(wildcard src/*.h)
 
@@ -44,6 +45,10 @@ $(OBJS_DIR)/x509-parser.o: src/x509-parser.c $(HEADERS)
 	@mkdir -p $(@D)
 	$(CC) $(LIB_CFLAGS) -c $< -o $@
 
+$(OBJS_DIR)/x509-crl-parser.o: src/x509-crl-parser.c $(HEADERS)
+	@mkdir -p $(@D)
+	$(CC) $(LIB_CFLAGS) -c $< -o $@
+
 $(OBJS_DIR)/x509-cert-parser.o: src/x509-cert-parser.c $(HEADERS)
 	@mkdir -p $(@D)
 	$(CC) $(LIB_CFLAGS) -c $< -o $@
@@ -61,7 +66,7 @@ $(OBJS_DIR)/x509-utils.o: src/x509-utils.c src/x509-utils.h
 # Frama-C
 #####################################################################
 
-SESSION:=frama-c-rte-val-wp.session
+SESSION:=frama-c-rte-eva-then-wp.session
 JOBS:=$(shell nproc)
 TIMEOUT:=30
 
@@ -73,7 +78,10 @@ TIMEOUT:=30
 # See https://bts.frama-c.com/view.php?id=2206
 
 frama-c:
-	frama-c src/x509-utils.c src/x509-common.c src/x509-cert-parser.c src/x509-parser.c \
+	frama-c src/x509-utils.c src/x509-common.c \
+		src/x509-crl-parser.c \
+		src/x509-cert-parser.c \
+		src/x509-parser.c \
 		-machdep x86_64  -pp-annot \
 		-warn-left-shift-negative \
 		-warn-right-shift-negative \

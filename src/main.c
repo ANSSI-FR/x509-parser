@@ -27,13 +27,16 @@ int main(int argc, char *argv[])
 {
 	char *path = argv[1];
 	cert_parsing_ctx cert_ctx;
+	crl_parsing_ctx crl_ctx;
 	struct stat st;
 	off_t fsize, offset, remain;
 	u32 eaten, to_be_parsed;
 	u8 *buf, *ptr;;
 	int ret;
 	int fd;
-	int num_v3_certs, num_v3_certs_ok, num_not_v3;
+	int num_x509_files;
+	int num_certs_v3_ok;
+	int num_crl_ok;
 
 	if (argc != 2) {
 		usage(argv[0]);
@@ -66,9 +69,9 @@ int main(int argc, char *argv[])
 	ptr = mmap(0, fsize, PROT_READ, MAP_SHARED, fd, 0);
 
 	/* Initialize stat values */
-	num_not_v3 = 0;
-	num_v3_certs = 0;
-	num_v3_certs_ok = 0;
+	num_x509_files = 0;
+	num_certs_v3_ok = 0;
+	num_crl_ok = 0;
 
 	remain = fsize;
 	buf = ptr;
@@ -96,13 +99,13 @@ int main(int argc, char *argv[])
 		switch (ret) {
 		case 0:
 			// printf("offset %llu %d\n", offset, eaten);
-			num_v3_certs_ok += 1;
-			num_v3_certs += 1;
+			num_x509_files += 1;
+			num_certs_v3_ok += 1;
 			break;
 
 		case 1:
-			printf("Invalid sequence for cert #%d at offset %ld\n",
-				num_v3_certs + num_not_v3, offset);
+			printf("Invalid sequence element #%d at offset %ld\n",
+				num_x509_files, offset);
 			ret = -1;
 			goto out;
 			break;
@@ -110,12 +113,36 @@ int main(int argc, char *argv[])
 		case X509_PARSER_ERROR_VERSION_NOT_3:
 		case X509_PARSER_ERROR_VERSION_ABSENT:
 		case X509_PARSER_ERROR_VERSION_UNEXPECTED_LENGTH:
-			num_not_v3 += 1;
+			num_x509_files += 1;
 			break;
 
 		default:
-			num_v3_certs += 1;
+			num_x509_files += 1;
 			break;
+		}
+
+		/*
+		 * if this is not even a valid sequence or the certificate was
+		 * considered valid, we do not need to bother parsing it as
+		 * a CRL.
+		 */
+		if ((ret != 1) && (ret != 0)) {
+			memset(&crl_ctx, 0, sizeof(crl_ctx));
+			ret = parse_x509_crl_relaxed(&crl_ctx, buf, to_be_parsed, &eaten);
+#ifdef ERROR_TRACE_ENABLE
+			printf("- CRL %06d off %llu eaten %lu file %s\n", -ret, offset, eaten, path);
+#endif
+
+			switch (ret) {
+			case 0:
+				// printf("offset %llu %d\n", offset, eaten);
+				num_crl_ok += 1;
+				break;
+
+			default:
+				break;
+			}
+
 		}
 
 		offset += eaten;
@@ -126,10 +153,10 @@ int main(int argc, char *argv[])
 	ret = munmap(ptr, fsize);
 	close(fd);
 
-	printf("%d/%d (%.2f%%) valid X.509v3 certificate(s) (and %d non-v3 certs)\n",
-		num_v3_certs_ok, num_v3_certs,
-		((float)(100*num_v3_certs_ok) / ((float)num_v3_certs)),
-		num_not_v3);
+	printf("Valid X.509v3 Certs: %d/%d (%.2f%%)\n",
+		num_certs_v3_ok, num_x509_files, ((float)(100*num_certs_v3_ok) / ((float)num_x509_files)));
+	printf("Valid X.509 CRL    : %d/%d (%.2f%%)\n",
+		num_crl_ok, num_x509_files, ((float)(100*num_crl_ok) / ((float)num_x509_files)));
 
 out:
 	return ret;

@@ -119,7 +119,8 @@ typedef enum {
 
 /*
  * Allow certificates w/ extension's critical flag explicitly set to false.
- * As this is the DEFAULT value, DER forbids encoding of that value.
+ * As this is the DEFAULT value, DER forbids encoding of that value. The
+ * knob also applies to CRL extensions.
  */
 #define TEMPORARY_LAXIST_EXTENSION_CRITICAL_FLAG_BOOLEAN_EXPLICIT_FALSE
 
@@ -140,5 +141,49 @@ typedef enum {
  * algoid parmas instead of the expected NULL.
  */
 #define TEMPORARY_LAXIST_RSA_PUBKEY_AND_SIG_NO_PARAMS_INSTEAD_OF_NULL
+
+/*
+ * nextUpdate field in CRL is optional in ASN.1 definition but RFC5280
+ * explicitly states both at end of section 5. introduction and in section
+ * 5.1.2 that conforming CRL issuers are required / MUST include
+ * nextUpdate field. When following knob is defined, invalid CRL with missing
+ * nextUpdate field are allowed.
+ */
+#define TEMPORARY_LAXIST_ALLOW_MISSING_CRL_NEXT_UPDATE
+
+/*
+ * CRL v2 may include extensions. The field is either absent or present,
+ * in which case "this field is a sequence of one or more CRL extensions."
+ * i.e. it is not valid to have the field with no extension in it. Some
+ * CRL nonetheless exhibit the field with an empty content. Defining
+ * this knob accepts those CRL.
+ */
+#define TEMPORARY_LAXIST_ALLOW_CRL_ENTRY_EXT_WITH_EMPTY_SEQ
+
+/*
+ * CRL Issuing Distribution Point (IDP) extension is a critical one.
+ * Nonetheless, some CRL issuers did not get the memo and do not
+ * assert the bit in the CRL they emit. Such invalid CRL can be let
+ * pass through by defining the following knob.
+ */
+#define TEMPORARY_LAXIST_ALLOW_IDP_CRL_EXT_WITHOUT_CRITICAL_BIT_SET
+
+/*
+ * RFC 5280 section 5.1.2.6 has "When there are no revoked certificates,
+ * the revoked certificates list MUST be absent". Some CRL wrongfully
+ * include an empty list in that case. Defining this knob let those
+ * CRL pass through.
+ */
+#define TEMPORARY_LAXIST_ALLOW_REVOKED_CERTS_LIST_EMPTY
+
+/*
+ * RFC 5280 has "When CRLs are issued, the CRLs MUST be version 2 CRLs,
+ * include the date by which the next CRL will be issued in the
+ * nextUpdate field (Section 5.1.2.5), include the CRL number extension
+ * (Section 5.2.3), and include the authority key identifier extension
+ * (Section 5.2.1)." If the CRL misses the AKI and CRL number extensions
+ * then it is invalid ;-)
+ */
+#define TEMPORARY_LAXIST_ALLOW_MISSING_AKI_OR_CRLNUM
 
 #endif /* __X509_CONFIG_H__ */
