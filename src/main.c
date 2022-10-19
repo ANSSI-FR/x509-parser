@@ -16,6 +16,8 @@
 #include <unistd.h>
 #include "x509-parser.h"
 
+#define X509_FILE_NUM 1 /* See x509-utils.h for rationale */
+
 static void usage(char *argv0)
 {
 	printf("Usage: %s file.der\n", argv0);
@@ -24,7 +26,7 @@ static void usage(char *argv0)
 int main(int argc, char *argv[])
 {
 	char *path = argv[1];
-	cert_parsing_ctx ctx;
+	cert_parsing_ctx cert_ctx;
 	struct stat st;
 	off_t fsize, offset, remain;
 	u32 eaten, to_be_parsed;
@@ -72,8 +74,6 @@ int main(int argc, char *argv[])
 	buf = ptr;
 	offset = 0;
 	while (remain) {
-		memset(&ctx, 0, sizeof(ctx));
-
 		/*
 		 * File may be larger than 4GB but parser expects u32
 		 * and has limits on size for individual elements to be
@@ -85,12 +85,14 @@ int main(int argc, char *argv[])
 		}
 		eaten = 0;
 
-		/* We limit our calls to parser to  */
-		ret = parse_x509_cert_relaxed(&ctx, buf, to_be_parsed, &eaten);
+		/* First try and parse buffer as a certificate */
 
+		memset(&cert_ctx, 0, sizeof(cert_ctx));
+		ret = parse_x509_cert_relaxed(&cert_ctx, buf, to_be_parsed, &eaten);
 #ifdef ERROR_TRACE_ENABLE
-		printf("- %05d off %llu eaten %lu file %s\n", -ret, offset, eaten, path);
+		printf("- CERT %06d off %llu eaten %lu file %s\n", -ret, offset, eaten, path);
 #endif
+
 		switch (ret) {
 		case 0:
 			// printf("offset %llu %d\n", offset, eaten);

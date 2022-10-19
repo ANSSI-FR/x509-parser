@@ -67,9 +67,15 @@ CFLAGS ?= $(WARNING_CFLAGS) -pedantic -fno-builtin -std=c99 \
 	  -D_FORTIFY_SOURCE=2 $(STACK_PROT_FLAG) -O3
 LDFLAGS ?=
 
-# Default AR and RANLIB if not overriden by user
+LIB_DYN_LDFLAGS ?= -shared -Wl,-z,relro,-z,now
+
+# Default AR and associated flags if not overriden by user
 AR ?= ar
+AR_FLAGS ?= rcs
+
+# Default RANLIB and associated flags if not overriden by user
 RANLIB ?= ranlib
+RANLIB_FLAGS ?=
 
 # Our debug flags
 DEBUG_CFLAGS = -DDEBUG -O -g
