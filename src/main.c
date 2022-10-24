@@ -14,6 +14,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 #include "x509-parser.h"
 
 #define X509_FILE_NUM 1 /* See x509-utils.h for rationale */
@@ -67,6 +68,11 @@ int main(int argc, char *argv[])
 
 	/* mmap the file */
 	ptr = mmap(0, fsize, PROT_READ, MAP_SHARED, fd, 0);
+	if (ptr == MAP_FAILED) {
+		printf("mmap() failed with errno=%d\n", errno);
+		ret = -1;
+		goto out;
+	}
 
 	/* Initialize stat values */
 	num_x509_files = 0;
